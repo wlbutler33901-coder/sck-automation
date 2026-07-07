@@ -41,4 +41,3 @@ Map to "Project Status": 1-3 -> Planned (stage detail in scan_notes), 4 -> Under
 
 ## Sub-type (record in scan_notes)
 Luxury Car Condo | Flex/Garage Condo | Motorcoach/RV | Boat adjacent | Mixed (auto + showroom/social) | Track-Side.
-
