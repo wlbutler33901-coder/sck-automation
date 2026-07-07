@@ -32,6 +32,7 @@ SELECT "Project Name", "City", review_status FROM "01 - Project - New" WHERE "Re
 ```
 
 ## Step 3 - Search
+Read references/search-playbook.md for the full keyword matrix, recency cues, mandatory second-pass patterns, source-type list, operator seeds, and the stage/financing taxonomy. Highlights below; the playbook governs.
 Definition: individually DEEDED garage condominium units sold to owners. Includes track-side garage condos, motor condos, toy barns, garage suites, flex/warehouse garage condos (tag tier-2 in scan_notes). Excludes leased-only self-storage, membership-only clubs (log as context, do not insert), residential condos with garages.
 
 Per active submarket, search the paired anchor cities plus region terms:
@@ -55,10 +56,13 @@ WHERE regexp_replace(lower(trim("Project Name")),'[\u2013\u2014]','-','g') = $NO
 (If pg_trgm similarity() is unavailable, fall back to exact normalized name + same-city substring checks.)
 Exact match -> skip, no log. Near match -> do NOT insert; log change_type='near_match_flag' with both names in detail.
 
+## Step 4b - Financing classification (the point of the scan)
+The operator is a CRE financing advisor; the prize is catching a project BEFORE the capital stack closes, with a named sponsor and contact path. Set financing_opportunity and financing_relevance per the playbook on every insert. Permitting / pre-sale stage with a named developer = High. A quiet night with zero finds is normal and acceptable; a null beats a guess and an empty run beats a fabricated row.
+
 ## Step 5 - Insert candidate
 ```sql
 INSERT INTO "01 - Project - New"
-("Project Name","Project Status","Address","City","County","Submarket","Region","Website","Developer","Units","Avg Unit Size (SF)","Key Amenities",source_url,confidence,scan_notes)
+("Project Name","Project Status","Address","City","County","Submarket","Region","Website","Developer","Units","Avg Unit Size (SF)","Key Amenities",source_url,confidence,scan_notes,financing_relevance,financing_opportunity)
 VALUES (...);
 ```
 - "Project Status": Completed | Under Construction | Planned. Rumored -> Planned + confidence 'low'.
@@ -73,4 +77,3 @@ End of run: change_type='run_summary', detail = regions covered, searches run, c
 ## Scheduling (document for the operator, do not self-schedule)
 Windows Task Scheduler / cron, 3:00 AM daily:
 claude -p "Run the SCK project scanner nightly routine per the sck-project-scanner skill" --permission-mode acceptEdits
-
