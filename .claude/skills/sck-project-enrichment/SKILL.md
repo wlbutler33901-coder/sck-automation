@@ -24,7 +24,7 @@ SELECT * FROM "01 - Project - New"
 WHERE "Region" = ANY($TONIGHT_REGIONS) AND review_status IN ('pending','approved')
 ORDER BY (confidence='high') DESC, discovered_at DESC;
 ```
-Field priority: 1) Address + County (needed for geocoding and region verification), 2) Developer + Sales Broker / Sales Broker Contact / Sales Broker Email (Will's financing-outreach fields), 3) Units + Avg Unit Size (SF), 4) Website, 5) Key Amenities, 6) Amenity Tier (Basic-Tier / Standard-Tier / Premium-Tier / Track-Side per "Amenity Tier Definition" - only when amenities are documented; track-integrated projects are Track-Side), 7) latitude/longitude (geocode only a verified street address, never a city centroid), 8) Proj. Delivery.
+Field priority: 1) Address + County (needed for geocoding and region verification), 2) Developer + Sales Broker / Sales Broker Contact / Sales Broker Email (Will's financing-outreach fields), 3) Units + Avg Unit Size (SF), 4) Website, 5) Key Amenities, 6) Amenity Tier (Flex-Tier / Standard-Tier / Premium-Tier / Track-Side (Flex-Tier = hybrid business + personal use; Basic-Tier is retired) per "Amenity Tier Definition" - only when amenities are documented; track-integrated projects are Track-Side), 7) latitude/longitude (geocode only a verified street address, never a city centroid), 8) Proj. Delivery.
 Sources: developer/project sites, county property appraiser and permit portals, business journals, state corporation registries (developer LLC contacts), site:linkedin.com/company {developer} for principals, and a '{developer} headquarters office phone' pass for a direct contact path.
 Each fill: UPDATE the row, append 'Enriched {field} from {source} {date}' to scan_notes, log change_type='field_enriched' (detail = field + value + source).
 
