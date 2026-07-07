@@ -1,49 +1,44 @@
 ---
-name: sck-morning-digest
-description: 6am daily email digest of the Storage Condo King overnight scan and enrichment activity. Summarizes new project candidates and critical updates from the Scan Activity Log and emails will.butler@calusainvestments.com. Use whenever asked to run the SCK morning digest, send the scan summary email, summarize last night's scans, or report overnight pipeline activity.
-SCK Morning Digest (6am email)
-Reads everything the scanner and enrichment agent logged since the last digest, buckets it, emails Will, marks it digested.
-Step 1 - Pull undigested activity
+name: sck-project-enrichment
+description: Daily (post-scan) enrichment agent for the Storage Condo King project pipeline. Fills empty fields on staged project candidates (developer, contacts, units, sizes, addresses, amenities), and monitors staged AND live projects for status transitions (Planned to Under Construction, Under Construction to Completed, stalled or dead projects). Use whenever asked to run the SCK enrichment routine, enrich the new projects table, fill missing project fields, check for project status updates, or verify whether a project is still alive. Covers all regions on a weekly rotation.
+---
+
+# SCK Project Enrichment Agent (daily)
+
+Two jobs: (A) complete the data on staged candidates; (B) detect status changes on staged and live projects. Runs unattended.
+
+## Hard rules
+0. This file is the procedure. If a run session cannot read this skill file, log the failure and STOP. Never reconstruct the routine from memory or from table shapes.
+1. UPDATE only "01 - Project - New" rows and INSERT only to "Scan Activity Log".
+2. NEVER modify "01 - Projects" (live). Live status changes are SUGGESTIONS: log change_type='live_status_suggestion' and stop. Will approves manually.
+3. Never overwrite a non-null staged field with lower-confidence data. Fill nulls; correct non-nulls only with a primary source (developer site, county record, major news), and append the old value to scan_notes.
+4. Normalize dashes in name joins; no em-dashes in stored text.
+
+## Step 1 - Today's rotation (same wheel as the scanner)
+Use the identical rotation query from sck-project-scanner Step 1. Same-day overlap with the scanner is intentional: enrich what last night staged.
+
+## Step 2A - Field enrichment (staged rows in today's regions)
+Priority targets, in order:
 ```sql
-SELECT * FROM "Scan Activity Log" WHERE digested_at IS NULL AND run_type IN ('scan','enrichment') ORDER BY ts;
+SELECT * FROM "01 - Project - New"
+WHERE "Region" = ANY($TONIGHT_REGIONS) AND review_status IN ('pending','approved')
+ORDER BY (confidence='high') DESC, discovered_at DESC;
 ```
-Scanner heartbeat check (MUST filter run_type - an enrichment summary is NOT a scan):
-```sql
-SELECT COUNT(*) FROM "Scan Activity Log" WHERE run_type='scan' AND change_type='run_summary' AND ts > now() - interval '26 hours';
-```
-Join new candidates to their staged rows for full detail:
-```sql
-SELECT p.* FROM "01 - Project - New" p WHERE p.discovered_at > now() - interval '26 hours';
-```
-Step 2 - Bucket
-Bucket 1 - New Projects: ONLY rows logged change_type='new_candidate' in this digest window. Never present pre-existing staged inventory as new; if the scanner logged no new_candidate rows, this section reads "No new candidates." One line each -
-{Project Name} | {Region} / {Submarket} | {Status} | {Units} units | confidence {level} | {one-line note} | {source_url}
-Order: high confidence first, then by region.
-Bucket 2 - Critical Updates, in this order:
-live_status_suggestion (live-database changes awaiting Will's approval - most important)
-dead_project flags
-status_change on staged rows (Planned -> UC -> Completed)
-near_match_flag (possible duplicates needing a human eye)
-Notable field_enriched items ONLY if high-value (developer contact found, units/pricing confirmed); routine fills go in the counts line, not the body.
-Step 3 - Compose and send
-To: will.butler@calusainvestments.com
-Subject: SCK Morning Scan Digest - {YYYY-MM-DD}
-Body (plain, terse, no em-dashes):
-Counts line: X new candidates, Y critical updates, Z fields enriched. Regions covered: {list}.
-NEW PROJECTS section (Bucket 1). If none: "No new candidates."
-CRITICAL UPDATES section (Bucket 2). If none: "No critical updates."
-Footer: "Review queue: 01 - Project - New, review_status = pending ({count} rows). Blocked sources or scan errors: {from run_summary rows, if any}."
-Send mechanism, in priority order:
-If env var SCK_DIGEST_WEBHOOK is set: POST the digest as JSON {"to","subject","body"} to that URL (Make.com scenario sends the email). Treat HTTP 200 as a successful send.
-Else if env vars GMAIL_APP_USER and GMAIL_APP_PASSWORD are set: send via Gmail SMTP (smtp.gmail.com:587, STARTTLS) using python smtplib.
-Else fall back to the Gmail connector create_draft, and leave digested_at NULL (a draft is not a send).
-Never silently skip; if all mechanisms fail, write the digest to ~/sck-digests/{date}.md and log the failure.
-Always send, even on a zero-activity night (two-line email). If the run_type='scan' heartbeat query above returns zero, lead the email with: "WARNING: 3am scan did not run or did not complete."
-Step 4 - Mark digested
-```sql
-UPDATE "Scan Activity Log" SET digested_at = now() WHERE digested_at IS NULL AND run_type IN ('scan','enrichment') AND ts < now();
-```
-Only after a successful send (or successful fallback write).
-Scheduling
-Daily 6:00 AM:
-claude -p "Run the SCK morning digest routine per the sck-morning-digest skill" --permission-mode acceptEdits
+Field priority: 1) Address + County (needed for geocoding and region verification), 2) Developer + Sales Broker / Sales Broker Contact / Sales Broker Email (Will's financing-outreach fields), 3) Units + Avg Unit Size (SF), 4) Website, 5) Key Amenities, 6) Amenity Tier (Basic-Tier / Standard-Tier / Premium-Tier / Track-Side per "Amenity Tier Definition" - only when amenities are documented; track-integrated projects are Track-Side), 7) latitude/longitude (geocode only a verified street address, never a city centroid), 8) Proj. Delivery.
+Sources: developer/project sites, county property appraiser and permit portals, business journals, state corporation registries (developer LLC contacts).
+Each fill: UPDATE the row, append 'Enriched {field} from {source} {date}' to scan_notes, log change_type='field_enriched' (detail = field + value + source).
+
+## Step 2B - Status watch (staged + live in today's regions)
+For each project (staged: all statuses; live: "01 - Projects" where Region in tonight's set), check the project website, developer news, and permit/CO records for:
+- Planned -> Under Construction (groundbreaking, vertical construction)
+- Under Construction -> Completed (CO, grand opening, "now open")
+- Any -> Dead/stalled (site offline + no activity 12+ months, entitlement denial, land re-listed)
+Staged row: UPDATE "Project Status", append evidence to scan_notes, log change_type='status_change' (or 'dead_project') with the evidence URL in detail.
+Live row: DO NOT TOUCH. Log change_type='live_status_suggestion', detail = '{project}: {current} -> {suggested}. Evidence: {url}'. The morning digest surfaces it.
+
+## Step 3 - Run summary
+Log change_type='run_summary': regions covered, rows enriched (count by field), status changes applied (staged), suggestions raised (live), dead projects flagged.
+
+## Scheduling
+Daily 4:15 AM (after the 3am scan):
+claude -p "Run the SCK project enrichment daily routine per the sck-project-enrichment skill" --permission-mode acceptEdits
