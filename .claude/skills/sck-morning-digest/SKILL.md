@@ -23,7 +23,7 @@ SELECT p.* FROM "01 - Project - New" p WHERE p.discovered_at > now() - interval 
 ## Step 2 - Bucket
 **Bucket 1 - New Projects**: ONLY rows logged change_type='new_candidate' in this digest window. Never present pre-existing staged inventory as new; if the scanner logged no new_candidate rows, this section reads "No new candidates." One line each -
 {Project Name} | {Region} / {Submarket} | {Status} | {Units} units | confidence {level} | {one-line note} | {source_url}
-Order: high confidence first, then by region.
+Order: financing_relevance High first (mark these as CALL-WORTHY with developer + contact if enriched), then confidence, then region.
 
 **Bucket 2 - Critical Updates**, in this order:
 1. live_status_suggestion (live-database changes awaiting Will's approval - most important)
