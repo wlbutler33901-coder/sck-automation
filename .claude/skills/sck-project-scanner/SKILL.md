@@ -65,7 +65,7 @@ INSERT INTO "01 - Project - New"
 ("Project Name","Project Status","Address","City","County","Submarket","Region","Website","Developer","Units","Avg Unit Size (SF)","Key Amenities",source_url,confidence,scan_notes,financing_relevance,financing_opportunity)
 VALUES (...);
 ```
-- "Project Status": Completed | Under Construction | Planned. Rumored -> Planned + confidence 'low'.
+- "Project Status": exact values from "00 - Project Status": Completed | Under Construction | Pre-Development. Rumored -> Pre-Development + confidence 'low'. (UW is a manual underwriting stage, never scanner-assigned; Dead is enrichment-assigned only.)
 - confidence: high (developer site w/ address+units), medium (developer marketing, partial data), low (aggregator/rumor only).
 - Region/Submarket: assign from the county and city against "Market Coverage - Submarkets". If no submarket fits, use the region's closest match and note "submarket provisional" in scan_notes. Region must NEVER be null; every county in FL/GA/NC/SC belongs to exactly one region.
 - scan_notes: source caveats, tier-2 flag, buy-or-lease flag, price points.

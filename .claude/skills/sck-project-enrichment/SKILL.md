@@ -1,6 +1,6 @@
 ---
 name: sck-project-enrichment
-description: Daily (post-scan) enrichment agent for the Storage Condo King project pipeline. Fills empty fields on staged project candidates (developer, contacts, units, sizes, addresses, amenities), and monitors staged AND live projects for status transitions (Planned to Under Construction, Under Construction to Completed, stalled or dead projects). Use whenever asked to run the SCK enrichment routine, enrich the new projects table, fill missing project fields, check for project status updates, or verify whether a project is still alive. Covers all regions on a weekly rotation.
+description: Daily (post-scan) enrichment agent for the Storage Condo King project pipeline. Fills empty fields on staged project candidates (developer, contacts, units, sizes, addresses, amenities), and monitors staged AND live projects for status transitions (Pre-Development to Under Construction, Under Construction to Completed, stalled or dead projects). Use whenever asked to run the SCK enrichment routine, enrich the new projects table, fill missing project fields, check for project status updates, or verify whether a project is still alive. Covers all regions on a weekly rotation.
 ---
 
 # SCK Project Enrichment Agent (daily)
@@ -30,11 +30,11 @@ Each fill: UPDATE the row, append 'Enriched {field} from {source} {date}' to sca
 
 ## Step 2B - Status watch (staged + live in today's regions)
 For each project (staged: all statuses; live: "01 - Projects" where Region in tonight's set), check the project website, developer news, and permit/CO records for:
-- Planned -> Under Construction (groundbreaking, vertical construction)
+- Pre-Development -> Under Construction (groundbreaking, vertical construction)
 - Under Construction -> Completed (CO, grand opening, "now open")
-- Any -> Dead/stalled (site offline + no activity 12+ months, entitlement denial, land re-listed)
-Staged row: UPDATE "Project Status", append evidence to scan_notes, log change_type='status_change' (or 'dead_project') with the evidence URL in detail.
-Live row: DO NOT TOUCH. Log change_type='live_status_suggestion', detail = '{project}: {current} -> {suggested}. Evidence: {url}'. The morning digest surfaces it.
+- Any -> Dead (site offline + no activity 12+ months, entitlement denial, land re-listed)
+Staged row: UPDATE "Project Status" (set to 'Dead' for the dead/stalled case), append evidence to scan_notes, log change_type='status_change' (or 'dead_project') with the evidence URL in detail.
+Live row: suggestion only, as ever - DO NOT TOUCH. Log change_type='live_status_suggestion', detail = '{project}: {current} -> {suggested}. Evidence: {url}'. The morning digest surfaces it.
 
 ## Step 2C - Financing classification maintenance
 When a status change is applied or a sponsor/contact is found, update financing_relevance and financing_opportunity on the staged row (taxonomy in the scanner's references/search-playbook.md). A project advancing into Permitting/Pre-Sale with a named sponsor moves to High; reaching Completed drops to Low.

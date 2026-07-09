@@ -28,7 +28,7 @@ Order: financing_relevance High first (mark these as CALL-WORTHY with developer 
 **Bucket 2 - Critical Updates**, in this order:
 1. live_status_suggestion (live-database changes awaiting Will's approval - most important)
 2. dead_project flags
-3. status_change on staged rows (Planned -> UC -> Completed)
+3. status_change on staged rows (UW -> Pre-Development -> Under Construction -> Completed)
 4. near_match_flag (possible duplicates needing a human eye)
 5. Notable field_enriched items ONLY if high-value (developer contact found, units/pricing confirmed); routine fills go in the counts line, not the body.
 
