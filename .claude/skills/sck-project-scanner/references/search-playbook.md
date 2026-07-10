@@ -33,7 +33,7 @@ f. Permit/zoning portals: verification of stage/parcel only, not primary discove
 3. Pre-Construction / Now Selling - groundbreaking near.
 4. Under Construction - bridge/gap/refi still viable.
 5. Completed / Sold Out - relationship intel only.
-Map to "Project Status": 1-3 -> Planned (stage detail in scan_notes), 4 -> Under Construction, 5 -> Completed.
+Map to "Project Status": 1-3 -> Pre-Development (stage detail in scan_notes), 4 -> Under Construction, 5 -> Completed. Exact strings per "00 - Project Status".
 
 ## Financing classification (set on every insert)
 - financing_opportunity: Land Acquisition | Construction | Bridge/Gap | Recap/Takeout.
