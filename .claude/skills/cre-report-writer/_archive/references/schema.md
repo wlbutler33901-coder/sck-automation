@@ -40,7 +40,6 @@ WHERE "Developer / Sponsor" ILIKE '%<name>%';
 | "New Developers Identified" | text (§2.4) |
 | "Stage Progressions" | text (§2.5) |
 | "Data Quality Notes" | text (§2.6) |
-| "Report Markdown" | text, the FULL report as markdown (canonical saved artifact) |
 | "Delivery Status" | set AFTER the email: 'sent' or 'failed: <reason>' |
 
 ## Confirm the write
