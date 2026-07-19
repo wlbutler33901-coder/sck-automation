@@ -46,6 +46,22 @@ Use a mobile user agent/viewport when a site serves mobile-only layouts. Never b
 
 SUNDAY DEEP SWEEP (in addition to the night's rotation): once a week, sweep EVERY operator brand site (item 2) across the entire FL/GA/NC/SC footprint, not just tonight's regions. One pass per brand; stage anything new through the same dedup gate.
 
+## Step 3b - Development Scanner cross-feed (car condo hits from the SWFL permit and news scanners)
+The SWFL Development Scanner (separate routines) writes commercial permits and press to "Development Scanner - Municipality Portals" and "Development Scanner - News Scanner" in the same database. Every night, sweep BOTH for car-condo signals from the last 26 hours:
+```sql
+SELECT id, "Project Name", "Address", "City", "County", "Developer / Sponsor / Key Principal" AS dev, "Development Description" AS detail, "Municipality Posting Look-Up Value" AS src
+FROM "Development Scanner - Municipality Portals"
+WHERE created_at >= now() - interval '26 hours'
+  AND ("Development Description" ILIKE ANY (ARRAY['%car condo%','%garage condo%','%motor condo%','%luxury garage%','%toy storage%','%garage suite%','%motorplex%','%auto condo%','%collector%garage%'])
+    OR "Project Name" ILIKE ANY (ARRAY['%car condo%','%garage%','%motor%','%auto vault%']));
+SELECT id, "Project Name", "City", "County", "Developer / Sponsor" AS dev, "Article Summary" AS detail, "Article URL" AS src
+FROM "Development Scanner - News Scanner"
+WHERE created_at >= now() - interval '26 hours'
+  AND ("Article Summary" ILIKE ANY (ARRAY['%car condo%','%garage condo%','%motor condo%','%luxury garage%','%toy storage%','%garage suite%','%motorplex%'])
+    OR "Project Name" ILIKE ANY (ARRAY['%car condo%','%garage condo%','%motor condo%']));
+```
+Each hit is a candidate: run it through the Step 4 dedup gate and, if new, stage it via Step 5 with source_url = the permit look-up value or article URL, confidence = 'high' for permit-sourced (a filed permit is primary evidence), 'medium' for news-sourced. Note "via Development Scanner cross-feed" in scan_notes and log change_type='crossfeed_candidate'. SWFL hits will be common (the scanners share the FL footprint); GA/NC/SC will not appear here.
+
 ## Step 4 - Dedup gate (mandatory, per candidate)
 ```sql
 SELECT 'live' AS src, "Project Name", "City" FROM "01 - Projects"
