@@ -16,8 +16,8 @@ Output: "Development Scanner - Report Summary" plus the Make webhook email.
 ## 1. Workflow
 1. Pull both windows per references/schema.md: PRIMARY last 26 hours (new since yesterday), CONTEXT last 7 days (for progressions and first-appearance checks).
 2. Build the opportunity universe: a news row with "Linked Portal Record" enriches that permit record (one combined item); unlinked articles are standalone news leads; permit rows with no articles are standalone permit leads.
-3. Compose the report in MARKDOWN per the EMAIL FORMATTING RULES below, sections per §2 exactly.
-4. INSERT one row into "Development Scanner - Report Summary" (every column including "Report Markdown" = the full markdown, references/schema.md), read it back by id to confirm.
+3. Compose the sections in §2 exactly.
+4. INSERT one row into "Development Scanner - Report Summary" (every column, references/schema.md), read it back by id to confirm.
 5. Deliver the email per §3, then UPDATE the row's "Delivery Status".
 
 ## 2. Report Sections (exactly these, in order; empty sections say so explicitly)
@@ -28,7 +28,7 @@ Output: "Development Scanner - Report Summary" plus the Make webhook email.
 5. STAGE PROGRESSIONS: permit-internal advances (parcel match, new permit type) and news-confirmed advances in the 7-day window.
 6. COVERAGE AND DATA QUALITY: last night's cluster per the permit rotation, portals blocked/failed, paywalls hit, null-heavy records worth a manual look.
 
-Formatting: terse, no em-dashes, mobile-readable, per the EMAIL FORMATTING RULES below.
+Formatting: plain text, terse, pipe separators, real line breaks, no em-dashes, mobile-readable.
 
 ## 3. Deliver the email (separate message, same Make pipe)
 POST to the shared Make webhook (it emails whatever it receives; this is a SEPARATE email from the SCK car-condo digest):
@@ -36,14 +36,9 @@ POST to the shared Make webhook (it emails whatever it receives; this is a SEPAR
 POST https://hook.us2.make.com/ms9ag6j37hic53tnuilvrfup1armt65y
 Content-Type: application/json
 {"subject": "SWFL Development Scanner - Daily Report - {YYYY-MM-DD}",
- "html": "<the markdown rendered to HTML per the EMAIL FORMATTING RULES>"}
+ "html": "<the brief as simple HTML: h3 section headers, <pre> for blocks>"}
 ```
 Expect 200 "Accepted". Failure: retry once after 60 seconds; then set "Delivery Status" = 'failed: <reason>' and still leave the Supabase row (the record is the source of truth). Success: "Delivery Status" = 'sent'. Always send, even on a zero-activity day (short email).
 
 ## 4. Guardrails
 Facts only; the analyst owns every call decision. Never report a figure not present in a source row. If a scanner did not run last night (no rows and no run evidence), the Executive Summary must say so in the first sentence.
-
-## EMAIL FORMATTING RULES (mandatory - no wall-of-text emails)
-Compose the report in MARKDOWN first (that markdown is the canonical saved artifact), then render the email HTML from it. Never send the whole report inside one <pre> block.
-- Markdown: ## title with date, ### per section, one blank line between items, "- " bullets, **bold** project and developer names, plain URLs on their own.
-- Email HTML rendering: <h2> title + date; <h3> per section; <hr> between major sections; items as <ul><li> with <b>bold</b> project names; a multi-field project entry is ONE <li>: <b>Name</b>: type, size, cost | city, county | stage | developer | one-line note; source links as <a href>. Counts and snapshots as short <ul> lists, not tables. <pre> is allowed ONLY for the pipeline-snapshot count block, nothing else. Keep the email under ~100 KB; when a section would exceed ~25 items, include the top items and one line saying the rest are in Supabase.
