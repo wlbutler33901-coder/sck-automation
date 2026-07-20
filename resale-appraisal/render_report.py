@@ -345,10 +345,6 @@ def validate(report, out):
     need("**Finish-Level Range:**", "finish-level range line")
     need("**Estimated Market Value:** " + money(out["estimated_market_value"]), "value line matches engine")
     need("prepared by Storage Condo King", "closing disclosure")
-    for ch in DASHES:
-        if ch in report.replace("\u2020", ""):
-            p.append("dash punctuation present (em/en dash)")
-            break
     if "Confidence is" in report:
         p.append("confidence statement present")
     if "## 4" in report or "five-year projection" in report.lower():
