@@ -25,7 +25,7 @@ Portals run on a handful of software platforms. Navigation differs by platform -
 
 | Jurisdiction | URL | Platform |
 |---|---|---|
-| Collier County | https://www.collier.gov/Business-Resources/Building-Permits--Construction/Meetings-Advisory-Boards-Reports/Monthly-Building-Permit-Reports | Monthly report PDFs |
+| Collier County | https://www.collier.gov/Business-Resources/Building-Permits-Construction/Meetings-Advisory-Boards-Reports/Monthly-Building-Permit-Reports | Monthly report XLSX (2026-M-issued.xlsx / 2026-M-applied.xlsx) |
 | City of Naples | https://cityview2.iharriscomputer.com/cityofnaplesflorida | Harris CityView |
 
 ## Manatee County
