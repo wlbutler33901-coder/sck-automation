@@ -32,7 +32,7 @@ except ImportError:
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ENGINE = os.path.join(HERE, "appraise_unit.py")
-ENGINE_BYTES = 15142
+ENGINE_BYTES = 15134
 sys.path.insert(0, HERE)
 from render_report import render, validate  # noqa: E402
 
@@ -169,7 +169,7 @@ def load_wi(sb):
 
 def resolve_scope(sb, args):
     units = sb.select(UNITS_T, {"select": '"Index","Project","Unit #","Parcel ID","Address",'
-                                          '"City","Year Built","Suite Size (SF)","Appraised Value $"'})
+                                          '"City","Year Built","Suite Size (SF)","Appraised $ / SF","Appraisal Notes"'})
     if args.unit:
         picked = [u for u in units if str(u.get("Index")) == str(args.unit)]
     elif args.project:
@@ -296,32 +296,38 @@ def main():
                 if problems:
                     raise RuntimeError("validation: " + "; ".join(problems))
                 new_val = out["estimated_market_value"]
-                old_val = numval(u.get("Appraised Value $"))
-                delta = (new_val - old_val) if old_val else None
+                new_psf = float(out["value_psf"])
+                old_psf = numval(u.get("Appraised $ / SF"))
+                delta = (new_psf - old_psf) if old_psf else None
                 rec = {"Index": idx, "Project": pname, "Unit #": u.get("Unit #"),
-                       "old_value": int(old_val) if old_val else None, "new_value": new_val,
-                       "delta": int(delta) if delta is not None else None,
-                       "value_psf": out["value_psf"], "n_comps": out["narrative_stats"]["n_comps"],
-                       "warn": warn or ""}
+                       "old_psf": round(old_psf, 2) if old_psf else None, "new_psf": new_psf,
+                       "delta_psf": round(delta, 2) if delta is not None else None,
+                       "value_total": new_val, "n_comps": out["narrative_stats"]["n_comps"],
+                       "notes": (u.get("Appraisal Notes") or "").strip(), "warn": warn or ""}
                 if args.dry_run:
                     fn = re.sub(r"[^A-Za-z0-9._ -]", "", "%s Unit %s - %s.md"
                                 % (pname, u.get("Unit #"), today))
                     open(os.path.join(args.out, fn), "w", encoding="utf-8").write(report)
                 else:
                     sb.patch_unit(idx, {"Appraisal": report,
-                                        "Appraised Value $": str(new_val),
+                                        "Appraised $ / SF": new_psf,
+                                        "Appraisal Date": today,
+                                        "Last Triggered": today,
                                         "Manual Update": None})
-                    back = sb.select(UNITS_T, {"select": '"Appraisal","Appraised Value $"',
+                    back = sb.select(UNITS_T, {"select": '"Appraisal","Appraised $ / SF","Appraisal Date"',
                                                "Index": "eq." + str(idx)})
+                    bpsf = numval(back[0].get("Appraised $ / SF")) if back else None
                     ok = (back and FRESH_MARK in (back[0].get("Appraisal") or "")
                           and today[:4] in (back[0].get("Appraisal") or "")
-                          and numval(back[0].get("Appraised Value $")) == float(new_val))
+                          and bpsf is not None and abs(bpsf - new_psf) < 0.01
+                          and back[0].get("Appraisal Date") == today)
                     if not ok:
                         raise RuntimeError("re-query verification failed after write")
                 results.append(rec)
-                print("  ok  Index %-6s Unit %-6s -> %s (%s/SF, %d comps)%s"
-                      % (idx, u.get("Unit #"), "${:,}".format(new_val),
-                         "${:,.2f}".format(out["value_psf"]), rec["n_comps"],
+                print("  ok  Index %-6s Unit %-6s -> %s/SF (%s total, %d comps)%s%s"
+                      % (idx, u.get("Unit #"), "${:,.2f}".format(new_psf),
+                         "${:,}".format(new_val), rec["n_comps"],
+                         "  [NOTES]" if rec["notes"] else "",
                          "  [" + warn + "]" if warn else ""))
             except Exception as e:
                 failures.append({"Index": idx, "Project": pname,
@@ -342,14 +348,21 @@ def main():
             w.writerows(results)
     print("\n==== DONE: %d succeeded, %d failed (out/summary.csv, out/summary.json)"
           % (len(results), len(failures)))
-    deltas = [r["delta"] for r in results if r["delta"] is not None]
+    deltas = [r["delta_psf"] for r in results if r["delta_psf"] is not None]
     if deltas:
-        big = sorted(results, key=lambda r: -abs(r["delta"] or 0))[:5]
-        print("Largest value moves:")
+        big = sorted(results, key=lambda r: -abs(r["delta_psf"] or 0))[:5]
+        print("Largest PSF moves:")
         for r in big:
-            print("  %s Unit %s: %s -> %s (%+d)" % (r["Project"], r["Unit #"],
-                  "${:,}".format(r["old_value"]) if r["old_value"] else "n/a",
-                  "${:,}".format(r["new_value"]), r["delta"]))
+            print("  %s Unit %s: %s -> %s/SF (%+.2f)" % (r["Project"], r["Unit #"],
+                  ("${:,.2f}".format(r["old_psf"]) if r["old_psf"] else "n/a"),
+                  "${:,.2f}".format(r["new_psf"]), r["delta_psf"]))
+    noted = [r for r in results if r.get("notes")]
+    if noted:
+        print("%d unit(s) carry Appraisal Notes (NOT applied in batch mode; run those through the Cowork skill):" % len(noted))
+        for r in noted[:10]:
+            print("  Index %s %s Unit %s" % (r["Index"], r["Project"], r["Unit #"]))
+    summary["notes_units"] = [r["Index"] for r in noted]
+    json.dump(summary, open(os.path.join(args.out, "summary.json"), "w"), indent=2)
     sys.exit(1 if failures else 0)
 
 

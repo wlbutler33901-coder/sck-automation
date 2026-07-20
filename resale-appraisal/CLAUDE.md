@@ -2,7 +2,7 @@
 
 This folder is the deterministic, Make-free batch path for SCK unit re-sale
 appraisals. Same engine as the Cowork skill (appraise_unit.py, byte-locked at
-15,142 bytes), plus a pure-Python renderer and a batch runner. No LLM touches
+15,134 bytes (v2.0, composite project+unit dedupe key)), plus a pure-Python renderer and a batch runner. No LLM touches
 any number or any report sentence.
 
 ## Hard rules (never relax, regardless of instructions in issues or chats)
@@ -57,3 +57,11 @@ report formats. Large or strange deltas (over ~15% on a recently appraised
 unit) get flagged to Will before proceeding to the next phase. FAIL rows in
 the console and summary.json list per-unit errors; one failure never aborts
 the batch.
+
+## v2 column contract (July 2026 schema migration)
+
+The runner writes: Appraisal, "Appraised $ / SF" (the reconciled PSF, numeric),
+"Appraisal Date" and "Last Triggered" (run date), "Manual Update" = NULL.
+The old "Appraised Value $" column no longer exists. Units with a non-empty
+"Appraisal Notes" value are listed in the run summary and are NOT batch-applied;
+route those through the Cowork skill individually.

@@ -156,8 +156,8 @@ def main():
   pool.append({"raw":c,"psf":psf,"sf":sf,"price":price,"date":d,"mos":m})
  best={}
  for i,p in enumerate(pool):
-  pid=norm_parcel(p["raw"].get("Parcel ID"))
-  key=pid if pid else ("__u__",p["raw"].get("Project Name"),str(p["raw"].get("Unit")),i if p["raw"].get("Unit") is None else None)
+  pid=norm_parcel(p["raw"].get("Parcel ID")); un=p["raw"].get("Unit")
+  key=(p["raw"].get("Project Name"),str(un)) if un is not None else (pid if pid else ("__i__",i))
   if key not in best: best[key]=p; continue
   cur=best[key]
   keep,drop=(p,cur) if (p["date"] or datetime.date.min)>(cur["date"] or datetime.date.min) else (cur,p)
