@@ -93,11 +93,15 @@ def _table5_intro(out):
     tier_mix = tiers[0] if len(tiers) == 1 else (", ".join(tiers[:-1]) + " and " + tiers[-1])
     note = cs.get("note")
     if contributed:
-        s1 = ("The subject's competitive set groups the " + b(len(sel)) + " " + region +
-              " projects competing for the same regional buyer pool: the " +
+        subj_region = str(subj.get("region") or "")
+        off = sum(1 for r in sel if str(r.get("region") or "") != subj_region)
+        scope = (region + " projects competing for the same regional buyer pool") if off == 0 else \
+                "projects competing for the subject's buyer pool"
+        cross = "" if off == 0 else (" (" + b(off) + " of the ranked projects sit outside " + region + ")")
+        s1 = ("The subject's competitive set groups the " + b(len(sel)) + " " + scope + ": the " +
               b(len(contributed)) +
               (" project" if len(contributed) == 1 else " projects") +
-              " supplying valuation comps rank first, backfilled by comparability, "
+              " supplying valuation comps rank first" + cross + ", backfilled by comparability, "
               "spanning " + tier_mix + ".")
     else:
         s1 = ("All " + b(ns["n_comps"]) + " valuation comps come from inside " +
@@ -127,6 +131,105 @@ def _table5_intro(out):
                "/SF range, " + b(psf(gap)) + "/SF " + side + " " + nearest["project"] + recency)
     s2 = "The subject's valued " + b(psf(vpsf) + "/SF") + " " + pos + "."
     return s1 + " " + s2
+
+
+DEVELOPER_SALES_URL = "/pre-sale-deals"  # live Developer Sales listing route (App.tsx)
+
+def unit_summary_block(out):
+    """Owner-facing Unit Summary block appended after the valuation half.
+    Mirrors the presale Sale Listing Summary skeleton (H1 delimiter, five
+    H2 sections, arrow link idiom, brand/project bolding, closing disclosure)
+    reoriented as a valuation resource for unit owners, ending with the
+    Developer Sales funnel link. Every figure comes from engine output."""
+    subj = out["subject"]
+    ns = out["narrative_stats"]
+    t1 = out["table1"]
+    band = out["finish_level_band"]
+    proj = str(subj["project"])
+    bp = b(proj)
+    unit = str(subj.get("unit_number") or "N/A")
+    vpsf = float(out["value_psf"])
+    n = ns["n_comps"]
+    a = ns["class_a"]
+    sel = out["competitive_set"].get("selected") or []
+    L = []
+    L.append("---")
+    L.append("")
+    L.append("# Unit Summary")
+    L.append("")
+    L.append("## Unit Value Summary")
+    own = ", including this unit's own prior sale" if ns.get("own_sale_included") else ""
+    L.append(b("Storage Condo King") + " values Unit " + b(unit) + " at " + bp + " at " +
+             b(money(out["estimated_market_value"])) + " (" + b(psf(vpsf) + "/SF") + ") as of " +
+             fmt_date_long(out["appraisal_date"]) + ". Recorded comparable evidence supports " +
+             b(money(band["low_value"])) + " to " + b(money(band["high_value"])) +
+             " depending on interior buildout.")
+    L.append("- [Value Summary →](#tab-value-summary)")
+    L.append("- [Contact Storage Condo King →](#contact)")
+    L.append("")
+    L.append("## Your Unit")
+    yr = subj.get("year_built")
+    L.append("Unit " + b(unit) + " at " + bp + " in " + str(subj.get("city") or "N/A") +
+             " is a " + b("{:,} SF".format(int(round(float(subj["unit_size_sf"]))))) + " " +
+             tier_label(subj.get("amenity_tier")) + " unit" +
+             (" built in " + b(yr) if yr else "") + ".")
+    if a:
+        vb = (b(n) + " recorded comparable sales, " + b(a) + " inside " + bp + " itself" + own + ".")
+    else:
+        vb = ("All " + b(n) + " comparables come from neighboring projects; " + bp +
+              " recorded no qualifying sales in the 60 month analysis window.")
+    L.append("- " + b("Unit Profile:") + " " + b("{:,} SF".format(int(round(float(subj["unit_size_sf"]))))) +
+             " of " + tier_label(subj.get("amenity_tier")) + " space, unit " + b(unit) + ".")
+    L.append("- " + b("Value Basis:") + " " + vb)
+    L.append("- " + b("Finish-Level Range:") + " " + b(money(band["low_value"])) + " to " +
+             b(money(band["high_value"])) + " (" + b(psf(band["low_psf"])) + " to " +
+             b(psf(band["high_psf"]) + "/SF") + "), reflecting buildout differences invisible in recorded sales.")
+    L.append("")
+    L.append("## Location")
+    L.append(bp + " sits in the " + str(subj.get("submarket") or "N/A") + " submarket of " +
+             str(subj.get("region") or "Florida") + ", where " + b("Storage Condo King") +
+             " tracks every recorded garage condo sale.")
+    L.append("- [Demographic Profile →](#tab-demographic-profile)")
+    L.append("")
+    L.append("## Market Overview")
+    src = ("drawn largely from inside " + bp) if a and a >= n / 2 else \
+          ("drawn from " + b(max(len([r for r in sel if r.get("comps_used", 0) > 0]), 1)) + " competing projects") if sel else \
+          ("drawn from neighboring projects")
+    L.append("Unit " + b(unit) + " is valued at " + b(psf(vpsf) + "/SF") +
+             " against an unadjusted comp average of " + b(psf(t1["comp_avg_psf"]) + "/SF") +
+             ", evidence " + src + ".")
+    if sel:
+        avgs = [float(r["avg_psf"]) for r in sel]
+        lo, hi = min(avgs), max(avgs)
+        pos = "above" if vpsf > hi else ("below" if vpsf < lo else "within")
+        L.append("The unit prices " + pos + " its competing set's " + b(psf(lo)) + " to " +
+                 b(psf(hi) + "/SF") + " range.")
+    L.append("- [Competitive Set →](#tab-competitive-set)")
+    L.append("- [Market Summary →](#tab-market-data)")
+    L.append("")
+    L.append("## Owner Highlights")
+    side = "above" if vpsf >= float(t1["comp_avg_psf"]) else "below"
+    L.append("- " + b("Current Value:") + " " + b(money(out["estimated_market_value"])) + " at " +
+             b(psf(vpsf) + "/SF") + ", " + side + " the comp set's " +
+             b(psf(t1["comp_avg_psf"]) + "/SF") + " unadjusted average.")
+    L.append("- " + b("Value Anchor:") + " " + vb)
+    L.append("- " + b("Appreciation Basis:") + " Sale timing compounded at the measured " +
+             b("{:.1f}%".format(float(out.get("growth_pct_used", 0)))) + " blended annual rate, capped by policy.")
+    if sel:
+        L.append("- " + b("Market Position:") + " Valued " + pos + " the competing set's " +
+                 b(psf(lo)) + " to " + b(psf(hi) + "/SF") + " range across " + b(len(sel)) +
+                 " ranked " + ("project" if len(sel) == 1 else "projects") + ".")
+    else:
+        L.append("- " + b("Market Position:") + " No competing projects in " +
+                 str(subj.get("region") or "the region") + " recorded qualifying sales in the analysis window.")
+    L.append("- " + b("Next Step:") + " Owners considering a sale can contact " +
+             b("Storage Condo King") + "; new developer offerings across Florida are listed on the platform.")
+    L.append("- [Explore Developer Sales →](" + DEVELOPER_SALES_URL + ")")
+    L.append("- [Get an Updated Valuation →](#contact)")
+    L.append("")
+    L.append(DISCLOSURE)
+    L.append("")
+    return "\n".join(L)
 
 
 def render(out):
@@ -320,6 +423,7 @@ def render(out):
     L.append("")
     L.append(DISCLOSURE)
     L.append("")
+    L.append(unit_summary_block(out))
     return "\n".join(L)
 
 
@@ -351,6 +455,23 @@ def validate(report, out):
         p.append("banned section/projection present")
     if not report.rstrip().endswith("appraisal.*"):
         p.append("disclosure is not the final element")
+    if report.count("prepared by Storage Condo King") != 2:
+        p.append("disclosure must close both the valuation and the Unit Summary block")
+    i_block = report.find("\n# Unit Summary")
+    if i_block < 0:
+        p.append("Unit Summary block missing")
+    else:
+        head = report[:i_block]
+        if not head.rstrip().endswith("---"):
+            p.append("Unit Summary block must follow a horizontal rule")
+        if "prepared by Storage Condo King" not in head:
+            p.append("valuation half must end with the disclosure before the block")
+        for sec in ("## Unit Value Summary", "## Your Unit", "## Location",
+                    "## Market Overview", "## Owner Highlights"):
+            if sec not in report[i_block:]:
+                p.append("block section missing: " + sec)
+        if "[Explore Developer Sales →](" not in report[i_block:]:
+            p.append("Developer Sales funnel link missing")
     for r in out["competitive_set"].get("selected") or []:
         if r["project"] == subj["project"]:
             p.append("subject project appears in Table 5")
