@@ -76,15 +76,21 @@ If a portal blocks automation or has no usable search, record the jurisdiction +
 The SPA is a shell over a JSON search API. Pattern (tenant path varies: /apps/selfservice or /EnerGov_Prod/SelfService):
 
 POST https://<host>/<tenant>/api/energov/search/search
-Content-Type: application/json
-Body shape (adjust module/type ids per city after discovery):
-{"Keyword":"","ExactMatch":true,"SearchModule":2,"FilterModule":1,
- "PermitCriteria":{"PermitTypeId":null,"PermitWorkclassId":null,"PermitStatusId":null,
-   "IssueDateFrom":"<ISO date 14 days ago>","IssueDateTo":"<ISO today>"},
- "PageNumber":1,"PageSize":50,"SortBy":"IssueDate","SortAscending":false}
-Response: JSON, results under Result.EntityResults[] (CaseNumber, ProjectName/Description, AddressDisplay, Status, ApplyDate, IssueDate). Page through PageNumber until empty.
+CERTIFIED 2026-07-20 against both tenants. Proven specifics (the earlier guessed shape was wrong):
+- REQUIRED headers (a bare POST 500s without them): Content-Type: application/json; tyler-tenant-culture: en-US;
+  tyler-tenanturl: <tenant>; tenantid: <n>; tenantname: <tenant>; plus Origin/Referer of the portal.
+- Permit search is SearchModule=1, FilterModule=2 (NOT 2/1). Capture the VERBATIM search body once from the SPA
+  (select "Permit" in select#SearchModule, click Search, copy the /search/search POST body) and reuse it as the template -
+  a hand-trimmed payload 500s; the server wants the full multi-criteria object.
+- The server IGNORES PermitCriteria.IssueDateFrom/To and ApplyDateFrom/To. Do NOT rely on server-side date filtering.
+  Instead SortBy a VALID key (one of: relevance | PermitNumber.keyword | ProjectName.keyword | MainAddress | IssueDate | FinalDate),
+  SortAscending:false, PageSize:50, paginate, and WINDOW CLIENT-SIDE on IssueDate/ApplyDate (drop garbage dates > today; Cape Coral has a record dated 2610).
+- Response: Result.EntityResults[] -> CaseNumber, CaseType, CaseWorkclass, ProjectName, Description, Address/AddressDisplay, MainParcel, ApplyDate, IssueDate, CaseStatus.
+Certified tenants:
+- Bonita Springs (Lee): host egweb1.cityofbonitasprings.org, tenant path /energov/selfservice, tenant=BonitaSpringsFLProd, tenantid=1.
+- Cape Coral (Lee): host energovweb.capecoral.gov, tenant path /EnerGovProd/SelfService, tenant=capecoralflprod, tenantid=1.
 
-DISCOVERY (once per portal, then save the exact endpoint + working payload HERE): open the portal search page in the headless browser with network logging on, run one search, and copy the XHR request the page makes (URL, headers, JSON body). That captured request is the permanent Tier 1 recipe; subsequent nights never need the browser for this portal. If the endpoint 401s, include the same headers the SPA sent (some tenants want a tenantId or module header).
+DISCOVERY (once per portal, then save the exact endpoint + working payload HERE): open the portal search page in the headless browser with network logging on, run one search, and copy the XHR request the page makes (URL, headers, JSON body). That captured request is the permanent Tier 1 recipe; subsequent nights never need the browser for this portal. If the endpoint 401/500s, include the same tenant headers the SPA sent.
 
 ### Accela ACA (Charlotte, Manatee, Bradenton, Sarasota County, North Port)
 No usable public JSON API on these tenants; ViewState-heavy forms. TIER 2 (headless browser) required: Advanced Search -> set date range -> record type Commercial/Building -> paginate -> open record detail. Selectors are stable per tenant; save working selector notes here after the first successful browser run.
@@ -97,5 +103,44 @@ At run start, before the portal loop:
 3. Driver pattern: launch chromium headless -> goto portal search URL -> fill date filters -> submit -> wait for results selector -> extract rows -> paginate -> open qualifying record detail pages. Screenshot on unexpected states for the run log.
 Time-box the whole install to ~3 minutes; it repeats nightly if the environment is cold - acceptable cost.
 
+PROXY / TLS WORKAROUND (CERTIFIED 2026-07-20, required in the CC cloud sandbox): the egress proxy re-terminates TLS
+and RESETS chromium's own destination handshake (net::ERR_CONNECTION_RESET on every site, even example.com), while
+curl and Node fetch through the same proxy succeed. Disabling ECH/post-quantum/TLS1.3 in chromium does NOT fix it.
+The working pattern is to launch chromium but fulfill EVERY request via Node fetch (request interception), so the
+browser never does its own destination TLS:
+  - export NODE_USE_ENV_PROXY=1 and NODE_EXTRA_CA_CERTS=/root/.ccr/ca-bundle.crt
+  - launch chromium ({ args:['--no-sandbox'] }); context { ignoreHTTPSErrors:true }
+  - ctx.route('**', route => Node-fetch the request (forward headers incl. cookie; strip accept-encoding & content-length
+    on the way back) and route.fulfill with the result). Cookies/session flow through the forwarded headers.
+Pure API pulls (EnerGov Tier 1) and PDF/XLSX downloads need no browser - just Node fetch/curl through the proxy.
+
 ## 403 / bot-blocked news sources (news scanner shared note)
 On HTTP 403 (e.g. Your Observer): retry once with a standard browser user agent; then try the site RSS feed; then use indexed excerpts and MARK the record lower-confidence with byline/address unconfirmed (as done for News id 109). Never bypass a paywall.
+
+## PORTAL CERTIFICATION (one-time full sweep, all 5 counties, run 2026-07-20)
+Every portal in references/sources.md was worked through the ACCESS TIERS and proven with a real 14-day pull
+(window 2026-07-06..2026-07-20). "Proven tier" = the tier that actually returned data this run. CERTIFIED = usable now;
+BLOCKED/LIMITED = needs Will's input (see the notes). All browser work used the Node-fetch harness above.
+
+| Portal | Platform | Proven tier | Endpoint / selector notes | Date certified | Issues |
+|---|---|---|---|---|---|
+| Cape Coral | Tyler EnerGov | Tier 1 API (CERTIFIED) | POST /EnerGovProd/SelfService/api/energov/search/search; tenant headers tenant=capecoralflprod id=1; SearchModule=1; window client-side | 2026-07-20 | 0 qualifying CRE in window (all residential/trade). One record has a garbage IssueDate (2610) - filter <= today. |
+| Bonita Springs | Tyler EnerGov | Tier 1 API (CERTIFIED) | POST /energov/selfservice/api/energov/search/search; tenant=BonitaSpringsFLProd id=1 | 2026-07-20 | Found 3 shell permits at Midtown at Bonita -> deduped as UPDATE to existing row (id 19), added real parcel + permit #s. |
+| Lee County DCD | SharePoint report app | Tier 3 PDF (CERTIFIED) | Newest = ULC2026JunBPC.PDF (Jun 2026, 115 commercial permits). Index /dcd/reports 401s; enumerate via anonymous _api/web/lists + getfolderbyserverrelativeurl(...)/files, then direct PDF. | 2026-07-20 | UI + _api/web/folders return 401 (SharePoint auth); list-enumeration path works. 0 new after dedupe. No July report yet. |
+| City of Fort Myers | CivicPlus DocumentCenter | Tier 3 PDF (CERTIFIED) | Newest = "202606 New Projects Report" (Jun 2026, DocumentCenter/View/26211). Index /2377/2026-Statistical-Reports. | 2026-07-20 | 1 new qualifying (The Forum 8-unit townhouse, id 31). No July report yet. |
+| Collier County | OpenCities - monthly XLSX | Tier 3 XLSX (CERTIFIED) | Newest = 2026-6-issued.xlsx (5,508 rows) + 2026-6-applied.xlsx. | 2026-07-20 | sources.md index URL had a double-dash typo (404) - corrected in sources.md. 11 written (ids 20-30). Excluded 7 utility-district plants. |
+| City of Sarasota | FastTrackGov (Mitchell Humphrey) | Tier 1 API (CERTIFIED) | GET Permits/Search.aspx?microapp=c (grab __VIEWSTATE/__EVENTVALIDATION + cookie) -> POST with FTGSearchControl$ddReportedOn=D30 & btnSearch -> GET Permits/SearchResults.aspx?...&page=N (20/page). Detail Inquiry.aspx?source=1&id=<guid>&microapp=c. | 2026-07-20 | Date granularity = "Last 30 days" only. 118 records pulled; 0 CRE at list level. Valuation/SF/desc behind a 'qna' AJAX postback (not cracked). |
+| Charlotte County | Accela ACA | Tier 2 browser (CERTIFIED) | Cap/CapHome.aspx?module=Building; date fields #...txtGSStartDate/_txtGSEndDate set via JS .value (NOT p.fill -> stale ViewState -> Error.aspx); submit #...btnNewSearch; results table[id*=dgvPermitList]; pager "Next >". | 2026-07-20 | ~100-row date-desc cap; no server-side type filter. 0 qualifying (trade subs). |
+| Manatee County | Accela ACA | Tier 2 browser (CERTIFIED) | Same page; NO date fields - filter by Record Type; ddlGSPermitType="Commercial". Detail a[href*=CapDetail]. | 2026-07-20 | CapDetail exposes no valuation/SF/parcel publicly. 60 commercial TIs, 0 qualifying. Tier-3 lead: Reports menu -> "Commercial Projects (CSV)" (untested). |
+| City of Bradenton | Accela ACA | Tier 2 browser (CERTIFIED) | Standard General Search w/ date + Record Type dropdown. | 2026-07-20 | "Commercial New"=0, "Commercial Multi-Family"=0; 50 commercial alterations. 0 qualifying. |
+| City of North Port | Accela ACA | Tier 2 browser (CERTIFIED) | General Search + type dropdown "Commercial New"/"Multi-Family". | 2026-07-20 | 2 qualifying written (ids 32-33: Sunshine Rheumatology medical office; ~16-unit townhome dev). CapDetail needs auth -> numeric fields omitted. |
+| City of Venice | eTRAKiT / TRAKiT (CentralSquare) | Tier 2 browser (CERTIFIED) | Search/permit.aspx; SearchBy #cplMain_ddSearchBy, Operator #cplMain_ddSearchOper, Value #cplMain_txtSearchString, Search #ctl00_cplMain_btnSearch; grid #ctl00_cplMain_rgSearchRslts_ctl00 (Permit#, Type, SubType, Parcel, Address, RECORDID); pager btnPageNext. XHR = ASP.NET AJAX partial postback (WebForms, no JSON API). | 2026-07-20 | No date filter; RECORDID encodes YYMMDD - use for the cut. Window = BLD26-04556..04930 (338 rows). Detail not viewable anonymously (needs login). 0 qualifying (church rebuild excluded as institutional). |
+| Sarasota County | Accela ACA | BLOCKED - login | module=Building 302 -> /SARASOTACO/Login.aspx (anonymous disabled). module=Planning IS anonymously searchable (rezoning/site-plan) - viable alternate. | 2026-07-20 | NEEDS WILL: provide ACA login, or approve scanning the open Planning module for this tenant. |
+| City of Naples | Harris CityView | BLOCKED - CAPTCHA | Landing 200 at /CityofNaplesFlorida/Permit/Locator; permit search sits behind a BotDetect image CAPTCHA ("Naples, Florida Captcha - CityView Portal"). No anonymous JSON API. | 2026-07-20 | NEEDS WILL: manual CAPTCHA solve / paid solver / or use the Collier County monthly report as the substitute feed for Naples-area CRE. |
+| City of Punta Gorda | Click2Gov (CentralSquare) | LIMITED - lookup only | selectpermit.html; searchMethod = Permit# | Address | Parcel only. CSRF OWASP_CSRFTOKEN. | 2026-07-20 | No date field anywhere - cannot enumerate "last 14 days". Not a discovery source; only answers a known permit#/address/parcel. Catch Punta Gorda CRE via Charlotte County + web. |
+| City of Palmetto | BS&A Online | LIMITED - needs follow-up | Building Department Record Search exists: /SiteSearch/BuildingDepartmentRecordSearch?uid=2403 -> AdvancedRecordSearch. Form is JS/Telerik with obfuscated field names + per-session GUID. | 2026-07-20 | Corrects the old "no permit feed" note - a feed EXISTS. Harness hit ERR_CONNECTION_RESET (multi-redirect/anti-bot). NEEDS a dedicated Telerik token-POST build, or keep catching Palmetto via Manatee County Accela + web. |
+| Village of Estero | Static page / CGA portal | LIMITED - no feed | estero-fl.gov posts PDF application forms + links a CGA "fl-estero.gov-easy.com" portal (login-oriented). | 2026-07-20 | Origin serves a broken/incomplete TLS cert chain (tunneled clients fail verify); read via browser if needed. No public date-searchable permit feed. Catch Estero CRE via Lee County + web. |
+
+Sweep tally: 11 CERTIFIED (2 EnerGov API, 1 FastTrackGov API, 3 report-PDF/XLSX, 4 Accela browser, 1 eTRAKiT browser),
+5 BLOCKED/LIMITED (Sarasota Co login, Naples CAPTCHA, Punta Gorda no-date-feed, Palmetto Telerik follow-up, Estero no-feed).
+Records written this run: 14 new (Collier ids 20-30, Fort Myers id 31, North Port ids 32-33) + 1 dedupe update (Bonita id 19).
