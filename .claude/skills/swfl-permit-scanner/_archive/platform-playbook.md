@@ -68,34 +68,3 @@ This reference provides extraction hints by software platform. Use this when sca
 
 ## General Fallback
 If a portal blocks automation or has no usable search, record the jurisdiction + date attempted in the log and rely on web search (trade press, county agendas) to catch major projects there.
-
-
-## TIER 1 API RECIPES (JSON behind the SPA - no browser needed)
-
-### Tyler EnerGov Self Service (Bonita Springs, Cape Coral)
-The SPA is a shell over a JSON search API. Pattern (tenant path varies: /apps/selfservice or /EnerGov_Prod/SelfService):
-
-POST https://<host>/<tenant>/api/energov/search/search
-Content-Type: application/json
-Body shape (adjust module/type ids per city after discovery):
-{"Keyword":"","ExactMatch":true,"SearchModule":2,"FilterModule":1,
- "PermitCriteria":{"PermitTypeId":null,"PermitWorkclassId":null,"PermitStatusId":null,
-   "IssueDateFrom":"<ISO date 14 days ago>","IssueDateTo":"<ISO today>"},
- "PageNumber":1,"PageSize":50,"SortBy":"IssueDate","SortAscending":false}
-Response: JSON, results under Result.EntityResults[] (CaseNumber, ProjectName/Description, AddressDisplay, Status, ApplyDate, IssueDate). Page through PageNumber until empty.
-
-DISCOVERY (once per portal, then save the exact endpoint + working payload HERE): open the portal search page in the headless browser with network logging on, run one search, and copy the XHR request the page makes (URL, headers, JSON body). That captured request is the permanent Tier 1 recipe; subsequent nights never need the browser for this portal. If the endpoint 401s, include the same headers the SPA sent (some tenants want a tenantId or module header).
-
-### Accela ACA (Charlotte, Manatee, Bradenton, Sarasota County, North Port)
-No usable public JSON API on these tenants; ViewState-heavy forms. TIER 2 (headless browser) required: Advanced Search -> set date range -> record type Commercial/Building -> paginate -> open record detail. Selectors are stable per tenant; save working selector notes here after the first successful browser run.
-
-## TIER 2 BOOTSTRAP (headless browser in the CC cloud sandbox)
-At run start, before the portal loop:
-1. node --version && npx playwright --version  (if present, skip install)
-2. npm i playwright && npx playwright install --with-deps chromium
-   (if --with-deps fails for lack of sudo: npx playwright install chromium, then retry; if launch still fails on missing libs, log "browser unavailable" and fall to Tier 3/4 for browser-only portals.)
-3. Driver pattern: launch chromium headless -> goto portal search URL -> fill date filters -> submit -> wait for results selector -> extract rows -> paginate -> open qualifying record detail pages. Screenshot on unexpected states for the run log.
-Time-box the whole install to ~3 minutes; it repeats nightly if the environment is cold - acceptable cost.
-
-## 403 / bot-blocked news sources (news scanner shared note)
-On HTTP 403 (e.g. Your Observer): retry once with a standard browser user agent; then try the site RSS feed; then use indexed excerpts and MARK the record lower-confidence with byline/address unconfirmed (as done for News id 109). Never bypass a paywall.
