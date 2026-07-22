@@ -19,6 +19,7 @@ Portals run on a handful of software platforms. Navigation differs by platform -
 | Jurisdiction | URL | Platform |
 |---|---|---|
 | Charlotte County | https://aca-prod.accela.com/BOCC/Default.aspx?culture=en-US | Accela ACA |
+| Charlotte County (Tier 3 fallback/primary check) | https://www.charlottecountyfl.gov/departments/community-development/major-development-projects.stml | Monthly "Major Projects" report PDF (`/file/363/major-projects-<month>-<year>.pdf`) |
 | City of Punta Gorda | https://punt-egov.aspgov.com/Click2GovBP/index.html | Click2Gov |
 
 ## Collier County

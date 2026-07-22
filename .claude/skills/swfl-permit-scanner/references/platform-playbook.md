@@ -144,3 +144,29 @@ BLOCKED/LIMITED = needs Will's input (see the notes). All browser work used the 
 Sweep tally: 11 CERTIFIED (2 EnerGov API, 1 FastTrackGov API, 3 report-PDF/XLSX, 4 Accela browser, 1 eTRAKiT browser),
 5 BLOCKED/LIMITED (Sarasota Co login, Naples CAPTCHA, Punta Gorda no-date-feed, Palmetto Telerik follow-up, Estero no-feed).
 Records written this run: 14 new (Collier ids 20-30, Fort Myers id 31, North Port ids 32-33) + 1 dedupe update (Bonita id 19).
+
+## 2026-07-22 run notes: Charlotte County Accela temporarily rate-limited; new Tier 3 source found
+- Charlotte County (BOCC Accela tenant, previously Tier 2 CERTIFIED 2026-07-20): the date-range General Search
+  (txtGSStartDate/txtGSEndDate set both via `.value` and via realistic Playwright keyboard typing) reliably returned
+  "Your search returned no results" for every date window tried, including the exact window that returned ~100 rows
+  two days prior and a 7-week super-window that should have caught it. A no-date-filter search DID return a grid (8 rows),
+  confirming the search engine itself works - only date-bounded queries failed. Immediately after, `aca-prod.accela.com`
+  became fully unreachable (`curl` timeout/connection reset on `/BOCC/...` while google.com and leegov.com stayed fine),
+  consistent with a temporary IP-level rate limit from the repeated automated hits during this troubleshooting. Stopped
+  retrying per the pacing guardrail. NEEDS FOLLOW-UP: on the next Wednesday cluster run, try the date search again fresh
+  (no repeated hits first) before assuming it's broken again - the "no results on any date range" symptom may not
+  recur once the block clears. If it does recur, the no-date-filter + client-side date scan (like the EnerGov pattern)
+  is a viable workaround.
+- NEW Tier 3 source discovered for Charlotte County: `https://www.charlottecountyfl.gov/departments/community-development/major-development-projects.stml`
+  links a monthly "Major Projects" spotlight PDF at `/file/363/major-projects-<month>-<year>.pdf` (e.g.
+  `major-projects-june-2026.pdf`), independent of the Accela portal. It lists named commercial projects with
+  address, parcel, SF, acreage, and Under Review / Under Construction / Completed status - a genuine county-published
+  feed, not press substitution. ADD THIS to sources.md as a standing Tier 3 fallback (and primary check) for Charlotte
+  County; check for a newer month's PDF each run before falling back to Accela or press.
+- Punta Gorda has no date-searchable feed (per existing LIMITED note) - covered via trade press this run: found
+  Duncan Road U.S. 17 PD rezoning (approved 5/26/2026), Punta Gorda Waterfront Hotel (300 W. Retta Esplanade, revised
+  master plan 5/21/2026), Punta Gorda Industrial Park (Blueprint Industrial Capital), and Duffie North industrial
+  (Airport Commerce Center, groundbreaking 12/9/2025).
+- Records written this run: 14 new (Charlotte County ids 49-58 from the county Major Projects PDF, ids 59-62 Punta
+  Gorda/Charlotte County press-substitution: Duncan Road rezoning, Waterfront Hotel, Punta Gorda Industrial Park,
+  Duffie North).
