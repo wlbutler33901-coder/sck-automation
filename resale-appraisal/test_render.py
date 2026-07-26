@@ -53,6 +53,8 @@ def main():
     out1, rpt1 = run(s1, "same-project-only")
     assert all(r["comps_used"] == 0 for r in out1["competitive_set"]["selected"])
     assert "valuation comps come from inside" in rpt1
+    assert "limits cross-market validation" in rpt1, "concentration disclosure missing"
+    assert "Prior Sale Trend" in rpt1, "prior-sale trend missing"
     print("PASS scenario 1 (same-project-only intro): value %s, %d comps, %d Table 5 rows"
           % ("${:,}".format(out1["estimated_market_value"]),
              out1["narrative_stats"]["n_comps"], len(out1["competitive_set"]["selected"])))
@@ -70,6 +72,14 @@ def main():
     print("PASS scenario 2 (contributed intro): value %s, %d comps, %d Table 5 rows"
           % ("${:,}".format(out2["estimated_market_value"]),
              out2["narrative_stats"]["n_comps"], len(out2["competitive_set"]["selected"])))
+    # Scenario 3: thin core forces cross-region Class D backfill -> honest region label
+    s3 = [sale("Test Motor Condos", 400 + i, 3 + i * 5, 300 + i * 8, 1200, "Standard-Tier", "Re-Sale")
+          for i in range(3)]
+    s3 += [sale("Faraway Garage Works", 90 + i, 3 + i * 2, 320 + i * 4, 1250, "Premium-Tier", "Re-Sale",
+                region="Other Region", sub="Other Sub", wi=7.0) for i in range(5)]
+    out3, rpt3 = run(s3, "cross-region")
+    assert "sit outside" in rpt3, "cross-region contributor label missing"
+    print("PASS scenario 3 (cross-region contributor labeling)")
     print("PASS all render tests")
 
 

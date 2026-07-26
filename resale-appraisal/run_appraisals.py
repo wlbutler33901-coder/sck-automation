@@ -41,6 +41,7 @@ PROJECTS_T = "01 - Projects"
 REGIONS_T = "Market Coverage - Regions"
 STATES_T = "Market Coverage - States"
 DEMO_T = "Demographic Data - Project"
+STATE_DEMO_T = "Demographic Data - State Level"
 FRESH_MARK = "prepared by Storage Condo King"  # renderer disclosure fingerprint
 
 
@@ -108,6 +109,94 @@ def numval(x):
         return None
 
 
+def parse_sale_date(txt):
+    import datetime as _dt
+    t = str(txt or "").strip()
+    try:
+        if re.match(r"^\d{4}-", t):
+            return _dt.date.fromisoformat(t[:10])
+        m = re.match(r"^(\d{1,2})/(\d{1,2})/(\d{2,4})", t)
+        if m:
+            mo, dy, yr = int(m.group(1)), int(m.group(2)), int(m.group(3))
+            if yr < 100:
+                yr += 2000
+            return _dt.date(yr, mo, dy)
+    except ValueError:
+        return None
+    return None
+
+
+def extract_location_open(text, max_chars=520):
+    """First ~3 sentences of a project Location Summary, cleaned for splicing\n    (long enough to carry the submarket positioning and a named demand driver)."""
+    if not text or len(str(text).strip()) < 60:
+        return None
+    lines = [ln.strip() for ln in str(text).splitlines()
+             if ln.strip() and not ln.strip().startswith(("#", "|", "-", "*"))]
+    if not lines:
+        return None
+    prose = " ".join(lines)
+    prose = re.sub(r"[\u2013\u2014]", "-", prose)
+    parts = re.split(r"(?<=[.!?])\s+(?=[A-Z])", prose)
+    out = ""
+    for pt in parts[:3]:
+        if len(out) + len(pt) + 1 > max_chars and out:
+            break
+        out = (out + " " + pt).strip()
+    if not out.endswith("."):
+        out = out.rstrip(".,;") + "."
+    return out
+
+
+def load_project_meta(sb):
+    """Location Summary extract + submarket per project, for the Unit Summary block."""
+    try:
+        rows = sb.select(PROJECTS_T)
+    except Exception as e:
+        print("WARN: could not read '01 - Projects' meta (%s)" % e)
+        return {}
+    if not rows:
+        return {}
+    pk = probe_key(rows[0], ("project", "name")) or "Project Name"
+    meta = {}
+    for p in rows:
+        nm = p.get(pk)
+        if not nm:
+            continue
+        meta[norm(nm)] = {
+            "location_extract": extract_location_open(p.get("Location Summary")),
+            "submarket": p.get("Submarket"),
+        }
+    have = sum(1 for m in meta.values() if m["location_extract"])
+    print("Location narratives: %d of %d projects carry a Location Summary "
+          "(missing ones fall back to demographic strengths; populate via sck-location-overview)"
+          % (have, len(meta)))
+    return meta
+
+
+def compute_ttm(sales, submarket):
+    """Trailing-12-month in-submarket sale count + median PSF from the RPC pool.
+    Display context only; never feeds the valuation engine."""
+    import datetime as _dt
+    if not sales or not submarket:
+        return None
+    cutoff = _dt.date.today() - _dt.timedelta(days=365)
+    want = norm(submarket)
+    psfs = []
+    for s in sales:
+        if norm(s.get("Submarket")) != want:
+            continue
+        d = parse_sale_date(s.get("Sale Date"))
+        v = numval(s.get("$ / SF"))
+        if d and d >= cutoff and v and v >= 50:
+            psfs.append(v)
+    if not psfs:
+        return None
+    psfs.sort()
+    n = len(psfs)
+    med = psfs[n // 2] if n % 2 else (psfs[n // 2 - 1] + psfs[n // 2]) / 2.0
+    return {"count": n, "med_psf": round(med)}
+
+
 def load_rates(sb):
     regions = sb.select(REGIONS_T)
     states = sb.select(STATES_T)
@@ -139,32 +228,60 @@ def load_rates(sb):
 def blend_rate(region, reg_rates, state_rate):
     reg = reg_rates.get(norm(region))
     if reg is None:
-        b = min(state_rate, 10.0)
+        raw = state_rate
         src = "statewide only (region rate not found)"
     else:
-        b = min(round(0.5 * reg + 0.5 * state_rate, 2), 10.0)
+        raw = round(0.5 * reg + 0.5 * state_rate, 2)
         src = "%.2f regional / %.2f statewide" % (reg, state_rate)
-    return b, src
+    b = min(raw, 10.0)
+    return b, src, (raw > 10.0)
 
 
 def load_wi(sb):
+    """Load per-project demographics with Florida-baseline ratios and the
+    portfolio wealth-index percentile. Returns (wi_map, demo_map)."""
     try:
         rows = sb.select(DEMO_T)
+        st = [x for x in sb.select(STATE_DEMO_T) if str(x.get("state")).upper() == "FL"]
     except Exception as e:
-        print("WARN: could not read %r (%s); subject WI will be null" % (DEMO_T, e))
-        return {}
-    if not rows:
-        return {}
-    nk = probe_key(rows[0], ("project",))
-    wk = probe_key(rows[0], ("wealth", "all"), ("wealth",))
-    out = {}
-    if nk and wk:
-        for r in rows:
-            v = numval(r.get(wk))
-            if r.get(nk) and v is not None:
-                out[norm(r[nk])] = v
-    print("Wealth Index: column %r resolved for %d projects" % (wk, len(out)))
-    return out
+        print("WARN: demographics unavailable (%s); Location lines fall back to generic" % e)
+        return {}, {}
+    if not rows or not st:
+        return {}, {}
+    fl = st[0]
+    p200_st = 100.0 * fl["hh_income_200k_plus"] / fl["total_households"]
+    lux_st = 100.0 * fl["housing_units_750k_plus"] / fl["occupied_housing_units"]
+    veh_st = 100.0 * fl["hh_vehicles_3_plus"] / fl["total_households"]
+    seas_st = 100.0 * fl["seasonal_units"] / fl["occupied_housing_units"]
+    wis = sorted(float(x["wealth_index"]) for x in rows if x.get("wealth_index") is not None)
+    wi_map, demo_map = {}, {}
+    for x in rows:
+        nkey = norm(x.get("project_name"))
+        wi = numval(x.get("wealth_index"))
+        if wi is not None:
+            wi_map[nkey] = wi
+        def rat(v, base):
+            v = numval(v)
+            return round(v / base, 2) if v is not None and base else None
+        d = {"wealth_index": wi,
+             "wi_pctl": round(100.0 * sum(1 for w in wis if w < wi) / max(len(wis) - 1, 1)) if wi is not None and wis else None,
+             "mhv_5mi": numval(x.get("mhv_5mi")), "mhv_ratio": rat(x.get("mhv_5mi"), fl["median_home_value"]),
+             "median_hh_income_5mi": numval(x.get("median_hh_income_5mi")),
+             "inc_ratio": rat(x.get("median_hh_income_5mi"), fl["median_hh_income"]),
+             "pct_hh_200k_plus_5mi": numval(x.get("pct_hh_200k_plus_5mi")),
+             "p200_ratio": rat(x.get("pct_hh_200k_plus_5mi"), p200_st),
+             "hh200k_5mi": numval(x.get("hh200k_5mi")),
+             "lux_housing_share_5mi": numval(x.get("lux_housing_share_5mi")),
+             "lux_ratio": rat(x.get("lux_housing_share_5mi"), lux_st),
+             "pct_hh_vehicles_3_plus_5mi": numval(x.get("pct_hh_vehicles_3_plus_5mi")),
+             "veh3_ratio": rat(x.get("pct_hh_vehicles_3_plus_5mi"), veh_st),
+             "seasonal_share_5mi": numval(x.get("seasonal_share_5mi")),
+             "seas_ratio": rat(x.get("seasonal_share_5mi"), seas_st),
+             "total_households_5mi": numval(x.get("total_households_5mi")),
+             "owner_occupancy_rate_5mi": numval(x.get("owner_occupancy_rate_5mi"))}
+        demo_map[nkey] = d
+    print("Demographics: %d projects with FL-baseline ratios; wealth-index percentiles computed" % len(demo_map))
+    return wi_map, demo_map
 
 
 def resolve_scope(sb, args):
@@ -259,7 +376,8 @@ def main():
           % (len(units), len(projects), mode, today))
 
     reg_rates, state_rate, _ = load_rates(sb)
-    wi_map = load_wi(sb)
+    wi_map, demo_map = load_wi(sb)
+    proj_meta = load_project_meta(sb)
 
     results, failures = [], []
     rpc_cache = {}
@@ -278,7 +396,7 @@ def main():
                 failures.append({"Index": u.get("Index"), "Project": pname,
                                  "Unit #": u.get("Unit #"), "error": "RPC: %s" % e})
             continue
-        rate, rate_src = blend_rate(proj_ctx.get("Region"), reg_rates, state_rate)
+        rate, rate_src, rate_capped = blend_rate(proj_ctx.get("Region"), reg_rates, state_rate)
         print("\n== %s : %d units | blended rate %.2f (%s) | %d candidate sales"
               % (pname, sum(1 for u in units if u.get("Project") == pname),
                  rate, rate_src, len(sales)))
@@ -286,6 +404,11 @@ def main():
             idx = u.get("Index")
             try:
                 subject = build_subject(u, proj_ctx, wi_map)
+                subject["demo"] = demo_map.get(norm(u.get("Project")))
+                pm = proj_meta.get(norm(u.get("Project"))) or {}
+                subject["location_extract"] = pm.get("location_extract")
+                subject["market_ttm"] = compute_ttm(sales, subject.get("submarket") or pm.get("submarket"))
+                subject["rate_capped"] = rate_capped
                 if not subject["unit_size_sf"]:
                     raise RuntimeError("Suite Size (SF) missing or zero")
                 engine_in = {"subject": subject, "appraisal_date": today,
