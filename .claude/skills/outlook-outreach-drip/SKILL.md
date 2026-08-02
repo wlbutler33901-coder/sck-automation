@@ -132,6 +132,7 @@ Rules for the body:
 - If "Project" is null, drop the project sentence and the project link line, and use https://storagecondoking.com/unit-appraisals with the same utm params on its own line.
 - The link is a plain URL on its own line. No HTML, no anchor tags, no tracking wrapper. These are plain text messages.
 - Never sign as market@storagecondoking.com; the signature must match the sending identity.
+- Every draft body must render in plain black text. Set the message body as plain text, not HTML. If the outlook_create_draft tool requires an HTML body, wrap the content so that all text inherits color #000000, including the URL line. Never leave a link rendering in the default blue, and never apply any other font color, highlight, or styling. The message must look like a normal message typed in Outlook.
 
 ### Step 4. Stamp the batch
 
@@ -218,6 +219,7 @@ Report: NDRs found, addresses suppressed, contacts retired, drafts promoted to c
 
 - Never send email directly. Create drafts only. Will presses send.
 - Every draft CCs chance.friedman@calusainvestments.com. No exceptions.
+- Draft bodies are plain black text only. No colored fonts, no blue hyperlinks, no HTML styling beyond what is required to force black.
 - The CRM contains only verified emails. Never write an address into any CRM email column without stamping "Email Verified At" and deleting the matching 04d row in the same operation.
 - 04d holds only unresolved addresses. An address must never exist in both 04d and the CRM. Resolved means deleted from 04d: good addresses go to the CRM, bad addresses go to 04a.
 - Never draft to an address present in "04a - Email Suppression" with "Suppress" = true. That single table holds bounces AND unsubscribes, distinguished by "Suppression Type". There is no "04b" table; it was collapsed into 04a on 2026-08-02. Screen the batch against it before creating drafts and drop any hits, deleting their 04d row since the address is already resolved.
