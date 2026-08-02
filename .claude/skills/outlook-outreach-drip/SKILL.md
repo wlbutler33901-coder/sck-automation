@@ -103,32 +103,35 @@ Subject: rotate between these three so the batch does not look templated:
 2. `{Project} resale values`
 3. `Quick question about your {Project} unit`
 
-Body template (adjust naturally per contact, keep under 120 words):
+Body template (adjust naturally per contact, keep under 110 words):
 
 ```
 Hi {First Name},
 
-I am with Calusa Capital Partners in Fort Myers. We run Storage Condo
-King, the market data platform tracking resale activity across Florida
-garage and car condo projects, including {Project}.
+I run Storage Condo King, the market data platform tracking resale
+activity across Florida garage and car condo projects, including
+{Project}.
 
-We maintain verified sale comps for your building and I can send you a
-current value estimate for your unit at no cost. Owners use these for
-insurance, estate planning, or simply to know what the market is doing.
+You can see current values for {Project} here:
+https://storagecondoking.com/unit-appraisals?project={URL-ENCODED PROJECT NAME}&utm_source=outreach&utm_medium=email&utm_campaign=drip-2026-08
 
-If that would be useful, just reply and I will put it together.
-
-Best regards,
+Happy to send you our Q2 2026 Florida Garage and Car Condo Market
+Report, or run a no-cost value estimate on your specific unit. Just
+reply and I will put it together.
 
 Will Butler
-Calusa Capital Partners
-will.butler@calusainvestments.com
+Calusa Capital Partners | Storage Condo King
+C: 239-898-5840
+E: will.butler@calusainvestments.com
 storagecondoking.com
 ```
 
-If "Project" is null, drop the project references and use the general Florida
-market framing. Never sign as market@storagecondoking.com; the signature must
-match the sending identity.
+Rules for the body:
+
+- The project link must URL-encode the project name exactly as it appears in "01 - Projects", normalizing en-dashes and em-dashes to hyphens first per the repo join convention.
+- If "Project" is null, drop the project sentence and the project link line, and use https://storagecondoking.com/unit-appraisals with the same utm params on its own line.
+- The link is a plain URL on its own line. No HTML, no anchor tags, no tracking wrapper. These are plain text messages.
+- Never sign as market@storagecondoking.com; the signature must match the sending identity.
 
 ### Step 4. Stamp the batch
 
