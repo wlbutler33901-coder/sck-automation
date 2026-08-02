@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """SCK unit re-sale batch appraisal runner (deterministic, Make-free).
 
-Replicates the unit-resale-appraisal-system skill headlessly:
+Replicates the sck-unit-resale-valuation skill headlessly:
   scope -> live rates + WI -> RPC per project -> engine per unit ->
   deterministic render -> structural validation -> write-back -> re-query verify.
 

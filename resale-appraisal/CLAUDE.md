@@ -63,5 +63,10 @@ the batch.
 The runner writes: Appraisal, "Appraised $ / SF" (the reconciled PSF, numeric),
 "Appraisal Date" and "Last Triggered" (run date), "Manual Update" = NULL.
 The old "Appraised Value $" column no longer exists. Units with a non-empty
-"Appraisal Valuation Comments" value are listed in the run summary and are NOT batch-applied;
-route those through the Cowork skill individually.
+"Appraisal Valuation Comments" value are listed in the run summary and are NOT
+batch-applied; route those through the sck-unit-resale-valuation skill individually.
+
+August 2026 rename: "02 - Units"."Appraisal Notes" was renamed to "Appraisal
+Valuation Comments" (applied live in the DB and in the Cowork skill, now
+sck-unit-resale-valuation v2.8). The runner reads the new column name; behavior
+is unchanged.
