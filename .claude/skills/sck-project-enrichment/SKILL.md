@@ -1,61 +1,89 @@
 ---
 name: sck-project-enrichment
-description: Daily (post-scan) enrichment agent for the Storage Condo King project pipeline. Completes ALL missing fields on staged project candidates ("01 - Project - New") and staged developer contacts ("05 - Developers - New" - contact person, office, cell, email, website for the CRM), runs a duplicate and error audit on both staging tables, and monitors staged AND live projects for status transitions. Use whenever asked to run the SCK enrichment routine, enrich the new projects or developers tables, fill missing contact info, dedupe staged rows, check for project status updates, or verify whether a project is still alive.
+description: Daily (post-scan) enrichment agent for the Storage Condo King pipeline. TOP PRIORITY: complete developer contact cards in "05 - Developers - New" and broker contact cards in "08 - Brokers - New" (these feed Will's outreach CRM), then complete staged project fields, run a duplicate and error audit, watch status transitions, and draft Florida developer outreach emails into "Developer Outreach - Drafts". Use whenever asked to run the SCK enrichment routine, enrich developers or brokers, fill missing contact info, dedupe staged rows, check status updates, or draft developer outreach.
 ---
 
-# SCK Project Enrichment Agent (v2 - daily)
+# SCK Project Enrichment Agent (v3 - daily)
 
-Three jobs: (A) COMPLETE the data on staged projects AND staged developers - all missing fields, whole table, not just a region slice; (B) AUDIT both staging tables for duplicates and errors; (C) detect status changes on staged and live projects. Runs unattended.
+Priority order is deliberate and NON-NEGOTIABLE: (1) developer contacts, (2) broker contacts, (3) project fields, (4) audit, (5) status watch, (6) FL outreach drafts. Contact completion outranks everything because it feeds Will's outreach; this has been under-delivered by prior versions and is now the first thing every run does and the first thing every run reports.
 
 ## Hard rules
-1. UPDATE only "01 - Project - New" and "05 - Developers - New" rows; INSERT only to "Scan Activity Log" (and new "05 - Developers - New" rows when a staged project's developer is missing from it).
-2. NEVER modify "01 - Projects", "05 - Developers", or any other live table. Live changes are SUGGESTIONS: log change_type='live_status_suggestion' and stop. Will approves manually.
-3. Never overwrite a non-null staged field with lower-confidence data. Fill nulls; correct non-nulls only with a primary source (developer site, county record, state registry, major news), and append the old value to scan_notes.
-4. Never fabricate contact details. A field stays null with a logged reason before it ever holds a guess. Verifiable-source rule: every contact fill carries its source.
-5. Normalize dashes in name joins; no em-dashes in stored text.
+1. UPDATE only "01 - Project - New", "05 - Developers - New", "08 - Brokers - New"; INSERT only to those staging tables, "Developer Outreach - Drafts", and "Scan Activity Log". NEVER modify "01 - Projects", "05 - Developers", "08 - Brokers", or any live table. Live changes are SUGGESTIONS: log change_type='live_status_suggestion' and stop.
+2. LOGGING CONSTANT: every log row uses run_type = 'enrichment', exactly.
+3. NEVER supply explicit id values on inserts; on a duplicate-key error, retry once and log the collision.
+4. Never overwrite a non-null field with lower-confidence data. Fill nulls; correct non-nulls only with a primary source, appending the old value to a notes field.
+5. Never fabricate contact details. A field stays null with a logged reason before it ever holds a guess; every fill carries its source.
+6. Normalize dashes in name joins; no em-dashes in stored text.
 
-## Step 1 - Field completion, PROJECTS (v2: whole table, not rotation-gated)
-```sql
-SELECT * FROM "01 - Project - New"
-WHERE review_status IN ('pending','approved')
-  AND ("Address" IS NULL OR "County" IS NULL OR "Developer" IS NULL OR "Units" IS NULL
-       OR "Avg Unit Size (SF)" IS NULL OR "Website" IS NULL OR "Key Amenities" IS NULL
-       OR "Proj. Delivery" IS NULL OR latitude IS NULL)
-ORDER BY (confidence='high') DESC, discovered_at ASC;
-```
-Process up to 25 rows per run, oldest first, until the table is complete; then this step becomes a nightly delta check on new rows only.
-Field priority: 1) Address + County, 2) Developer, 3) Units + Avg Unit Size (SF), 4) Website, 5) Key Amenities, 6) Amenity Tier (per "Amenity Tier Definition"; track-integrated = Track-Side), 7) latitude/longitude (geocode only a verified street address, never a city centroid), 8) Proj. Delivery.
-Sources: developer/project sites, county property appraiser and permit portals, business journals, state corporation registries.
-Each fill: UPDATE the row, append 'Enriched {field} from {source} {date}' to scan_notes, log change_type='field_enriched'.
-
-## Step 2 - Field completion, DEVELOPERS (v2: new - feeds Will's CRM)
+## Step 1 - DEVELOPER CONTACTS (first, always)
 ```sql
 SELECT * FROM "05 - Developers - New"
 WHERE "Contact" IS NULL OR "Office" IS NULL OR "Cell" IS NULL OR "Email" IS NULL OR "Website" IS NULL
 ORDER BY created_at ASC;
 ```
-Process up to 25 rows per run until complete; then delta-only. For each developer fill: Contact (principal or sales lead full name), Office (main line), Cell (only if publicly published), Email (direct if published, else the published sales/info address, labeled in notes), Website.
-Source ladder, in order: 1) the developer's own site (contact/about/team pages), 2) the state corporate registry for the LLC (FL Sunbiz, GA/NC/SC Secretary of State - registered agent and principal names), 3) press coverage naming principals, 4) public LinkedIn pages (name and title only; never scrape behind login), 5) Google Business Profile phone, 6) the project's listing broker as a labeled fallback contact when the developer publishes nothing (mark "broker contact, not developer" in notes).
+Process up to 25 rows per run, oldest first, until the table is complete; then delta-only on new rows. Fill: Contact (principal or sales lead full name), Office, Cell (only if publicly published), Email (direct if published, else the published sales/info address, labeled), Website.
+Source ladder, in order: the developer's own site (contact/about/team) > state corporate registry (FL Sunbiz, GA/NC/SC SOS: registered agent and principals) > press naming principals > public LinkedIn (name and title only) > Google Business Profile phone > the project's listing broker as a labeled fallback ("broker contact, not developer").
 Every fill logs change_type='field_enriched' with source. Unfillable after the full ladder: leave null, log change_type='enrichment_gap' with what was tried.
-Cross-link check: every DISTINCT "Developer" on staged project rows must have a row here; INSERT missing ones (name only) and log it.
+REVIEW PASS (nightly): re-verify up to 5 previously filled developer rows (oldest verification first): confirm the website resolves, the contact still holds the role, the email domain matches. Correct errors with sources; log change_type='contact_corrected'.
+Cross-link: every DISTINCT "Developer" on staged project rows must have a row here; INSERT missing ones (name only) and log it.
+FAILURE LANGUAGE: a run that ends with NULL contact fields remaining while processing capacity remained is a FAILED run; the run_summary must begin "FAILED-DEV-CONTACTS" and say why. Silence on this step is not acceptable.
 
-## Step 3 - Duplicate and error audit (v2: new, both staging tables, every run)
-a. DEVELOPER dedupe: normalize names (dashes, case, punctuation, strip suffixes like LLC/Inc). EXACT normalized duplicates: auto-merge - keep the oldest row, coalesce non-null fields into it, append merged-from note, delete the shell duplicate, log change_type='dedupe_merge'. VARIANT names sharing a stem (e.g. "Stables Motor Condos" vs "Stables Motor Condos / PW Development"): do NOT auto-merge; log change_type='merge_recommendation' with both rows and the evidence.
-b. PROJECT dedupe: same rule set on "01 - Project - New", plus address-collision check (same street address, different names = probable duplicate; the Charleston Toy Box / Motor District pattern). Auto-merge exact only; recommend the rest.
-c. Error checks, each staged row touched tonight: Region/Submarket values exist in the coverage tables; "Project Status" is a valid enum; City/County actually match (the Awendaw vs Mount Pleasant pattern - verify against the address when present); Website resolves (dead URL -> note, do not delete); phone/email format sanity.
-d. Everything found lands in the log so the Daily Intelligence Brief's DATABASE UPDATE RECOMMENDATIONS section surfaces it.
+## Step 2 - BROKER CONTACTS (new)
+Same mechanics against "08 - Brokers - New" (columns: "Broker", "Brokerage", "Contact", "Office", "Cell", "Email", "Website", "Projects", "Notes"). Up to 15 rows per run.
+Sources: the project's sales page ("sales by", "marketed by") > the brokerage's site > FL DBPR / state license lookup (confirms name and brokerage) > listing platforms (LoopNet/Crexi agent cards) > public LinkedIn.
+Cross-link both directions: every staged project must carry a "Sales Broker" value (a broker name or 'Developer-Direct', never silently null: backfill it), and every named broker must have a row here with "Projects" listing the associated project names. Create missing rows; log fills as change_type='field_enriched'.
 
-## Step 4 - Status watch (rotation-gated as before)
-Use the scanner's rotation query for tonight's regions. For each project (staged: all statuses; live: "01 - Projects" where Region in tonight's set), check the project website, developer news, and permit/CO records for:
-- Planned -> Under Construction (groundbreaking, vertical construction)
-- Under Construction -> Completed (CO, grand opening, "now open")
-- Any -> Dead/stalled (site offline + no activity 12+ months, entitlement denial, land re-listed)
-Staged row: UPDATE "Project Status", append evidence to scan_notes, log change_type='status_change' (or 'dead_project').
-Live row: DO NOT TOUCH. Log change_type='live_status_suggestion', detail = '{project}: {current} -> {suggested}. Evidence: {url}'.
+## Step 3 - Project field completion (whole table, not rotation-gated)
+```sql
+SELECT * FROM "01 - Project - New"
+WHERE review_status IN ('pending','approved')
+  AND ("Address" IS NULL OR "County" IS NULL OR "Developer" IS NULL OR "Units" IS NULL
+       OR "Avg Unit Size (SF)" IS NULL OR "Website" IS NULL OR "Key Amenities" IS NULL
+       OR "Proj. Delivery" IS NULL OR latitude IS NULL OR "Sales Broker" IS NULL)
+ORDER BY (confidence='high') DESC, discovered_at ASC;
+```
+Up to 25 rows per run. Field priority: Address + County, Developer, Sales Broker, Units + Avg Unit Size (SF), Website, Key Amenities, Amenity Tier (per "Amenity Tier Definition"), latitude/longitude (geocode only a verified street address), Proj. Delivery.
+Each fill: UPDATE, append 'Enriched {field} from {source} {date}' to scan_notes, log change_type='field_enriched'.
 
-## Step 5 - Run summary
-Log change_type='run_summary': project rows completed (count by field), developer rows completed (count by field), completeness percentages for both tables, merges applied, merge recommendations raised, errors corrected/flagged, status changes applied (staged), suggestions raised (live), dead projects flagged.
+## Step 4 - Duplicate and error audit (every run)
+a. DEVELOPER dedupe: normalize names (dashes, case, punctuation, strip LLC/Inc). EXACT normalized duplicates: auto-merge (keep oldest, coalesce fields, delete the shell, log change_type='dedupe_merge'). VARIANT names sharing a stem: log change_type='merge_recommendation', never auto-merge.
+b. BROKER dedupe: same rules on "08 - Brokers - New".
+c. PROJECT dedupe, including vs LIVE: apply the scanner's DISTINCTIVE-TOKEN rule (strip generic product tokens: auto, motor, car, garage, vehicle, vault, condo, condos, suites, storage, club, luxury, premium, the, at, of; compare what remains within the same county) across "01 - Project - New" AND against "01 - Projects". The Bonita Auto Vault vs Bonita Motor Vault pattern must be caught HERE even if the scanner missed it. Address collisions too. Staged-vs-staged exact: auto-merge; anything involving a live row: merge_recommendation only.
+d. Error checks on rows touched tonight: Region/Submarket exist in coverage tables; "Project Status" valid; City/County agree with the address; Website resolves; phone/email format sanity.
+
+## Step 5 - Status watch (rotation-gated)
+Use the scanner's rotation for tonight's regions. Staged rows: UPDATE "Project Status" with evidence, log change_type='status_change' (or 'dead_project'). Live rows: DO NOT TOUCH; log change_type='live_status_suggestion' with evidence URL.
+
+## Step 6 - FL DEVELOPER OUTREACH DRAFTS (new)
+For each developer whose contact card gained at least a Contact name or Email this run (or is complete but has no draft yet), AND whose staged/live projects sit in FLORIDA (FL only for now: that is where the market report covers):
+```sql
+INSERT ... WHERE NOT EXISTS (SELECT 1 FROM "Developer Outreach - Drafts" WHERE "Developer" = <name>)
+```
+One draft per developer, ever. Compose per the TEMPLATE below into "Developer Outreach - Drafts" ("Developer", "Project" = their most advanced FL project, "Region", "Subject", "Body", "Status"='draft'). Will reviews and sends from Outlook, attaching the Q2 report himself.
+
+### OUTREACH TEMPLATE (tight version of Will's proven email; 150 to 180 words, no em or en dashes, hyphens fine)
+Subject: Financing and pre-sale resources for {Project} - {City}
+Body structure:
+1. Greeting: "{FirstName}, hope you're doing well." (Contact name known) else "Hi there, hope you're doing well."
+2. Who + why: "I provide non-recourse construction financing and pre-sale solutions for luxury storage condo developers, and {Project} in {City} caught my attention as it {stage phrase: moves through pre-development / goes vertical / opens sales}."
+3. Platform + ONE region-matched data tidbit: "I run Storage Condo King (storagecondoking.com), the Florida garage and car condo platform connecting developers, capital providers, and 2,000+ unit owners with market data, underwriting resources, and pre-sale distribution. {TIDBIT}. The attached Q2 2026 Florida Market Report has the full picture for {Region}."
+4. Three or four capability bullets, one line each: Construction financing: non-recourse options with limited pre-sale requirements, or low-cost recourse bank debt. / Pre-sale distribution: 2,000+ unit-owner database for founding-member sales. / Live sale comps and an institutional development model for underwriting. / Site and pricing evaluation across every Florida market.
+5. CTA: "I'm local in Fort Myers and would enjoy connecting over coffee or a quick call to talk through {Project}."
+6. Sign-off: Will Butler, Calusa Capital Partners | Storage Condo King.
+
+### TIDBIT MENU (Q2 2026 report figures; pick the line matching the project's region, else the statewide line; never invent others)
+- Statewide: "Q2 cleared $530 per SF statewide, up 48% year over year"
+- New construction premium: "new construction cleared $531 per SF YTD versus $421 for re-sales"
+- Southwest Florida: "Southwest Florida averages $361 per SF on the deepest volume in the state"
+- South Florida: "South Florida is averaging $480 per SF"
+- Tampa MSA: "Tampa is averaging $420 per SF on strong volume"
+- Orlando MSA: "Orlando leads the state at $674 per SF"
+- Jacksonville MSA: "Jacksonville averages $344 per SF with room to run"
+- Central-East Florida: "Central-East Florida averages $281 per SF, the value corridor of the state"
+Personalize lightly (project name, city, stage, one tidbit); do not go overboard, and never state a fact about the developer's project that is not in the staged row.
+
+## Step 7 - Run summary
+Log run_type='enrichment', change_type='run_summary': developer rows completed and completeness % (count of rows with Contact AND Email), broker rows completed and completeness %, review-pass corrections, project fields filled, merges applied, merge recommendations, status changes, drafts created. If Step 1 processed zero rows while NULLs remain, the summary begins FAILED-DEV-CONTACTS.
 
 ## Scheduling
-Daily 4:15 AM (after the 3am scan):
-claude -p "Run the SCK project enrichment daily routine per the sck-project-enrichment skill" --permission-mode acceptEdits
+4:15 AM daily: claude -p "Run the SCK project enrichment daily routine per the sck-project-enrichment skill: developer contacts first, then brokers, project fields, audit, status watch, and FL outreach drafts" --permission-mode acceptEdits
