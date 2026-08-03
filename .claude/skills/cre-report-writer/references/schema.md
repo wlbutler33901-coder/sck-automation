@@ -4,11 +4,14 @@ Connection: "Supabase - Storage Condo King" MCP, project llwyvgkqhendgzsgngqh, s
 
 ## Source reads (Step 1)
 ```sql
--- PRIMARY window: new in the last 26 hours
+-- PRIMARY window: high water mark - everything created since the last report row.
+-- window_start = coalesce(max(created_at) from "Development Scanner - Report Summary", now() - interval '26 hours')
 SELECT * FROM "Development Scanner - Municipality Portals"
-WHERE created_at >= now() - interval '26 hours' ORDER BY "Posting Date" DESC NULLS LAST;
+WHERE created_at > (SELECT coalesce(max(created_at), now() - interval '26 hours') FROM "Development Scanner - Report Summary")
+ORDER BY "Posting Date" DESC NULLS LAST;
 SELECT * FROM "Development Scanner - News Scanner"
-WHERE created_at >= now() - interval '26 hours' ORDER BY "Article Date" DESC NULLS LAST;
+WHERE created_at > (SELECT coalesce(max(created_at), now() - interval '26 hours') FROM "Development Scanner - Report Summary")
+ORDER BY "Article Date" DESC NULLS LAST;
 
 -- CONTEXT window: last 7 days (progressions, first-appearance)
 SELECT * FROM "Development Scanner - Municipality Portals"
@@ -39,6 +42,9 @@ WHERE "Developer / Sponsor" ILIKE '%<name>%';
 | "Top Opportunities" | text, the FINANCING LENS section (§2.3) |
 | "New Developers Identified" | text (§2.4) |
 | "Stage Progressions" | text (§2.5) |
+| "Project Updates" | text, preserve line breaks (PROJECT UPDATES section, per references/report-structure.md) |
+| "Rotation Audit" | text (ROTATION AND COVERAGE AUDIT section, per references/report-structure.md) |
+| "Updates Count" | integer, items in the PROJECT UPDATES section |
 | "Data Quality Notes" | text (§2.6) |
 | "Report Markdown" | text, the FULL report as markdown (canonical saved artifact) |
 | "Delivery Status" | set AFTER the email: 'sent' or 'failed: <reason>' |

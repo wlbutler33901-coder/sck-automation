@@ -5,28 +5,25 @@ description: Daily synthesis of the SWFL development scanner. Reviews the last 2
 
 # SWFL Development Report Writer (daily)
 
+Read LEARNINGS.md at the repo root before anything else, and append a dated entry at run end per the contract in that file.
+
 Daily decision-support brief for Will Butler / Calusa Capital Partners (Fort Myers CRE financing advisory). Runs every morning ~5:30 AM ET as a Claude Code cloud routine, after the permit (3:30) and news (4:30) scans. Autonomous scheduled run: execute end to end, do not pause for confirmation.
 
-CURRENT PHASE: the brief leads with NEW PROJECTS. The financing lens (scoring per references/scoring-framework.md) stays as a compact secondary section; it becomes the lead in a later phase, not now. Focus geography: Lee, Charlotte, Collier, Sarasota, Manatee, one SWFL region. Sweet spot when scoring: $3M to $30M capitalization.
+CURRENT PHASE: the brief leads with NEW PROJECTS. The financing lens (scoring per references/scoring-framework.md) stays as a compact secondary section; it becomes the lead in a later phase, not now. Focus geography: Lee, Charlotte, Collier, Sarasota, Manatee, one SWFL region, plus Hillsborough, Pinellas, Pasco and Hernando (Tampa MSA, Track B) once its clusters are active. Sweet spot when scoring: $3M to $30M capitalization.
 
 Connection: "Supabase - Storage Condo King" MCP, project llwyvgkqhendgzsgngqh, schema public.
 Sources: "Development Scanner - Municipality Portals" (permits), "Development Scanner - News Scanner" (press).
 Output: "Development Scanner - Report Summary" plus the Make webhook email.
 
 ## 1. Workflow
-1. Pull both windows per references/schema.md: PRIMARY last 26 hours (new since yesterday), CONTEXT last 7 days (for progressions and first-appearance checks).
+1. Pull the PRIMARY window using the high water mark rule in references/report-structure.md and the CONTEXT window of the last 7 days, per references/schema.md (for progressions and first-appearance checks). Also pull the coverage and rotation queries from ../swfl-permit-scanner/references/run-logging.md.
 2. Build the opportunity universe: a news row with "Linked Portal Record" enriches that permit record (one combined item); unlinked articles are standalone news leads; permit rows with no articles are standalone permit leads.
 3. Compose the report in MARKDOWN per the EMAIL FORMATTING RULES below, sections per §2 exactly.
-4. INSERT one row into "Development Scanner - Report Summary" (every column including "Report Markdown" = the full markdown, references/schema.md), read it back by id to confirm.
+4. INSERT one row into "Development Scanner - Report Summary" (every column including "Report Markdown" = the full markdown, references/schema.md), read it back by id to confirm. Write every named column, including "Project Updates", "Rotation Audit" and "Updates Count", which already exist on the table.
 5. Deliver the email per §3, then UPDATE the row's "Delivery Status".
 
 ## 2. Report Sections (exactly these, in order; empty sections say so explicitly)
-1. EXECUTIVE SUMMARY (2-3 sentences): counts reviewed (permits, articles), new projects found in the last 26 hours, cluster scanned last night, aggregate disclosed cost, anything unusual.
-2. NEW PROJECTS (the lead): every project appearing for the first time in the last 26 hours, permits and news merged. One block per project: Name (source id: Portal id X and/or News id Y) | property type, SF, cost | city, county | stage | developer and contact actionability | one-line why it matters. Order by disclosed cost descending, unknown-cost last.
-3. FINANCING LENS (compact, secondary for now): the 3-5 highest-scoring opportunities per references/scoring-framework.md, one line each with score rationale. No outreach scripting.
-4. NEW DEVELOPERS IDENTIFIED: first appearance across BOTH tables inside the 7-day window (verification queries in schema.md): name, asset class, source, one-line signal.
-5. STAGE PROGRESSIONS: permit-internal advances (parcel match, new permit type) and news-confirmed advances in the 7-day window.
-6. COVERAGE AND DATA QUALITY: last night's cluster per the permit rotation, portals blocked/failed, paywalls hit, null-heavy records worth a manual look.
+Section order, numbering, the report window, the first appearance rules, and the rotation audit are defined in references/report-structure.md; follow that file exactly.
 
 Formatting: terse, no em-dashes, mobile-readable, per the EMAIL FORMATTING RULES below.
 
@@ -45,5 +42,5 @@ Facts only; the analyst owns every call decision. Never report a figure not pres
 
 ## EMAIL FORMATTING RULES (mandatory - no wall-of-text emails)
 Compose the report in MARKDOWN first (that markdown is the canonical saved artifact), then render the email HTML from it. Never send the whole report inside one <pre> block.
-- Markdown: ## title with date, ### per section, one blank line between items, "- " bullets, **bold** project and developer names, plain URLs on their own.
-- Email HTML rendering: <h2> title + date; <h3> per section; <hr> between major sections; items as <ul><li> with <b>bold</b> project names; a multi-field project entry is ONE <li>: <b>Name</b>: type, size, cost | city, county | stage | developer | one-line note; source links as <a href>. Counts and snapshots as short <ul> lists, not tables. <pre> is allowed ONLY for the pipeline-snapshot count block, nothing else. Keep the email under ~100 KB; when a section would exceed ~25 items, include the top items and one line saying the rest are in Supabase.
+- Markdown: ## title with date, ### per section, one blank line between items, numbered "1." items (never "- " bullets for report items), **bold** project and developer names, plain URLs on their own.
+- Email HTML rendering: <h2> title + date; <h3> per section; <hr> between major sections; items as <ol><li> with <b>bold</b> project names; a multi-field project entry is ONE <li>: <b>Name</b>: type, size, cost | city, county | stage | developer | one-line note; source links as <a href>. Counts and snapshots as short <ul> lists, not tables. <pre> is allowed ONLY for the pipeline-snapshot count block, nothing else. Keep the email under ~100 KB; when a section would exceed ~25 items, include the top items and one line saying the rest are in Supabase.
