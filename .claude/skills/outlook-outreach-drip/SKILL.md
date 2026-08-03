@@ -108,13 +108,13 @@ hard line breaks mid-sentence and greyed out Outlook's formatting controls.
 Build the body as simple HTML so it looks exactly like a normal email typed in
 Outlook:
 
-- Wrap everything in `<div style="font-family:Calibri,Arial,sans-serif;font-size:11pt;color:#000000">`.
 - One `<p>` per paragraph. NEVER insert manual line breaks inside a sentence;
   let the client wrap text naturally.
-- The value link is an `<a>` tag with `style="color:#000000;text-decoration:underline"`
-  so it renders black, with the full URL as the href and the visible text.
-- The bullet list is a `<ul>` with plain `<li>` items, no styling beyond the
-  inherited black.
+- The value link is a standard `<a href>` anchor with no style attributes,
+  with the full URL as the href and the visible text. The M365 draft tool
+  strips inline styles, so the link renders in Outlook's default blue, and
+  that is accepted. Body text stays black via the plain HTML structure.
+- The bullet list is a `<ul>` with plain `<li>` items, no styling.
 - No other styling: no bold, no colors, no images, no font size changes.
 
 Body template (adjust the opening naturally per contact; keep the bullets
@@ -246,6 +246,7 @@ Report: NDRs found, addresses suppressed, contacts retired, drafts promoted to c
 
 - Never send email directly. Create drafts only. Will presses send.
 - Every draft CCs chance.friedman@calusainvestments.com. No exceptions.
+- Draft bodies are plain HTML with no inline style attributes. Body text stays black through the plain structure, and the value link is a standard `<a href>` anchor. The M365 draft tool strips inline styles, so the link renders in Outlook's default blue, and that is accepted. No colored fonts, images, or other styling.
 - The CRM contains only verified emails. Never write an address into any CRM email column without stamping "Email Verified At" and deleting the matching 04d row in the same operation.
 - 04d holds only unresolved addresses. An address must never exist in both 04d and the CRM. Resolved means deleted from 04d: good addresses go to the CRM, bad addresses go to 04a.
 - Never draft to an address present in "04a - Email Suppression" with "Suppress" = true. That single table holds bounces AND unsubscribes, distinguished by "Suppression Type". There is no "04b" table; it was collapsed into 04a on 2026-08-02. Screen the batch against it before creating drafts and drop any hits, deleting their 04d row since the address is already resolved.
