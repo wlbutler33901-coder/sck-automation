@@ -73,6 +73,11 @@ NEVER put credentials, API keys, or personal contact details in this file.
 - 2026-08-03 | swfl-permit-scanner | note | The Hernando County URL on file is the property
   appraiser parcel lookup, not a permit feed. Locate the county's actual permit search at
   certification; keep the appraiser link for parcel enrichment.
+- 2026-08-03 | swfl-permit-scanner | blocker | St. Petersburg (Click2Gov) has no date-searchable
+  permit feed and no Tier-3 substitute (ArcGIS Geohub, Socrata, and the city site all lack
+  itemized issued permits; only an annual aggregate report exists). Pinellas County Accela does
+  NOT cover St. Pete, so TPA-WED-PINELLAS-S runs with St. Pete as a standing coverage gap until
+  Will provides a feed or accepts Tier-4 press only. Log a coverage_gap row for it each Wednesday.
 
 ## Resolved
 
@@ -100,3 +105,16 @@ NEVER put credentials, API keys, or personal contact details in this file.
   Jul 19 to Aug 2: every night with rows hit its scheduled cluster. Two nights (Jul 24, Jul 28)
   produced zero rows with no way to tell a failed run from an empty one; run logging closes
   that gap.
+- 2026-08-03 | swfl-permit-scanner | note | Track B (Tampa MSA) certified: 13 of 26 portals
+  CERTIFIED (5 Accela, 5 EnerGov incl. Largo and Hernando, 2 SmartGov, 1 iWorQ), 12
+  BLOCKED-SUBSTITUTE, 1 gap (St. Pete). All 7 Track B clusters flipped to ACTIVE in rotation.md;
+  first cloud rotation performs the first real writes with the 90-day first-run lookback.
+- 2026-08-03 | swfl-permit-scanner | fixed | Dunedin EnerGov host on file (energoweb) DNS-failed;
+  correct host is cityofdunedinfl-energovweb.tylerhost.net; sources-tampa.md URL corrected.
+- 2026-08-03 | swfl-permit-scanner | note | Hernando County real permit feed found = Tyler
+  EnerGov (hernandocountyfl-energovweb.tylerhost.net, tenant hernandocountyflprod, top-level
+  paging quirk); the on-file pvweb.hernandopa-fl.us is the appraiser (parcel enrichment only).
+- 2026-08-03 | swfl-permit-scanner | note | New Track B platform recipes cracked and saved to
+  platform-playbook.md: SmartGov (Granicus) and iWorQ are usable Tier-2; Tyler Portico,
+  Citizenserve (reCAPTCHA), MGO Connect (login), MaintStar and CivicGov (lookup-only), BS&A
+  (anti-bot) are blocked with substitutes.

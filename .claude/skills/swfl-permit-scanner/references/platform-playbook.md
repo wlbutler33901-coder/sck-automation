@@ -145,3 +145,117 @@ Sweep tally: 12 CERTIFIED (2 EnerGov API, 1 FastTrackGov API, 3 report-PDF/XLSX,
 Planning module, 1 eTRAKiT browser), 4 BLOCKED/LIMITED (Naples CAPTCHA, Punta Gorda no-date-feed, Palmetto Telerik follow-up,
 Estero no-feed). Sarasota County Building-permit search still needs ACA creds; its Planning module is certified as the rezoning/site-plan feed.
 Records written across the sweep + Planning follow-up: 19 new (ids 20-38) + 1 dedupe update (Bonita id 19).
+
+# ============================================================================
+# TAMPA TRACK B - NEW PLATFORM RECIPES AND BLOCKERS (appended 2026-08-03 cloud pass)
+# 13 of 26 portals CERTIFIED; the rest blocked/lookup-only with substitutes. Additive only - do not reorder.
+# ============================================================================
+
+## Accela ACA - Tampa MSA tenant notes (certified 2026-08-03, cloud via Node-fetch harness)
+Standard recipe (date fields via JS .value + ddlGSPermitType + btnNewSearch + table[id*=dgvPermitList] + "Next >" pager)
+certified against 5 Tampa tenants: /hcfl, /tampa, /pinellas, /CLEARWATER, /pasco. None login-gated. Best commercial
+new-construction record types: hcfl and tampa = "Commercial New Construction and Additions"; pinellas = "Commercial New
+Construction"; pasco = "Commercial New" (also "Commercial Multifamily"); clearwater = "Building - Construction Permit".
+- PINELLAS tenant grid column order DIFFERS: Date | Record Type | Record Number | Status | Address (record# in 3rd cell,
+  not 2nd). Key the record number off the BC-*/permit pattern, not a fixed column index.
+- CLEARWATER has NO commercial/residential record-type split (only generic "Building - Construction Permit") and enforces
+  the ~100-row date-desc cap; scan descriptions for CRE keywords.
+- PASCO uses 26TMP-* for draft/temp records and COMNEW-YYYY-###### for issued commercial-new; expect both in a range pull.
+
+## Tyler EnerGov - newer /apps/selfservice build (Angular app.main) - CERTIFIED 2026-08-03 (Tampa Track B)
+Distinct from the older /EnerGovProd|/energov builds. tylerhost.net "-energovweb" hosts (Dunedin, Zephyrhills, New Port
+Richey) serve the SPA at /apps/selfservice/ (root 403s; /EnerGovProd/SelfService 404s). Same JSON API: POST
+https://<host>/apps/selfservice/api/energov/search/search with the VERBATIM full search body (reuse the captured EnerGov
+body template), SearchModule=1, FilterModule=2. Server IGNORES date filters, so SortBy:"IssueDate", SortAscending:false,
+PageSize:50, paginate ~8 pages, WINDOW CLIENT-SIDE on IssueDate. Response Result.EntityResults[] -> CaseNumber, CaseType,
+CaseWorkclass, IssueDate, ApplyDate, Description, AddressDisplay, MainParcel, CaseStatus. Tenant headers vary per host
+(capture from a /api/CommonSetting XHR on the search route):
+  - Dunedin #9:         tenantid=1, tenantname=DunedinFLProd, tyler-tenanturl=Home
+  - Zephyrhills #23:    tenantid=1, tenantname=EnerGovProd,   tyler-tenanturl=EnerGovProd
+  - New Port Richey #24: tenantid=1, tenantname=EnerGovProd,  tyler-tenanturl=Home
+Source-file host typo: Dunedin is cityofdunedinfl-energovweb.tylerhost.net (the "energoweb" spelling DNS-fails).
+
+## Click2Gov (aspgov.com Click2GovBP) - Tampa cities confirm the Punta Gorda precedent - 2026-08-03
+Temple Terrace, St. Petersburg, Tarpon Springs all serve selectpermit.html with searchMethod = 0 Application Number,
+1 Address, 2 Parcel Number, 3 Name ONLY. No date-issued / date-range search on any build, so a lookback cannot be
+enumerated. Treat all Click2GovBP as lookup-only (known permit#/address/parcel/name), not a discovery feed. St. Petersburg
+has NO Tier-3 substitute: ArcGIS Geohub (services2.arcgis.com/9qPLjNtocjo438CJ, 113 services) has no issued-permits layer,
+StPeteStat/Socrata none, city site publishes only an annual aggregate Utilization Report. St. Pete is a standalone coverage
+gap (Pinellas County Accela does not cover it) - needs Will's input.
+
+## Tyler Portico (2026-08-03, Pinellas Park #10) - Tampa Track B
+Forge SPA. Enumerate hosted apps via GET <host>/portal/launcher/api/AppLauncher (JSON: label/category/uri). EnerGov Community
+Self Service, when present, mounts at <host>/css/<appname>/ with API base <host>/css/<appname>/api/ (AppConfig, features,
+moduleconfig/<module>); permit search would be POST .../api/energov/search/search (standard EnerGov body, SearchModule=2).
+CAVEAT: a tenant may host only a General-Billing CSS (Pinellas Park case) with NO CommunityDevelopment app -> no public permit
+search. Check AppLauncher first before assuming EnerGov permits exist.
+
+## Citizenserve (2026-08-03, Seminole #14) - Tampa Track B
+Permit search recipe = GET Portal/PortalController?Action=showSearchPage&type=Permit&installationID=<id> (grab uniqueID +
+cookies), then POST Portal/PortalController with Action=DisplayCasesNPagging, filetype=Permit, Datefrom=MM/DD/YYYY,
+to=MM/DD/YYYY, PermitType, PermitStatus, PermitNumber, uniqueID, installationID. BLOCKER: reCAPTCHA v3 enterprise on
+validateAndSearch(); replay without g-recaptcha-response = HTTP 401 Access Denied; token handshake doesn't complete through
+the fetch-harness proxy. Treat Citizenserve installs as captcha-blocked unless a token can be minted.
+
+## MGO Connect / MyGovernmentOnline (2026-08-03, Treasure Island #15 + Madeira Beach #16) - Tampa Track B
+Angular SPA, API host https://api.mgoconnect.org, search POST /jpv2/projectmanager/search (+ /search/row-count). ENTIRELY
+auth-gated: unauth = 405/redirect to /auth/login; no anonymous public permit-search route (app routes: auth,cp,mgo,pg,reports).
+Legacy www.mygovernmentonline.org 301->landing.mgoconnect.org. All MGO tenants = login-required BLOCKED; no public date search.
+
+## BS&A Online (2026-08-03, Safety Harbor #12 + Gulfport #13) - Tampa Track B
+Confirms the Palmetto anti-bot precedent under the cloud proxy. Landing ?uid=<n> returns 200 via curl, but
+/SiteSearch/BuildingDepartmentRecordSearch is behind a Robot/Captcha interstitial (honeypot inputs) and loses the uid session
+(redirect to MunicipalDirectory); real Chromium (harness) hits net::ERR_CONNECTION_RESET. PARK on first reset; substitute =
+county + city agendas/press.
+
+## SmartGov / Granicus (*.smartgovcommunity.com) - CERTIFIED 2026-08-03 (Tampa Track B) - Tier 2 (AJAX form POST, HTML fragment)
+GET {BASE}/ -> 302 /Public/Home. Public permit search at {BASE}/Public/PermitSearch (also /Public/ApplicationSearch).
+Search fires: POST {BASE}/Public/PermitSearch/SearchPage
+  Headers: X-Requested-With: XMLHttpRequest; Content-Type: application/x-www-form-urlencoded
+  Body: _conv=1 & query=<TOKEN> & search_listState=<JSON> & __submitFormValidator__=<token from GET page> & ILS-Ajax=Y
+  search_listState = {"Filter":[{"key":"Module","op":"=","val":"Permitting"},
+    {"key":"Status.ProcessState","op":"!=","val":"Cancelled"},{"key":"Status.ProcessState","op":"!=","val":"Incomplete"},
+    {"key":"CaseType.PublicPortalSearchable","op":"=","val":"True"}],
+    "Sort":[{"key":"StatusDate","op":"DESC"}],"Group":"None","PageNumber":N,"ActiveWorkspaceId":""}
+  Response: HTML fragment; each row = PermitNumber | CaseType | "<Status>, M/D/YYYY" | Address | Owner | Contractor.
+GOTCHA: query MUST be non-empty (empty query -> 0 rows, even with a StatusDate date filter). Use a broad token (a street
+  name like "gulf", or leading house-number digits like "18"); results come StatusDate DESC, page via PageNumber and window
+  client-side on the per-row "M/D/YYYY". Needs a session cookie + fresh __submitFormValidator__ from the GET page; drive via
+  the Node-fetch harness (or curl with the token). Confirmed: Redington Shores (392 rows); Redington Beach same portal.
+
+## CommunityCore / SAFEbuilt (app.communitycore.com) - BLOCKED (login-gated) 2026-08-03 (Tampa Track B)
+Root -> /app/account/login (Angular SPA; every route serves index.html so route-guessing is useless). swagger/v1/swagger.json
+returns openapi 3.0.1 with paths:{} (schemas only). /api/v1/* requires auth. No anonymous/guest permit search, no public
+report export; for Indian Shores the portal is contractor apply/inspection only. Substitute = town agendas/press (Tier 4).
+
+## iWorQ (portal.iworq.net) - CERTIFIED 2026-08-03 via City of Port Richey (Tampa Track B)
+Per-tenant subdomain <tenant>.portal.iworq.net; tenant code is UPPERCASE in-path (PORTRICHEY). CERTIFIED RECIPE (no
+XHR/JSON - server-side rendered HTML, no captcha, no login): GET https://<tenant>.portal.iworq.net/<TENANT>/permits/601
+returns the full permit list newest-first (Permit# desc). Parse the <table>: Permit#, Date (MM/DD/YYYY), Permit Type,
+Parcel Address, Parcel#, Applicant, Status. No commercial-only filter -> scan Type/desc for CRE keywords. The on-page
+date-range form (searchField="Permit Date" + #startDate/#endDate) is reCAPTCHA-gated - do NOT use it; the default 601
+listing is already date-desc. Route id is per-tenant (Port Richey 601 = permit list); discover from /portalhome/<tenant>
+links. GOTCHA: a tenant with "Portal home not set up" (Dade City) has no published public portal -> BLOCKED; substitute the county.
+
+## Tyler EnerGov - Hernando County tenant - CERTIFIED 2026-08-03 (Tampa Track B)
+Host https://hernandocountyfl-energovweb.tylerhost.net, tenant path /apps/selfservice, tyler-tenanturl=hernandocountyflprod,
+tenantid=1, tenantname=hernandocountyflprod. Same Tier-1 recipe: POST /apps/selfservice/api/energov/search/search with the
+verbatim EnerGov body (SearchModule=1, FilterModule=2) + tenant headers + Content-Type: application/json. PermitsFound=7553.
+TENANT QUIRKS (differ from Cape/Bonita): paging is TOP-LEVEL body.PageSize/body.PageNumber (PermitCriteria paging IGNORED);
+PermitCriteria date filters and top-level SortBy return a NULL Result -> window client-side over the CaseNumber-ascending set
+(BLDC-*-2026 = Commercial Building, BLDR = residential). Public API is rate-limit-flaky under rapid replay - add backoff.
+Keep pvweb.hernandopa-fl.us (appraiser) for parcel enrichment only. (The source-file URL was the appraiser, NOT the permit feed.)
+
+## MaintStar (h8.maintstar.co/<tenant>/portal/) - BLOCKED lookup-only 2026-08-03 via Plant City (Tampa Track B)
+Angular SPA. Captured search XHRs (both GET): GET /<tenant>/api/Public/Record/Search?query=<term>&skip=0&take=100 ->
+{data:[{id,projectNumber,number,type,status,description}], total:-1} (NO date field); GET /<tenant>/api/Public/Record/
+searchattachments?query=<term>&skip=0&take=100 -> {data:[{createdDate,projectNumber,number,description,link}]} (dated, newest
+first). Types via GET /<tenant>/api/v2/Portal/TypesConfig/InitialTypes. BLOCKER: query is REQUIRED (empty -> []) and
+Record/Search carries no date -> cannot enumerate a lookback window; only searchattachments is dated (doc-centric). Lookup-only;
+discovery from county Accela + press.
+
+## CivicGov / CivicPlus Community Development 4.0 (civicgov4.com/<tenant>/portal/) - BLOCKED lookup-only 2026-08-03 via Brooksville
+Public entry index.php?r=publicRecordsSearch/index = "Search Public Records by Location", a SINGLE location_search input
+(street address OR parcel #). No date field, no record-type filter; blank/wildcard returns nothing. Same class as
+Click2Gov/Punta Gorda: answers a known address/parcel only, cannot enumerate a date window. Substitute county feed + agendas + press.
+

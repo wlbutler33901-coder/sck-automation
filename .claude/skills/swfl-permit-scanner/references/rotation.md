@@ -34,13 +34,13 @@ covered. Never improvise Tampa portals from memory or from a web search.
 
 | Day | Cluster ID | Status | Jurisdictions (scan these portals today) |
 |---|---|---|---|
-| Sunday | TPA-SUN-HILLS-UNINC | PENDING | Hillsborough County (Unincorporated) |
-| Monday | TPA-MON-TAMPA | PENDING | City of Tampa |
-| Tuesday | TPA-TUE-PINELLAS-N | PENDING | Pinellas County (Unincorporated, Oldsmar, Kenneth City); City of Clearwater; City of Dunedin; City of Largo; City of Safety Harbor; City of Tarpon Springs |
-| Wednesday | TPA-WED-PINELLAS-S | PENDING | City of St. Petersburg; City of Pinellas Park; City of Gulfport; City of Seminole; City of Treasure Island; City of Madeira Beach; Towns of Redington Beach and North Redington Beach; Town of Redington Shores; Town of Indian Shores |
-| Thursday | TPA-THU-PASCO | PENDING | Pasco County (Unincorporated); City of Dade City (serves San Antonio and St. Leo); City of Port Richey; City of Zephyrhills; City of New Port Richey |
-| Friday | TPA-FRI-HERNANDO | PENDING | Hernando County (Unincorporated, Weeki Wachee); City of Brooksville |
-| Saturday | TPA-SAT-HILLS-CITIES | PENDING | City of Plant City; City of Temple Terrace |
+| Sunday | TPA-SUN-HILLS-UNINC | ACTIVE | Hillsborough County (Unincorporated) |
+| Monday | TPA-MON-TAMPA | ACTIVE | City of Tampa |
+| Tuesday | TPA-TUE-PINELLAS-N | ACTIVE | Pinellas County (Unincorporated, Oldsmar, Kenneth City); City of Clearwater; City of Dunedin; City of Largo; City of Safety Harbor; City of Tarpon Springs |
+| Wednesday | TPA-WED-PINELLAS-S | ACTIVE | City of St. Petersburg; City of Pinellas Park; City of Gulfport; City of Seminole; City of Treasure Island; City of Madeira Beach; Towns of Redington Beach and North Redington Beach; Town of Redington Shores; Town of Indian Shores |
+| Thursday | TPA-THU-PASCO | ACTIVE | Pasco County (Unincorporated); City of Dade City (serves San Antonio and St. Leo); City of Port Richey; City of Zephyrhills; City of New Port Richey |
+| Friday | TPA-FRI-HERNANDO | ACTIVE | Hernando County (Unincorporated, Weeki Wachee); City of Brooksville |
+| Saturday | TPA-SAT-HILLS-CITIES | ACTIVE | City of Plant City; City of Temple Terrace |
 
 Hillsborough is deliberately split across three days (unincorporated Sunday, Tampa city Monday,
 small cities Saturday): the county portal and the Tampa city portal will be the two highest
