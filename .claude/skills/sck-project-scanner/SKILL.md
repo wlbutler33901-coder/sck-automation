@@ -14,6 +14,8 @@ Discovers new deeded car-condo projects and stages them for Will's review. Runs 
 4. Dedup before every insert (Step 4). When in doubt, log a near-match flag instead of inserting.
 5. Normalize en/em dashes in every name comparison: regexp_replace(lower(trim(x)), '[\u2013\u2014]', '-', 'g').
 6. No em-dashes in any text written to the database.
+7. Read LEARNINGS.md at the repo root before anything else, and append a dated entry at run end per the contract in that file.
+8. Follow references/run-resilience.md for run logging, region checkpointing, and concurrency limits; run_type is always the literal string scan.
 
 ## Step 1 - Tonight's rotation
 Regions rotate across the week by display_order. Pull tonight's set:
@@ -88,6 +90,7 @@ VALUES (...);
 - scan_notes: source caveats, tier-2 flag, buy-or-lease flag, price points.
 
 ## Step 6 - Log
+The run_started and region_complete rows required by references/run-resilience.md are in addition to the rows below.
 One row per insert: run_type='scan', change_type='new_candidate', confidence, detail = one-line summary.
 End of run: run_type='scan', change_type='run_summary', detail = regions covered, searches run, candidates inserted, near-matches flagged, sources blocked, new operators discovered.
 

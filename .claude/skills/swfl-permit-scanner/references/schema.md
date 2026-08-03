@@ -18,7 +18,7 @@ Target: SCK Supabase project llwyvgkqhendgzsgngqh, schema public, table "Develop
 | Address | text | Street address / parcel location. |
 | Parcel / Folio Number | text | Parcel / folio / STRAP number from the permit or county property appraiser. Stable across name/address changes; primary fallback dedupe key. Populate whenever obtainable. |
 | City | text | City. |
-| County | text | One of: Lee, Charlotte, Collier, Sarasota, Manatee. Always populate; it drives the report and the rotation QA. |
+| County | text | One of: Lee, Charlotte, Collier, Sarasota, Manatee, Hillsborough, Pinellas, Pasco, Hernando. Always populate; it drives the report and the rotation QA. |
 | State | text | Two-letter (FL). |
 | Property Type | text | Controlled vocabulary - pick one: Industrial, Multifamily, Retail, Office, Hospitality, Mixed-Use, Self-Storage, Medical/Healthcare, Senior Living, Data Center, Land/Subdivision, Other. |
 | Project Stage | text | Controlled vocabulary - one of: Planned / Permitting, Under Construction, Completed, On Hold / Stalled. Drives outreach priority. |

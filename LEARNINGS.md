@@ -1,0 +1,102 @@
+# sck-automation Learnings
+
+Shared operational memory for every scheduled routine in this repo. This file is the
+institutional record of what has already broken, so no routine pays for the same failure twice.
+
+## Contract (every routine, every run)
+
+READ AT RUN START. Before any portal loop, search pass, or database write, read this entire
+file. It is short by design. If a rule here conflicts with a skill file, this file wins on
+operational matters (retries, concurrency, logging, run_type values) and the skill file wins
+on subject matter (what qualifies, what gets written where).
+
+APPEND AT RUN END. Append a dated entry to the LOG section below whenever any of these occur:
+- A source, portal, or API failed, changed shape, or started blocking.
+- A write was rejected by the database.
+- The run was cut short, suspended, or timed out.
+- A rule in this file turned out to be wrong or is now obsolete.
+- A workaround was discovered that a future run should reuse.
+
+Do not append on a clean run. A clean run adds nothing.
+
+FORMAT. One entry per line, newest at the bottom of its section:
+`YYYY-MM-DD | routine | severity | one sentence of what happened and what to do about it.`
+Severity is one of blocker, degraded, fixed, note.
+
+HOUSEKEEPING. Cap ACTIVE CONSTRAINTS at roughly 30 lines. When an entry is resolved, move it to
+RESOLVED with the resolution date. Delete RESOLVED entries older than 90 days. Never delete an
+ACTIVE entry to make room; if the list is full, escalate in the run summary instead.
+
+NEVER put credentials, API keys, or personal contact details in this file.
+
+## Active constraints
+
+- 2026-07-20 | swfl-permit-scanner | blocker | The egress proxy resets chromium TLS on every
+  site. Drive chromium via Playwright but fulfill every request through Node fetch. Full
+  harness in references/platform-playbook.md; do not rebuild it from scratch.
+- 2026-07-20 | swfl-permit-scanner | note | EnerGov requires tyler-tenanturl, tyler-tenantid and
+  tyler-tenantname headers, SearchModule 1, and client-side date windowing. Server-side date
+  filters are ignored.
+- 2026-07-20 | swfl-permit-scanner | blocker | Sarasota County Accela building search is login
+  gated. Use the approved Planning module substitute. Naples CityView is behind a CAPTCHA, use
+  the Collier County feed. Punta Gorda Click2Gov is lookup only. Palmetto BS&A is anti-bot and
+  parked, catch it through Manatee County. Estero serves a broken TLS chain, catch it through
+  Lee County plus press. Never attempt to defeat a login or a CAPTCHA.
+- 2026-08-03 | all routines | blocker | Scan Activity Log run_type has drifted repeatedly. The
+  ONLY permitted values are: scan, enrichment, swfl_permit_scan, swfl_news_scan, swfl_report.
+  Values nightly_scan, project_scan, project_scanner and scanner have all appeared in
+  production and are invisible to the consuming digests. Hard-code the literal, never compose
+  it, never abbreviate it.
+- 2026-08-03 | sck-project-scanner | blocker | The cloud container suspended mid-run with five
+  parallel research agents open and the run logged zero rows. Cap concurrent research agents at
+  2, write a run_started row before any search, and log each region the moment it completes.
+- 2026-08-03 | swfl-permit-scanner | blocker | A cluster that produces zero qualifying permits
+  must still log a portal_result row per portal. Silence is indistinguishable from a run that
+  never happened, which is how the Collier gap went unnoticed for a week.
+- 2026-07-15 | all routines | note | Staging table id sequences have collided with existing
+  rows. Never pass an explicit id in an INSERT; let the sequence assign it.
+- 2026-07-15 | all routines | note | Windows Task Scheduler runs these through `claude -p`. An
+  unmerged PR deploys nothing and the routines silently keep using the old skill files. Merging
+  is part of shipping, not an optional follow-up.
+- 2026-07-10 | resale-appraisal | blocker | Never set "Manual Update" to TRUE. It fires the
+  legacy Make webhook.
+- 2026-08-03 | cre-report-writer | blocker | Report windows are high water mark based per
+  references/report-structure.md, never a fixed lookback. The old 26 hour window overlapped the
+  prior morning's scan output and reported most items as new twice.
+- 2026-08-03 | swfl-news-scanner | note | businessobserverfl.com and yourobserver.com return 403
+  on direct fetches. Recover via search snippets or syndicated mirrors and mark that content as
+  not independently verified.
+- 2026-08-03 | swfl-permit-scanner | note | Track B platform expectations from Track A
+  precedent: Click2Gov is lookup only for date searches (Punta Gorda) and BS&A is anti-bot
+  (Palmetto). Certify Tampa portals on those platforms with substitutes ready per
+  references/sources-tampa.md.
+- 2026-08-03 | swfl-permit-scanner | note | The Hernando County URL on file is the property
+  appraiser parcel lookup, not a permit feed. Locate the county's actual permit search at
+  certification; keep the appraiser link for parcel enrichment.
+
+## Resolved
+
+- 2026-07-20 | swfl-permit-scanner | fixed | Portal certification sweep completed. 11 portals
+  certified with real 14 day pulls across 4 access tiers. Recipes live in
+  references/platform-playbook.md and references/sources.md. Those two files are additive only;
+  never replace them wholesale.
+
+## Log
+
+- 2026-08-03 | swfl-permit-scanner | blocker | No SWFL routine has ever written to Scan Activity
+  Log, so the daily report has had no way to audit its own rotation. Run logging contract added
+  in references/run-logging.md.
+- 2026-08-03 | cre-report-writer | fixed | Double counting root caused: report at 09:40 UTC with
+  a 26 hour window reaches past the prior morning's 07:37 to 08:47 UTC scan writes, so 22 of 34
+  New Projects entries across Aug 1 to Aug 3 were repeats, including Estero Oaks Portal id 98
+  presented as a first appearance two days running. Fixed by the high water mark window in
+  references/report-structure.md.
+- 2026-08-03 | cre-report-writer | fixed | New Developers section re listed the same names for a
+  week by spec (7 day window). Now first appearance within the report window only.
+- 2026-08-03 | swfl-permit-scanner | note | Venice eTRAKiT has produced zero records since
+  certification on Jul 20. Once portal_result logging lands, the first Friday run will show
+  whether that is real zero volume or a silent failure.
+- 2026-08-03 | swfl-permit-scanner | note | Rotation adherence verified from the database for
+  Jul 19 to Aug 2: every night with rows hit its scheduled cluster. Two nights (Jul 24, Jul 28)
+  produced zero rows with no way to tell a failed run from an empty one; run logging closes
+  that gap.
