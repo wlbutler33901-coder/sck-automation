@@ -22,7 +22,7 @@ SELECT p.* FROM "01 - Project - New" p WHERE p.discovered_at > now() - interval 
 ```
 
 ## Step 2 - Compose, in EXACTLY this section order
-1. WARNINGS (only if any): scan did not run / did not complete, blocked sources, errors, FAILED-DEV-CONTACTS from the enrichment summary; any 'skill_out_of_date' (SKILL-OUT-OF-DATE) rows; any 'outreach_skipped' rows with the reason. If the log has no scanner run_summary for last night, lead with "WARNING: 3am scan did not run or did not complete. Last scan: {ts} ({regions})."
+1. WARNINGS (only if any): scan did not run / did not complete, blocked sources, errors, FAILED-DEV-CONTACTS from the enrichment summary. If the log has no scanner run_summary for last night, lead with "WARNING: 3am scan did not run or did not complete. Last scan: {ts} ({regions})."
 2. NEW PROJECTS (the lead section): one line per new candidate -
    {Project Name} | {Region} / {Submarket} | {Status} | {Units} units | confidence {level} | {one-line note} | {source_url}
    High confidence first, then by region. If none: "No new candidates. Regions scanned: {list}."
@@ -65,16 +65,6 @@ WHERE digested_at IS NULL AND run_type IN ('scan','enrichment','nightly_scan','p
 Compose the report in MARKDOWN first (that markdown is the canonical saved artifact), then render the email HTML from it. Never send the whole report inside one <pre> block.
 - Markdown: ## title with date, ### per section, one blank line between items, "- " bullets, **bold** project and developer names, plain URLs on their own.
 - Email HTML rendering: <h2> title + date; <h3> per section; <hr> between major sections; items as <ul><li> with <b>bold</b> project names; a multi-field entry is ONE <li>; links as <a href>. Counts and snapshots as short <ul> lists. <pre> is allowed ONLY for the pipeline-snapshot count block. Keep the email under ~100 KB; when a section would exceed ~25 items, include the top items and one line saying the rest are in Supabase.
-
-
-## Learnings file (read first, append on lessons)
-At RUN START: read the repo-root file automation-learnings.md (the last ~30 entries) and honor every lesson in it; it is the memory that keeps mistakes from repeating.
-At RUN END: append an entry ONLY when something failed, was corrected, surprised you, or required a workaround (never for routine success), one line:
-- {YYYY-MM-DD} | {routine} | {what happened} | {lesson or fix}
-Then commit the file ("learnings: {routine} {date}") and push. If the push is blocked by branch policy, leave it committed and say so in the run summary.
-
-## Version self-check (prevents skill/instruction drift)
-This skill version's marker section is "DEVELOPER OUTREACH DRAFTS". If the routine instructions reference features this file does not contain, or this file lacks its marker, the deployed skill is stale: log change_type='skill_out_of_date' with run_type='enrichment' detail beginning "SKILL-OUT-OF-DATE", do what the loaded skill supports, and never improvise missing templates or rules.
 
 ## Scheduling
 Daily 5:55 AM: claude -p "Run the SCK morning digest routine per the sck-morning-digest skill" --permission-mode acceptEdits
