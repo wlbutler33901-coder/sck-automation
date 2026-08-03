@@ -46,7 +46,8 @@ NEVER put credentials, API keys, or personal contact details in this file.
   ONLY permitted values are: scan, enrichment, swfl_permit_scan, swfl_news_scan, swfl_report.
   Values nightly_scan, project_scan, project_scanner and scanner have all appeared in
   production and are invisible to the consuming digests. Hard-code the literal, never compose
-  it, never abbreviate it.
+  it, never abbreviate it. The consuming digests keep a tolerant IN-list as a backstop, but
+  never rely on it.
 - 2026-08-03 | sck-project-scanner | blocker | The cloud container suspended mid-run with five
   parallel research agents open and the run logged zero rows. Cap concurrent research agents at
   2, write a run_started row before any search, and log each region the moment it completes.
@@ -54,10 +55,14 @@ NEVER put credentials, API keys, or personal contact details in this file.
   must still log a portal_result row per portal. Silence is indistinguishable from a run that
   never happened, which is how the Collier gap went unnoticed for a week.
 - 2026-07-15 | all routines | note | Staging table id sequences have collided with existing
-  rows. Never pass an explicit id in an INSERT; let the sequence assign it.
+  rows. Never pass an explicit id in an INSERT; let the sequence assign it. On a duplicate-key
+  collision retry once; the sequence self-corrects.
 - 2026-07-15 | all routines | note | Windows Task Scheduler runs these through `claude -p`. An
   unmerged PR deploys nothing and the routines silently keep using the old skill files. Merging
   is part of shipping, not an optional follow-up.
+- 2026-07-19 | make-pipeline | note | Bare webhook hits (link scanners) crashed the email module
+  and auto-disabled the Make scenario; a filter now drops payloads without subject+html silently
+  - never remove it.
 - 2026-07-10 | resale-appraisal | blocker | Never set "Manual Update" to TRUE. It fires the
   legacy Make webhook.
 - 2026-08-03 | cre-report-writer | blocker | Report windows are high water mark based per
@@ -73,11 +78,11 @@ NEVER put credentials, API keys, or personal contact details in this file.
 - 2026-08-03 | swfl-permit-scanner | note | The Hernando County URL on file is the property
   appraiser parcel lookup, not a permit feed. Locate the county's actual permit search at
   certification; keep the appraiser link for parcel enrichment.
-- 2026-08-03 | swfl-permit-scanner | blocker | St. Petersburg (Click2Gov) has no date-searchable
+- 2026-08-03 | swfl-permit-scanner | note | St. Petersburg (Click2Gov) has no date-searchable
   permit feed and no Tier-3 substitute (ArcGIS Geohub, Socrata, and the city site all lack
-  itemized issued permits; only an annual aggregate report exists). Pinellas County Accela does
-  NOT cover St. Pete, so TPA-WED-PINELLAS-S runs with St. Pete as a standing coverage gap until
-  Will provides a feed or accepts Tier-4 press only. Log a coverage_gap row for it each Wednesday.
+  itemized issued permits; only an annual aggregate report exists). Tier-4 press substitution
+  with a coverage_gap flag is ACCEPTED for now, the same treatment Track A gives Estero and
+  Naples; a direct feed remains wanted. Log a coverage_gap row for St. Pete each Wednesday.
 
 ## Resolved
 
@@ -118,3 +123,13 @@ NEVER put credentials, API keys, or personal contact details in this file.
   platform-playbook.md: SmartGov (Granicus) and iWorQ are usable Tier-2; Tyler Portico,
   Citizenserve (reCAPTCHA), MGO Connect (login), MaintStar and CivicGov (lookup-only), BS&A
   (anti-bot) are blocked with substitutes.
+- 2026-08-01 | sck-project-scanner | note | "Bonita Auto Vault" was staged as new but is Bonita
+  Motor Vault (live); dedup is now multi-signal at COUNTY level - distinctive-token match after
+  stripping generic product words, plus address, parcel, and developer.
+- 2026-08-03 | sck-project-enrichment | note | Routine referenced an outreach template/menu not
+  present in the repo skill (a skill update had not merged to origin/main); it correctly skipped
+  rather than improvise. Skills carry a marker section; when instructions and skill drift, log
+  SKILL-OUT-OF-DATE loudly and verify every skill update landed on origin/main.
+- 2026-08-03 | sck-project-scanner | note | A 3am scan did not execute (no run_summary) and the
+  digest warned correctly; check the routine Runs list for the failure reason - the 14-day
+  lookback self-heals coverage the next night.

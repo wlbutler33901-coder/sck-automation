@@ -87,7 +87,7 @@ Log run_type='enrichment', change_type='run_summary': developer rows completed a
 
 
 ## Learnings file (read first, append on lessons)
-At RUN START: read the repo-root file automation-learnings.md (the last ~30 entries) and honor every lesson in it; it is the memory that keeps mistakes from repeating.
+At RUN START: read the repo-root file LEARNINGS.md (the last ~30 entries) and honor every lesson in it; it is the memory that keeps mistakes from repeating.
 At RUN END: append an entry ONLY when something failed, was corrected, surprised you, or required a workaround (never for routine success), one line:
 - {YYYY-MM-DD} | {routine} | {what happened} | {lesson or fix}
 Then commit the file ("learnings: {routine} {date}") and push. If the push is blocked by branch policy, leave it committed and say so in the run summary.
