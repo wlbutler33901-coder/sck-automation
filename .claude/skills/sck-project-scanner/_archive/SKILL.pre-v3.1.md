@@ -91,15 +91,5 @@ VALUES (...);
 One row per insert: run_type='scan', change_type='new_candidate', confidence, detail = one-line summary.
 End of run: run_type='scan', change_type='run_summary', detail = regions covered, searches run, candidates inserted, near-matches flagged, sources blocked, new operators discovered.
 
-
-## Learnings file (read first, append on lessons)
-At RUN START: read the repo-root file automation-learnings.md (the last ~30 entries) and honor every lesson in it; it is the memory that keeps mistakes from repeating.
-At RUN END: append an entry ONLY when something failed, was corrected, surprised you, or required a workaround (never for routine success), one line:
-- {YYYY-MM-DD} | {routine} | {what happened} | {lesson or fix}
-Then commit the file ("learnings: {routine} {date}") and push. If the push is blocked by branch policy, leave it committed and say so in the run summary.
-
-## Version self-check (prevents skill/instruction drift)
-This skill version's marker section is "MULTI-SIGNAL". If the routine instructions reference features this file does not contain, or this file lacks its marker, the deployed skill is stale: log change_type='skill_out_of_date' with run_type='scan' detail beginning "SKILL-OUT-OF-DATE", do what the loaded skill supports, and never improvise missing templates or rules.
-
 ## Scheduling (document for the operator, do not self-schedule)
 3:00 AM daily: claude -p "Run the SCK project scanner nightly routine per the sck-project-scanner skill" --permission-mode acceptEdits

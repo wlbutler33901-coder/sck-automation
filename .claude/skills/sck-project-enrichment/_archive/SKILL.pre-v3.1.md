@@ -85,15 +85,5 @@ Personalize lightly (project name, city, stage, one tidbit); do not go overboard
 ## Step 7 - Run summary
 Log run_type='enrichment', change_type='run_summary': developer rows completed and completeness % (count of rows with Contact AND Email), broker rows completed and completeness %, review-pass corrections, project fields filled, merges applied, merge recommendations, status changes, drafts created. If Step 1 processed zero rows while NULLs remain, the summary begins FAILED-DEV-CONTACTS.
 
-
-## Learnings file (read first, append on lessons)
-At RUN START: read the repo-root file automation-learnings.md (the last ~30 entries) and honor every lesson in it; it is the memory that keeps mistakes from repeating.
-At RUN END: append an entry ONLY when something failed, was corrected, surprised you, or required a workaround (never for routine success), one line:
-- {YYYY-MM-DD} | {routine} | {what happened} | {lesson or fix}
-Then commit the file ("learnings: {routine} {date}") and push. If the push is blocked by branch policy, leave it committed and say so in the run summary.
-
-## Version self-check (prevents skill/instruction drift)
-This skill version's marker section is "TIDBIT MENU". If the routine instructions reference features this file does not contain, or this file lacks its marker, the deployed skill is stale: log change_type='skill_out_of_date' with run_type='enrichment' detail beginning "SKILL-OUT-OF-DATE", do what the loaded skill supports, and never improvise missing templates or rules.
-
 ## Scheduling
 4:15 AM daily: claude -p "Run the SCK project enrichment daily routine per the sck-project-enrichment skill: developer contacts first, then brokers, project fields, audit, status watch, and FL outreach drafts" --permission-mode acceptEdits
