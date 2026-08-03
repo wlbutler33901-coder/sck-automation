@@ -101,38 +101,65 @@ chance.friedman@calusainvestments.com.
 Subject: rotate between these three so the batch does not look templated:
 1. `Your unit at {Project}`
 2. `{Project} resale values`
-3. `Quick question about your {Project} unit`
+3. `Quick question about your unit at {Project}`
 
-Body template (adjust naturally per contact, keep under 110 words):
+**Body format: HTML, not plain text.** The earlier plain-text approach carried
+hard line breaks mid-sentence and greyed out Outlook's formatting controls.
+Build the body as simple HTML so it looks exactly like a normal email typed in
+Outlook:
+
+- Wrap everything in `<div style="font-family:Calibri,Arial,sans-serif;font-size:11pt;color:#000000">`.
+- One `<p>` per paragraph. NEVER insert manual line breaks inside a sentence;
+  let the client wrap text naturally.
+- The value link is an `<a>` tag with `style="color:#000000;text-decoration:underline"`
+  so it renders black, with the full URL as the href and the visible text.
+- The bullet list is a `<ul>` with plain `<li>` items, no styling beyond the
+  inherited black.
+- No other styling: no bold, no colors, no images, no font size changes.
+
+Body template (adjust the opening naturally per contact; keep the bullets
+verbatim):
 
 ```
 Hi {First Name},
 
-I run Storage Condo King, the market data platform tracking resale
-activity across Florida garage and car condo projects, including
-{Project}.
+I run Storage Condo King, the market data platform tracking resale activity
+across Florida garage and car condo projects, including {Project}.
 
 You can see current values for {Project} here:
-https://storagecondoking.com/unit-appraisals?project={URL-ENCODED PROJECT NAME}&utm_source=outreach&utm_medium=email&utm_campaign=drip-2026-08
+{value link}
 
-Happy to send you our Q2 2026 Florida Garage and Car Condo Market
-Report, or run a no-cost value estimate on your specific unit. Just
-reply and I will put it together.
+For unit owners, the platform provides:
+
+- Current market valuations, with a valuation engine covering both pre-sale
+  and re-sale units.
+- Verified sale comps across every Florida garage and car condo project.
+- Live listings and a marketing distribution network when you are ready to
+  sell.
+- Investment cash flow models and market research.
+- Project level detail: demographics, amenities, and the new supply pipeline.
+
+Happy to send our Q2 2026 Florida Garage and Car Condo Market Report, or run
+a no-cost value estimate on your specific unit. Just reply and I will put it
+together.
 
 Will Butler
-Calusa Capital Partners | Storage Condo King
+Calusa Capital Partners
 C: 239-898-5840
 E: will.butler@calusainvestments.com
-storagecondoking.com
 ```
 
-Rules for the body:
+The signature is exactly those four lines, nothing more. No "Storage Condo
+King" suffix on the firm line, no website line under the signature. It must
+match Will's normal Calusa signature block verbatim.
 
-- The project link must URL-encode the project name exactly as it appears in "01 - Projects", normalizing en-dashes and em-dashes to hyphens first per the repo join convention.
-- If "Project" is null, drop the project sentence and the project link line, and use https://storagecondoking.com/unit-appraisals with the same utm params on its own line.
-- The link is a plain URL on its own line. No HTML, no anchor tags, no tracking wrapper. These are plain text messages.
-- Never sign as market@storagecondoking.com; the signature must match the sending identity.
-- Every draft body must render in plain black text. Set the message body as plain text, not HTML. If the outlook_create_draft tool requires an HTML body, wrap the content so that all text inherits color #000000, including the URL line. Never leave a link rendering in the default blue, and never apply any other font color, highlight, or styling. The message must look like a normal message typed in Outlook.
+If "Project" is null, drop the project sentence and link the general page
+https://storagecondoking.com/unit-appraisals with the same utm params.
+
+The project link must URL-encode the project name exactly as it appears in
+"01 - Projects", normalizing en dashes and em dashes to hyphens first per the
+repo join convention, with utm_source=outreach, utm_medium=email,
+utm_campaign=drip-2026-08.
 
 ### Step 4. Stamp the batch
 
@@ -219,7 +246,6 @@ Report: NDRs found, addresses suppressed, contacts retired, drafts promoted to c
 
 - Never send email directly. Create drafts only. Will presses send.
 - Every draft CCs chance.friedman@calusainvestments.com. No exceptions.
-- Draft bodies are plain black text only. No colored fonts, no blue hyperlinks, no HTML styling beyond what is required to force black.
 - The CRM contains only verified emails. Never write an address into any CRM email column without stamping "Email Verified At" and deleting the matching 04d row in the same operation.
 - 04d holds only unresolved addresses. An address must never exist in both 04d and the CRM. Resolved means deleted from 04d: good addresses go to the CRM, bad addresses go to 04a.
 - Never draft to an address present in "04a - Email Suppression" with "Suppress" = true. That single table holds bounces AND unsubscribes, distinguished by "Suppression Type". There is no "04b" table; it was collapsed into 04a on 2026-08-02. Screen the batch against it before creating drafts and drop any hits, deleting their 04d row since the address is already resolved.
