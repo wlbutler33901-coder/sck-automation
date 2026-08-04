@@ -204,3 +204,15 @@ NEVER put credentials, API keys, or personal contact details in this file.
 - 2026-08-03 | sck-project-scanner | note | A 3am scan did not execute (no run_summary) and the
   digest warned correctly; check the routine Runs list for the failure reason - the 14-day
   lookback self-heals coverage the next night.
+- 2026-08-04 | sck-project-enrichment | fix | The eight legacy outreach drafts created by the
+  per-discovery drafter were backfilled with clean recipient addresses; developer Email fields
+  often carry annotations and secondary addresses, so "Recipient Email" must hold a bare first
+  valid address, preferring a named person over a generic inbox.
+- 2026-08-04 | sck-project-enrichment | fix | The outreach queue sent-check now treats Status
+  'draft' and 'queued' alike (most recent by "Queued At" then created_at) so legacy drafts
+  cannot stall the rotation; unsent legacy drafts expire after 14 days rather than being
+  deleted.
+- 2026-08-04 | sck-project-enrichment | note | Developer rows contain unmerged duplicates
+  (Harrod Properties, The Vault, ReVest, Storage Caves, Stables Motor Condos); outreach
+  selection must match on normalized developer name and deduplicate first, or one developer
+  gets drafted twice under variant records.
