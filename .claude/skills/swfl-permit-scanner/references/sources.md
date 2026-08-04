@@ -44,7 +44,7 @@ Portals run on a handful of software platforms. Navigation differs by platform -
 | Jurisdiction | URL | Platform |
 |---|---|---|
 | Sarasota County | https://aca-prod.accela.com/SARASOTACO/Default.aspx | Accela ACA |
-| City of Sarasota | https://ftgportal.sarasotafl.gov/Common/ApplicationLinks.aspx | SUPERSEDED - FastTrackGov (Mitchell Humphrey). Superseded by the row for this jurisdiction added 2026-08-04; retained for certification history. Do not scan this path. |
+| City of Sarasota (building permits - secondary, triage only) | https://ftgportal.sarasotafl.gov/Common/ApplicationLinks.aspx | FastTrackGov (Mitchell Humphrey), "c" microapp. SECONDARY path: triage only for building permits (list-level Application ID/Type/Date/Status/Address, no description or valuation, detail page AJAX-gated, mostly residential trade permits). The Development Applications ("da") row below remains PRIMARY for rezonings and site plans. |
 | City of Sarasota (Development Applications - where rezonings/site plans live) | https://ftgportal.sarasotafl.gov/Permits/Search.aspx?microapp=da | FastTrackGov "da" microapp, street-name search - see platform-playbook.md |
 | City of North Port | https://aca-prod.accela.com/NORTHPORT/Default.aspx | Accela ACA |
 | City of Venice | https://trakit.venicegov.com/eTRAKiT/ | eTRAKiT (TRAKiT) |
