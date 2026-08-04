@@ -102,6 +102,33 @@ NEVER put credentials, API keys, or personal contact details in this file.
   (landing pages and article pages alike), worse than the prior intermittent-403 note above.
   Recovered via WebSearch only. If this persists across runs, treat it as blocked like
   businessobserverfl.com rather than intermittent.
+- 2026-08-04 | swfl-permit-scanner | blocker | Monday Aug 3 rotation (SWFL-MON-LEE-CITIES,
+  TPA-MON-TAMPA) left zero trace: no Scan Activity Log rows and no portal-table writes for the
+  full overnight window, versus normal writes on the nights before and after. Not a logging gap
+  (the run-logging contract was already live); the run itself appears not to have executed.
+  Needs investigation before next Monday; the 14-day lookback will self-heal the data once it
+  does run, but the missed night is otherwise invisible without this note.
+- 2026-08-04 | swfl-permit-scanner | note | The City of Naples press-substitute path inserted 2
+  permit rows (The Avenue - Fifth Avenue South Mixed-Use; Dual-Brand Hotel at 870
+  Goodlette-Frank Rd) that duplicate news scanner rows from Jul 19 and Jul 27 at the same
+  address with no new facts. The report's exact-string identity key did not catch it because the
+  two tables used different Project Name strings for the same project. The press-substitute
+  cross-table dedup rule in the permit scanner section 5 now covers this; check the News Scanner
+  table by address/parcel, not just by project name.
+- 2026-08-04 | sck-project-enrichment | workaround | FL Sunbiz (search.sunbiz.org) sits behind a
+  Cloudflare managed challenge that blocks both WebFetch and browser-UA curl, so LLC
+  registered-agent/principal reads fail. Get principals from press, bizprofiles.com / city-data
+  business-entity mirrors, and FL DBPR license lookups instead; cite the real Sunbiz doc number
+  when the mirror confirms it.
+- 2026-08-04 | sck-project-enrichment | note | The 25-oldest dev-contact budget is misleading once
+  the oldest rows are already worked: they held documented genuine gaps from the prior run, so the
+  real fillable work was the newer filled=0 rows (mostly FL). Spend the row budget where NULLs are
+  actually fillable, not strictly oldest-first, or the top-priority contacts stay empty.
+- 2026-08-04 | sck-project-enrichment | note | The distinctive-token audit earned its keep: it
+  flagged two staged near-dupes the scanner missed - "Car Village Bluffton" vs "CarVillage USA"
+  (same developer SKYHB-1, Beaufort Co) and "Naples Luxury Auto Storage" vs "Naples Luxury Motor
+  Suites" (both reduce to "naples", Collier Co). Logged as merge_recommendation, not auto-merged,
+  since the names differ and a live/high-value row was involved.
 
 ## Resolved
 
