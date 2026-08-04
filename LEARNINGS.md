@@ -142,6 +142,12 @@ NEVER put credentials, API keys, or personal contact details in this file.
   plus client-side date windowing. The county also publishes a monthly "Major Projects" PDF
   (charlottecountyfl.gov /file/363/major-projects-<month>-<year>.pdf) that is a genuine Tier 3
   feed, not press substitution. Recovered from branch hopeful-heisenberg-4eed0z.
+- 2026-08-04 | swfl-permit-scanner | note | references/sources.md now marks retired access paths
+  with a SUPERSEDED marker at the start of the Platform cell instead of deleting the row, so
+  certification history survives. Scanners MUST skip any row marked SUPERSEDED; it is history,
+  not a scan target. The file has no Status or Notes column, so the marker lives in the Platform
+  cell, which the file already defines as the extraction cue. Same rule applies to
+  references/sources-tampa.md, which does have a real Status column.
 - 2026-08-04 | swfl-permit-scanner | note | City of Sarasota CRE lives in the FastTrackGov
   "da" (Development Applications) microapp, not the certified "c" building-permit search, which
   is list-level triage only (no description or valuation, detail page AJAX-gated). Search "da" by

@@ -8,11 +8,11 @@ Portals run on a handful of software platforms. Navigation differs by platform -
 
 | Jurisdiction | URL | Platform |
 |---|---|---|
-| Lee County | https://www.leegov.com/dcd/reports | Custom report portal (PDF/Excel reports) |
+| Lee County | https://www.leegov.com/dcd/reports | SUPERSEDED - Custom report portal (PDF/Excel reports). Superseded by the row for this jurisdiction added 2026-08-04; retained for certification history. Do not scan this path. |
 | City of Fort Myers | https://fortmyers.gov/2324/2025-Statistical-Reports | Statistical report PDFs |
 | City of Cape Coral | https://energovweb.capecoral.gov/EnerGovProd/SelfService#/report | Tyler EnerGov |
 | City of Bonita Springs | https://egweb1.cityofbonitasprings.org/energov/selfservice#/home | Tyler EnerGov |
-| Village of Estero | https://estero-fl.gov/building-permit-application/ | Static page / forms |
+| Village of Estero | https://estero-fl.gov/building-permit-application/ | SUPERSEDED - Static page / forms. Superseded by the row for this jurisdiction added 2026-08-04; retained for certification history. Do not scan this path. |
 | Village of Estero (CERTIFIED Tier 3 feed, use this) | https://www.leegov.com/dcd/rpts/Documents/CurrentMonth/ (VEBPCWeek1-5.PDF) | Lee County DCD CurrentMonth weekly PDF, VE prefix - see platform-playbook.md |
 | Lee County (CERTIFIED Tier 3 weekly feed, preferred over the monthly report) | https://www.leegov.com/dcd/rpts/Documents/CurrentMonth/ (ULCBPCWeek1-5.PDF) | Lee County DCD CurrentMonth weekly PDF, no-auth fixed URLs - see platform-playbook.md |
 
@@ -44,7 +44,7 @@ Portals run on a handful of software platforms. Navigation differs by platform -
 | Jurisdiction | URL | Platform |
 |---|---|---|
 | Sarasota County | https://aca-prod.accela.com/SARASOTACO/Default.aspx | Accela ACA |
-| City of Sarasota | https://ftgportal.sarasotafl.gov/Common/ApplicationLinks.aspx | FastTrackGov (Mitchell Humphrey) |
+| City of Sarasota | https://ftgportal.sarasotafl.gov/Common/ApplicationLinks.aspx | SUPERSEDED - FastTrackGov (Mitchell Humphrey). Superseded by the row for this jurisdiction added 2026-08-04; retained for certification history. Do not scan this path. |
 | City of Sarasota (Development Applications - where rezonings/site plans live) | https://ftgportal.sarasotafl.gov/Permits/Search.aspx?microapp=da | FastTrackGov "da" microapp, street-name search - see platform-playbook.md |
 | City of North Port | https://aca-prod.accela.com/NORTHPORT/Default.aspx | Accela ACA |
 | City of Venice | https://trakit.venicegov.com/eTRAKiT/ | eTRAKiT (TRAKiT) |
