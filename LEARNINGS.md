@@ -129,6 +129,25 @@ NEVER put credentials, API keys, or personal contact details in this file.
   (same developer SKYHB-1, Beaufort Co) and "Naples Luxury Auto Storage" vs "Naples Luxury Motor
   Suites" (both reduce to "naples", Collier Co). Logged as merge_recommendation, not auto-merged,
   since the names differ and a live/high-value row was involved.
+- 2026-08-04 | swfl-permit-scanner | fixed | Lee County has a weekly no-auth PDF feed under
+  /dcd/rpts/Documents/CurrentMonth (ULCBPCWeek1-5.PDF), which avoids the SharePoint 401 and the
+  monthly-report lag entirely, and Village of Estero permits are in that same feed under the VE
+  prefix (VEBPCWeek1-5.PDF) - Estero is no longer a no-feed jurisdiction. Recipe recovered from
+  the 2026-07-26 run (branch hopeful-heisenberg-bgxo71) into references/platform-playbook.md.
+  Parse with pdftotext -layout; pypdf/cffi is broken in the CC cloud sandbox.
+- 2026-08-04 | swfl-permit-scanner | note | Charlotte County Accela date-range search returned
+  "no results" for every window on 2026-07-22 while an unfiltered search worked, then the host
+  went unreachable - a temporary IP rate limit from repeated automated hits. Retry fresh on a
+  later cluster night before assuming it is broken; if it recurs, use the no-date-filter search
+  plus client-side date windowing. The county also publishes a monthly "Major Projects" PDF
+  (charlottecountyfl.gov /file/363/major-projects-<month>-<year>.pdf) that is a genuine Tier 3
+  feed, not press substitution. Recovered from branch hopeful-heisenberg-4eed0z.
+- 2026-08-04 | swfl-permit-scanner | note | City of Sarasota CRE lives in the FastTrackGov
+  "da" (Development Applications) microapp, not the certified "c" building-permit search, which
+  is list-level triage only (no description or valuation, detail page AJAX-gated). Search "da" by
+  street name only; there is no working date range. Sarasota County Planning also needs
+  ddlGSPermitType filtered per type or an unfiltered search returns 100+ noise rows. Recovered
+  from branch hopeful-heisenberg-rnikmc.
 
 ## Resolved
 

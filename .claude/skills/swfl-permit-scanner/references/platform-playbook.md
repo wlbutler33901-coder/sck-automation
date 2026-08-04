@@ -259,3 +259,72 @@ Public entry index.php?r=publicRecordsSearch/index = "Search Public Records by L
 (street address OR parcel #). No date field, no record-type filter; blank/wildcard returns nothing. Same class as
 Click2Gov/Punta Gorda: answers a known address/parcel only, cannot enumerate a date window. Substitute county feed + agendas + press.
 
+
+# ============================================================================
+# RECOVERED PORTAL RESEARCH (appended 2026-08-04 from stranded unattended-run branches).
+# Additive only. These supplement, and do not replace, the certification table above.
+# ============================================================================
+
+## Lee County DCD - CurrentMonth WEEKLY PDF feed (recovered from run of 2026-07-26; branch hopeful-heisenberg-bgxo71)
+BEST SOURCE for Lee County, and it supersedes the monthly report for the daily scan. Weekly reports sit at fixed,
+no-auth URLs under `/dcd/rpts/Documents/CurrentMonth/<PREFIX><TYPE>Week<1-5>.PDF` - a rolling 5-week window, no
+SharePoint auth needed (this avoids the 401 that the /dcd/reports UI and _api/web/folders both return) and no
+monthly-report lag.
+- PREFIX = sub-area: ULC=Unincorporated Lee County, VE=Village of Estero, NFM=North Fort Myers, BG=Boca Grande,
+  CI=Captiva Island, LA=Lehigh Acres.
+- TYPE: BPC = "Building Permits Issued - Commercial" (the one to read weekly). BPR/BPD/BPT/BPP/BPRO/BPSO/BPEO/CPR
+  also exist and are lower value.
+- WeekN labels are NOT calendar-week numbers, they rotate. Check each file's own "From:/To:" header and its
+  TimeLastModified to find the newest 2-3.
+- Discovery: GET `https://www.leegov.com/dcd/rpts/_api/web/getfolderbyserverrelativeurl('/dcd/rpts/Documents/CurrentMonth')/files`
+  with `Accept: application/json;odata=verbose` lists current filenames + mtimes; then plain GET the .PDF (no headers
+  needed) and parse with `pdftotext -layout` (apt: poppler-utils).
+- GOTCHA: pypdf/cffi is broken in the CC cloud sandbox (missing `_cffi_backend` -> Rust panic). Use `pdftotext -layout`,
+  not a Python PDF library.
+- The old monthly path `/dcd/rpts/Documents/<Area>/<Year>/<Mon>/<Area><Year><Mon>BPC.PDF` (e.g. ULC2026JunBPC.PDF) still
+  works as a Tier 3 fallback/backfill but lags about a week into the next month.
+VILLAGE OF ESTERO IS IN THIS SAME FEED under the VE prefix: `VEBPCWeek<1-5>.PDF` = "Building Permits Issued -
+Commercial - Village of Estero", same format and columns as the ULC report. Read it alongside ULC each Sunday; no
+separate Estero portal is needed. The estero-fl.gov static page / CGA portal remains a dead end (no date-searchable
+feed, broken TLS chain) and can be skipped now that this feed is known. Run evidence 2026-07-26: ULCBPCWeek1-3 +
+VEBPCWeek1-3 over the 7/5-7/25/2026 window produced 7 new Lee County projects and 3 dedupe progressions; Estero
+returned 0 qualifying commercial permits (confirmed-empty, not a scan failure).
+
+## Charlotte County - Accela date-search failure, IP rate limit, and a county-published Tier 3 source (run of 2026-07-22; branch hopeful-heisenberg-4eed0z)
+ACCELA SYMPTOM: the BOCC tenant's date-range General Search (txtGSStartDate/txtGSEndDate set both via `.value` and via
+realistic Playwright keyboard typing) reliably returned "Your search returned no results" for every date window tried,
+including the exact window that had returned ~100 rows two days earlier and a 7-week super-window that should have
+caught it. A no-date-filter search DID return a grid (8 rows), so the search engine itself works and only date-bounded
+queries failed. Immediately after, `aca-prod.accela.com` became fully unreachable (curl timeout / connection reset on
+`/BOCC/...` while google.com and leegov.com stayed fine), consistent with a temporary IP-level rate limit from repeated
+automated hits during troubleshooting. Retrying was stopped per the pacing guardrail.
+FOLLOW-UP: on a Wednesday cluster run, try the date search fresh (no repeated hits first) before assuming it is broken
+again; the "no results on any date range" symptom may not recur once the block clears. If it does recur, use the
+no-date-filter search plus a client-side date scan, the same pattern used for EnerGov.
+NEW TIER 3 SOURCE: `https://www.charlottecountyfl.gov/departments/community-development/major-development-projects.stml`
+links a monthly "Major Projects" spotlight PDF at `/file/363/major-projects-<month>-<year>.pdf` (e.g.
+`major-projects-june-2026.pdf`), independent of the Accela portal. It lists named commercial projects with address,
+parcel, SF, acreage and Under Review / Under Construction / Completed status - a genuine county-published feed, not
+press substitution. Check it each run before falling back to Accela or press. Run evidence: 14 records written
+(10 from the Major Projects PDF, 4 Punta Gorda / Charlotte County press substitution: Duncan Road U.S. 17 PD rezoning
+approved 5/26/2026, Punta Gorda Waterfront Hotel revised master plan 5/21/2026, Punta Gorda Industrial Park
+(Blueprint Industrial Capital), Duffie North industrial / Airport Commerce Center).
+
+## City of Sarasota - "da" Development Applications search, and extra Sarasota County Planning detail (run of 2026-07-23; branch hopeful-heisenberg-rnikmc)
+CITY OF SARASOTA (FastTrackGov): the certified `microapp=c` building-permit search is TRIAGE ONLY - its list columns are
+just Application ID / Type / Subtype / Date / Status / Address, with no description or valuation, and the detail page is
+'qna' AJAX-gated (not cracked); content is mostly residential trade permits. RUN THIS SEPARATE SEARCH INSTEAD for CRE:
+`microapp=da` (Development Applications, not building permits) at the same host and request pattern. POST with
+`FTGSearchControl$txtStreetName=<street name only, no number or suffix>` and `btnSearch`; street name is the only
+reliable filter (there is no working date range on "da"). This is where city-level rezonings and site plans actually
+live. Evidence: a street-name search for "Ringling" surfaced 5 Development Application case numbers at 1660 Ringling
+Blvd (Benderson Class A office redevelopment of the former Sarasota County admin building). The "da" case list shows
+only ID/date/status/address, so confirm project scope via press before writing a record.
+SARASOTA COUNTY PLANNING (supplements the certified Planning-module row above): filter `ddlGSPermitType` separately per
+relevant type, because an unfiltered search returns 100+ noise rows including test/junk entries. Working values seen:
+"Planning/Rezoning/NA/NA", "Planning/LDS/Plan Amendment/NA", "Planning/LDS/Development Submittal/NA",
+"Planning/LDS/Plat/NA", "Planning/General Plan/Amendment/NA", "Planning/Conditional Use/NA/NA". Results rows carry
+Date/PermitNumber/Type/Description/ProjectName/Address inline in the list view, so no detail-page click is needed -
+richer list-level data than the Building module. Run evidence 2026-07-23: 2 qualifying written (Juniper Landscaping
+Office/Field Ops facility, Englewood, straight from the list view; Benderson 1660 Ringling Blvd via the "da"
+cross-reference plus press).
