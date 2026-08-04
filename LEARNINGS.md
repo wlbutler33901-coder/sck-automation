@@ -83,6 +83,18 @@ NEVER put credentials, API keys, or personal contact details in this file.
   itemized issued permits; only an annual aggregate report exists). Tier-4 press substitution
   with a coverage_gap flag is ACCEPTED for now, the same treatment Track A gives Estero and
   Naples; a direct feed remains wanted. Log a coverage_gap row for St. Pete each Wednesday.
+- 2026-08-04 | swfl-permit-scanner | note | City of Clearwater Accela (TPA-TUE-PINELLAS-N) enforces
+  a hard ~100-row date-desc cap on its only record type (generic "Building - Construction Permit"),
+  so a 90-day first-run pull only actually reached back about 6 days (2026-07-29 to 2026-08-03) in
+  the first cloud run. Expect the same shallow real coverage on every future pass, not just the
+  first; the 90-day intent does not apply here, this portal is effectively last-100-rows-only.
+- 2026-08-04 | swfl-permit-scanner | note | TPA-TUE-PINELLAS-N first real write pass complete
+  (Dunedin/Largo EnerGov api, Pinellas Co/Clearwater Accela browser, Safety Harbor/Tarpon Springs
+  press-substitute). 7 records inserted. The Dunedin/Largo EnerGov search-body template was not on
+  file in platform-playbook.md (only headers/host); the run recaptured it live via a one-time
+  Playwright network-interception pass but did not save it back to the playbook. Future runs on
+  these two portals should capture-and-append the verbatim body once cracked so Tier-1 API pulls
+  stop needing a browser at all.
 
 ## Resolved
 
