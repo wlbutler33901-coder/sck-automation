@@ -58,6 +58,11 @@ will.butler@calusainvestments.com
 project row. {their metro} and {their region} from the project's City and Region. Fill every
 slot from the database; never invent.
 
+"Recipient Email" must be a bare address with no annotations, parentheses, or secondary
+addresses. Developer Email fields often store notes like "scott@example.com (direct);
+info@example.com"; extract the FIRST valid address only and prefer a named-person address over
+a generic info@ or legal@ inbox when both appear.
+
 ## Selection and rotation
 
 1. TRIGGER: run this step only when the last 26 hours produced zero new developer rows in
@@ -65,17 +70,27 @@ slot from the database; never invent.
    handles outreach and this step is skipped (log outreach_skipped, reason new developers
    found).
 2. SENT CHECK FIRST: before drafting anyone new, take the most recent row in "Developer
-   Outreach - Drafts" with Status = 'queued'. Search Outlook Sent Items for a message from
+   Outreach - Drafts" with Status in ('queued','draft'), ordered by "Queued At" then
+   created_at. Search Outlook Sent Items for a message from
    will.butler@calusainvestments.com to that row's "Recipient Email" sent after its "Queued
    At". If found: set that row Status = 'sent' and "Sent At" to the send time, and note the
    contact in the developer's Comments. If not found: the queue is occupied; do NOT draft
    another. Log outreach_skipped, reason prior draft still pending, and stop this step.
+2b. LEGACY DRAFTS: eight rows created 2026-08-04 by the per-discovery drafter have Status
+   'draft' and no "Queued At". Their "Recipient Email" values have been backfilled. Treat
+   them exactly like queued rows for the sent-check: if a matching message appears in Sent
+   Items, mark Status 'sent' and set "Sent At". If a legacy draft is older than 14 days with
+   no send and no reply, set Status 'expired' and free that developer back into the rotation,
+   logging change_type 'outreach_expired'. Never delete a Drafts row.
 3. SELECT the next outstanding developer only when the queue is clear: a Florida developer
    (from "05 - Developers" or approved rows in "05 - Developers - New") with a usable Email,
    no row in "Developer Outreach - Drafts" with Status in ('queued','sent','draft'), and no
    contact already noted in Comments. Priority order: developers with a Pre-Development or
    Under Construction FL project first, then Developer Sale, then Completed; ties broken by
-   most recent project activity. Deterministic; no judgment calls at 4 AM.
+   most recent project activity. Deterministic; no judgment calls at 4 AM. Developer rows are
+   known to contain unmerged duplicates (Harrod Properties, The Vault, ReVest, Storage Caves,
+   Stables Motor Condos). Match on normalized developer name and deduplicate before selecting,
+   so one developer can never be drafted twice under variant records.
 4. DRAFT: compose from this template, create the Outlook draft in Will's Drafts folder via the
    Microsoft 365 connector, CC chance.friedman@calusainvestments.com. Then INSERT the row into
    "Developer Outreach - Drafts" with Developer, Project, Region, Subject, Body, "Recipient

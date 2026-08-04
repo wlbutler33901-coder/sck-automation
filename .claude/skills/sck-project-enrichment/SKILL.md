@@ -54,7 +54,7 @@ d. Error checks on rows touched tonight: Region/Submarket exist in coverage tabl
 ## Step 5 - Status watch (rotation-gated)
 Use the scanner's rotation for tonight's regions. Staged rows: UPDATE "Project Status" with evidence, log change_type='status_change' (or 'dead_project'). Live rows: DO NOT TOUCH; log change_type='live_status_suggestion' with evidence URL.
 
-## Step 4b - FL developer outreach queue (fallback)
+## Step 5b - FL developer outreach queue (fallback)
 On mornings when the last 26 hours produced zero new developer rows, run the outreach queue exactly per references/outreach-template.md: sent-check first against Outlook Sent Items, rotate only when the queue is clear, one Outlook draft per morning to Will's Drafts folder with chance.friedman@calusainvestments.com CCd, Supabase row with Status queued, log outreach_queued or outreach_skipped with the reason. The database columns "Recipient Email" and "Queued At" on "Developer Outreach - Drafts" and resolution / resolved_at on "Scan Activity Log" already exist.
 
 ## Step 6 - FL DEVELOPER OUTREACH DRAFTS (new)
