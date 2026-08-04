@@ -63,5 +63,5 @@ the batch.
 The runner writes: Appraisal, "Appraised $ / SF" (the reconciled PSF, numeric),
 "Appraisal Date" and "Last Triggered" (run date), "Manual Update" = NULL.
 The old "Appraised Value $" column no longer exists. Units with a non-empty
-"Appraisal Notes" value are listed in the run summary and are NOT batch-applied;
+"Appraisal Valuation Comments" value are listed in the run summary and are NOT batch-applied;
 route those through the Cowork skill individually.

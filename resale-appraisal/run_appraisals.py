@@ -9,7 +9,7 @@ HARD SAFETY RULES (do not relax):
   * NEVER sets "Manual Update" = TRUE anywhere (that fires the legacy Make
     webhook). Completed units get "Manual Update" = NULL, which never fires.
   * Never touches region/project batch trigger tables or any Make webhook.
-  * appraise_unit.py is byte-locked (15,142 bytes); this script refuses to run
+  * appraise_unit.py is byte-locked (15,134 bytes); this script refuses to run
     if the engine file size differs.
 
 Usage examples:
@@ -286,7 +286,7 @@ def load_wi(sb):
 
 def resolve_scope(sb, args):
     units = sb.select(UNITS_T, {"select": '"Index","Project","Unit #","Parcel ID","Address",'
-                                          '"City","Year Built","Suite Size (SF)","Appraised $ / SF","Appraisal Notes"'})
+                                          '"City","Year Built","Suite Size (SF)","Appraised $ / SF","Appraisal Valuation Comments"'})
     if args.unit:
         picked = [u for u in units if str(u.get("Index")) == str(args.unit)]
     elif args.project:
@@ -426,7 +426,7 @@ def main():
                        "old_psf": round(old_psf, 2) if old_psf else None, "new_psf": new_psf,
                        "delta_psf": round(delta, 2) if delta is not None else None,
                        "value_total": new_val, "n_comps": out["narrative_stats"]["n_comps"],
-                       "notes": (u.get("Appraisal Notes") or "").strip(), "warn": warn or ""}
+                       "notes": (u.get("Appraisal Valuation Comments") or "").strip(), "warn": warn or ""}
                 if args.dry_run:
                     fn = re.sub(r"[^A-Za-z0-9._ -]", "", "%s Unit %s - %s.md"
                                 % (pname, u.get("Unit #"), today))
@@ -481,7 +481,7 @@ def main():
                   "${:,.2f}".format(r["new_psf"]), r["delta_psf"]))
     noted = [r for r in results if r.get("notes")]
     if noted:
-        print("%d unit(s) carry Appraisal Notes (NOT applied in batch mode; run those through the Cowork skill):" % len(noted))
+        print("%d unit(s) carry Appraisal Valuation Comments (NOT applied in batch mode; run those through the Cowork skill):" % len(noted))
         for r in noted[:10]:
             print("  Index %s %s Unit %s" % (r["Index"], r["Project"], r["Unit #"]))
     summary["notes_units"] = [r["Index"] for r in noted]
