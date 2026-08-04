@@ -26,14 +26,15 @@ SELECT p.* FROM "01 - Project - New" p WHERE p.discovered_at > now() - interval 
 2. NEW PROJECTS (the lead section): one line per new candidate -
    {Project Name} | {Region} / {Submarket} | {Status} | {Units} units | confidence {level} | {one-line note} | {source_url}
    High confidence first, then by region. If none: "No new candidates. Regions scanned: {list}."
+   This section contains ONLY change_type new_candidate rows. Rediscoveries, near-match flags, and context notes never appear here; a rediscovery appears in section 3 only when it carries a potential change (possible duplicate, status difference), otherwise it is counts-line only.
 3. DATABASE UPDATE RECOMMENDATIONS (the action section), in this order:
    a. live_status_suggestions NEW since last digest (project, current -> suggested, confidence, evidence URL, one line).
-   b. live_status_suggestions still PENDING (compact list).
+   b. Open live_status_suggestions only: rows where resolution IS NULL. Before composing, auto-resolve: for each open suggestion, compare the suggested status in detail against the project's current "Project Status" in "01 - Projects" (normalized name match); if they now match, UPDATE that log row SET resolution = 'applied', resolved_at = now() and list it under a one-line "Applied since last digest" confirmation instead. Suggestions that cannot auto-resolve (at-risk, verify continuity) stay open until Will resolves them in a chat session, which sets resolution to approved or rejected.
    c. Staged status changes auto-applied (project, old -> new, evidence).
    d. Duplicate / merge recommendations and near-match flags, including which dedup signal fired.
    e. Data corrections applied or recommended.
 4. CONTACT CARD PROGRESS: "05 - Developers - New": X of Y rows with Contact, X of Y with Email (and the delta vs yesterday); "08 - Brokers - New": same; review-pass corrections; staged projects still missing a "Sales Broker" answer. If developer completeness did not move and NULLs remain, say so bluntly.
-5. DEVELOPER OUTREACH DRAFTS: new drafts created last night (Developer | Project | Subject) and the count of drafts still at Status='draft' in "Developer Outreach - Drafts". One reminder line: review and send from Outlook with the Q2 2026 Florida Market Report attached.
+5. DEVELOPER OUTREACH DRAFTS: new drafts created last night (Developer | Project | Subject) and the count of drafts still at Status='draft' in "Developer Outreach - Drafts". One reminder line: review and send from Outlook with the Q2 2026 Florida Market Report attached. Also report any outreach draft queued this morning by the fallback queue: developer, project, recipient, with the reminder "Attach the current Florida Market Report PDF in Outlook before sending." If the queue was skipped because a prior draft is still pending in your Drafts folder, say that instead.
 6. PIPELINE SNAPSHOT: live "01 - Projects" counts by status (excl. Dead), staged totals ("01 - Project - New": total | added last 7 days | pending review), open suggestion count.
 
 Formatting: compose in MARKDOWN per the EMAIL FORMATTING RULES below (the markdown is the canonical saved artifact). Terse, no em-dashes, mobile-readable. Stage labels are fine; never rank by financing relevance.

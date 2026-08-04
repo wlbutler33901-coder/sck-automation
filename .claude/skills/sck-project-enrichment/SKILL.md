@@ -8,7 +8,7 @@ description: Daily (post-scan) enrichment agent for the Storage Condo King pipel
 Priority order is deliberate and NON-NEGOTIABLE: (1) developer contacts, (2) broker contacts, (3) project fields, (4) audit, (5) status watch, (6) FL outreach drafts. Contact completion outranks everything because it feeds Will's outreach; this has been under-delivered by prior versions and is now the first thing every run does and the first thing every run reports.
 
 ## Hard rules
-1. UPDATE only "01 - Project - New", "05 - Developers - New", "08 - Brokers - New"; INSERT only to those staging tables, "Developer Outreach - Drafts", and "Scan Activity Log". NEVER modify "01 - Projects", "05 - Developers", "08 - Brokers", or any live table. Live changes are SUGGESTIONS: log change_type='live_status_suggestion' and stop.
+1. UPDATE only "01 - Project - New", "05 - Developers - New", "08 - Brokers - New"; INSERT only to those staging tables, "Developer Outreach - Drafts", and "Scan Activity Log", plus INSERT and Status / "Sent At" updates on "Developer Outreach - Drafts" for the outreach queue step. NEVER modify "01 - Projects", "05 - Developers", "08 - Brokers", or any live table. Live changes are SUGGESTIONS: log change_type='live_status_suggestion' and stop.
 2. LOGGING CONSTANT: every log row uses run_type = 'enrichment', exactly.
 3. NEVER supply explicit id values on inserts; on a duplicate-key error, retry once and log the collision.
 4. Never overwrite a non-null field with lower-confidence data. Fill nulls; correct non-nulls only with a primary source, appending the old value to a notes field.
@@ -53,6 +53,9 @@ d. Error checks on rows touched tonight: Region/Submarket exist in coverage tabl
 
 ## Step 5 - Status watch (rotation-gated)
 Use the scanner's rotation for tonight's regions. Staged rows: UPDATE "Project Status" with evidence, log change_type='status_change' (or 'dead_project'). Live rows: DO NOT TOUCH; log change_type='live_status_suggestion' with evidence URL.
+
+## Step 4b - FL developer outreach queue (fallback)
+On mornings when the last 26 hours produced zero new developer rows, run the outreach queue exactly per references/outreach-template.md: sent-check first against Outlook Sent Items, rotate only when the queue is clear, one Outlook draft per morning to Will's Drafts folder with chance.friedman@calusainvestments.com CCd, Supabase row with Status queued, log outreach_queued or outreach_skipped with the reason. The database columns "Recipient Email" and "Queued At" on "Developer Outreach - Drafts" and resolution / resolved_at on "Scan Activity Log" already exist.
 
 ## Step 6 - FL DEVELOPER OUTREACH DRAFTS (new)
 For each developer whose contact card gained at least a Contact name or Email this run (or is complete but has no draft yet), AND whose staged/live projects sit in FLORIDA (FL only for now: that is where the market report covers):
