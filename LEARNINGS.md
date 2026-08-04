@@ -10,14 +10,13 @@ file. It is short by design. If a rule here conflicts with a skill file, this fi
 operational matters (retries, concurrency, logging, run_type values) and the skill file wins
 on subject matter (what qualifies, what gets written where).
 
-APPEND AT RUN END. Append a dated entry to the LOG section below whenever any of these occur:
-- A source, portal, or API failed, changed shape, or started blocking.
-- A write was rejected by the database.
-- The run was cut short, suspended, or timed out.
-- A rule in this file turned out to be wrong or is now obsolete.
-- A workaround was discovered that a future run should reuse.
-
-Do not append on a clean run. A clean run adds nothing.
+APPEND AT RUN END. Interactive and local sessions append dated entries directly to this file.
+Unattended cloud runs must NEVER commit, branch, or push; they record each learning as a Scan
+Activity Log row with their own run_type and change_type learning, detail formatted as a contract
+line from this file. Learning rows are folded into this file during interactive repo sessions,
+which set digested_at on the rows they fold. Log a learning whenever a source failed or changed
+shape, a write was rejected, a run was cut short, a rule here proved wrong, or a workaround was
+found. A clean run logs nothing.
 
 FORMAT. One entry per line, newest at the bottom of its section:
 `YYYY-MM-DD | routine | severity | one sentence of what happened and what to do about it.`
@@ -83,6 +82,26 @@ NEVER put credentials, API keys, or personal contact details in this file.
   itemized issued permits; only an annual aggregate report exists). Tier-4 press substitution
   with a coverage_gap flag is ACCEPTED for now, the same treatment Track A gives Estero and
   Naples; a direct feed remains wanted. Log a coverage_gap row for St. Pete each Wednesday.
+- 2026-08-04 | swfl-permit-scanner | note | City of Clearwater Accela (TPA-TUE-PINELLAS-N) enforces
+  a hard ~100-row date-desc cap on its only record type (generic "Building - Construction Permit"),
+  so a 90-day first-run pull only actually reached back about 6 days (2026-07-29 to 2026-08-03) in
+  the first cloud run. Expect the same shallow real coverage on every future pass, not just the
+  first; the 90-day intent does not apply here, this portal is effectively last-100-rows-only.
+- 2026-08-04 | swfl-permit-scanner | note | TPA-TUE-PINELLAS-N first real write pass complete
+  (Dunedin/Largo EnerGov api, Pinellas Co/Clearwater Accela browser, Safety Harbor/Tarpon Springs
+  press-substitute). 7 records inserted. The Dunedin/Largo EnerGov search-body template was not on
+  file in references/platform-playbook.md (only headers/host); the run recaptured it live via a
+  one-time Playwright network-interception pass but did not save it back to the playbook. Future
+  runs on these two portals should capture-and-append the verbatim body once cracked so Tier-1 API
+  pulls stop needing a browser at all.
+- 2026-08-04 | swfl-news-scanner | note | news-press.com and naplesnews.com (Gannett) are not just
+  metered-paywalled, WebFetch could not reach either site at all this run ("unable to fetch"), and
+  WebSearch site: queries returned zero results for either domain in the scan window. Treat both as
+  blocked, not paywalled, until proven otherwise; do not burn time on direct WebFetch retries.
+- 2026-08-04 | swfl-news-scanner | note | yourobserver.com 403'd on every URL tried this run
+  (landing pages and article pages alike), worse than the prior intermittent-403 note above.
+  Recovered via WebSearch only. If this persists across runs, treat it as blocked like
+  businessobserverfl.com rather than intermittent.
 
 ## Resolved
 

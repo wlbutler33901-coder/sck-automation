@@ -133,13 +133,21 @@ Built from the queries in the permit scanner's references/run-logging.md. Report
 
 1. Cluster ids that ran last night, per track, with portals completed and blocked.
 2. Cluster ids scheduled in the last 7 days that left NO trace in the log at all. Name them
-   and give the date they should have run. This is the miss list.
+   and give the date they should have run. This is the miss list. A scheduled night with no
+   trace that predates the cluster's first ever run_started row is labeled no logged history
+   yet, pre deployment or newly activated, and is not treated as a confirmed miss; only nights
+   after a cluster's first run_started row count as real misses.
 3. Portals that returned zero qualifying permits, distinguished plainly from portals that were
    never reached. These are different findings and must never be merged into one line.
 4. Tracks currently PENDING and therefore uncovered.
 
 If the permit scanner wrote no `run_started` row for last night, section 0 WARNINGS leads with
 that fact and the Executive Summary repeats it in its first sentence.
+
+## Section 8 additions
+
+Section 8 also lists, numbered, any change_type learning rows logged since the last report, one
+line each, so learnings surface to Will daily even before they are folded into LEARNINGS.md.
 
 ## Counts written to Supabase
 

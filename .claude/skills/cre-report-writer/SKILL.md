@@ -5,7 +5,7 @@ description: Daily synthesis of the SWFL development scanner. Reviews the last 2
 
 # SWFL Development Report Writer (daily)
 
-Read LEARNINGS.md at the repo root before anything else, and append a dated entry at run end per the contract in that file.
+Read LEARNINGS.md at the repo root before anything else, and append a dated entry at run end per the contract in that file; in an unattended cloud run, record learnings as change_type learning rows in Scan Activity Log instead, and never commit, branch, or push.
 
 Daily decision-support brief for Will Butler / Calusa Capital Partners (Fort Myers CRE financing advisory). Runs every morning ~5:30 AM ET as a Claude Code cloud routine, after the permit (3:30) and news (4:30) scans. Autonomous scheduled run: execute end to end, do not pause for confirmation.
 
