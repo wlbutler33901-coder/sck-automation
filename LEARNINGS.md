@@ -83,6 +83,19 @@ NEVER put credentials, API keys, or personal contact details in this file.
   itemized issued permits; only an annual aggregate report exists). Tier-4 press substitution
   with a coverage_gap flag is ACCEPTED for now, the same treatment Track A gives Estero and
   Naples; a direct feed remains wanted. Log a coverage_gap row for St. Pete each Wednesday.
+- 2026-08-04 | swfl-permit-scanner | blocker | Monday Aug 3 rotation (SWFL-MON-LEE-CITIES,
+  TPA-MON-TAMPA) left zero trace: no Scan Activity Log rows and no portal-table writes for the
+  full overnight window, versus normal writes on the nights before and after. Not a logging gap
+  (the run-logging contract was already live); the run itself appears not to have executed.
+  Needs investigation before next Monday; the 14-day lookback will self-heal the data once it
+  does run, but the missed night is otherwise invisible without this note.
+- 2026-08-04 | swfl-permit-scanner | note | The City of Naples press-substitute path inserted 2
+  permit rows (The Avenue - Fifth Avenue South Mixed-Use; Dual-Brand Hotel at 870
+  Goodlette-Frank Rd) that duplicate news scanner rows from Jul 19 and Jul 27 at the same
+  address with no new facts. The report's exact-string identity key didn't catch it because the
+  two tables used different Project Name strings for the same project. Before inserting a
+  Naples press-substitute row, cross-check the News Scanner table by address/parcel, not just
+  by project name.
 
 ## Resolved
 
