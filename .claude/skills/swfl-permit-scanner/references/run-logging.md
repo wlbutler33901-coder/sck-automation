@@ -44,6 +44,11 @@ The table is generic. Map SWFL concepts onto it as follows and do not invent col
 | `portal_blocked` | A portal could not be reached or is gated | Portal name and the reason (login, CAPTCHA, TLS, timeout, anti-bot). |
 | `coverage_gap` | A track or cluster was skipped entirely | Track, cluster id, and reason. |
 | `run_summary` | ONCE, at the very end | Cluster ids actually completed, portals scanned, portals blocked, records inserted, records updated, and total runtime. |
+| `learning` | A run discovers something future runs need to know | A LEARNINGS.md contract format line. |
+
+Learning rows are the ONLY path for cloud runs to record learnings; unattended runs never commit
+or push to git, and digested_at may be set only by the interactive session that folds a learning
+row into LEARNINGS.md.
 
 ## Incremental logging is mandatory
 

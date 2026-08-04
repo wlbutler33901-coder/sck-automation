@@ -14,7 +14,7 @@ Discovers new deeded car-condo projects and stages them for Will's review. Runs 
 4. Dedup before every insert (Step 4). When in doubt, log a near-match flag instead of inserting.
 5. Normalize en/em dashes in every name comparison: regexp_replace(lower(trim(x)), '[\u2013\u2014]', '-', 'g').
 6. No em-dashes in any text written to the database.
-7. Read LEARNINGS.md at the repo root before anything else, and append a dated entry at run end per the contract in that file.
+7. Read LEARNINGS.md at the repo root before anything else, and append a dated entry at run end per the contract in that file; in an unattended cloud run, record learnings as change_type learning rows in Scan Activity Log instead, and never commit, branch, or push.
 8. Follow references/run-resilience.md for run logging, region checkpointing, and concurrency limits; run_type is always the literal string scan.
 
 ## Step 1 - Tonight's rotation
