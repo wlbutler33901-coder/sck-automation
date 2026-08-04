@@ -133,3 +133,17 @@ NEVER put credentials, API keys, or personal contact details in this file.
 - 2026-08-03 | sck-project-scanner | note | A 3am scan did not execute (no run_summary) and the
   digest warned correctly; check the routine Runs list for the failure reason - the 14-day
   lookback self-heals coverage the next night.
+- 2026-08-04 | sck-project-enrichment | workaround | FL Sunbiz (search.sunbiz.org) sits behind a
+  Cloudflare managed challenge that blocks both WebFetch and browser-UA curl, so LLC
+  registered-agent/principal reads fail. Get principals from press, bizprofiles.com / city-data
+  business-entity mirrors, and FL DBPR license lookups instead; cite the real Sunbiz doc number
+  when the mirror confirms it.
+- 2026-08-04 | sck-project-enrichment | note | The 25-oldest dev-contact budget is misleading once
+  the oldest rows are already worked: they held documented genuine gaps from the prior run, so the
+  real fillable work was the newer filled=0 rows (mostly FL). Spend the row budget where NULLs are
+  actually fillable, not strictly oldest-first, or the top-priority contacts stay empty.
+- 2026-08-04 | sck-project-enrichment | note | Distinctive-token audit earned its keep: flagged two
+  staged near-dupes the scanner missed - "Car Village Bluffton" vs "CarVillage USA" (same dev
+  SKYHB-1, Beaufort Co) and "Naples Luxury Auto Storage" vs "Naples Luxury Motor Suites" (both
+  reduce to "naples", Collier Co). Logged as merge_recommendation, not auto-merged, since names
+  differ and a live/high-value row was involved.
