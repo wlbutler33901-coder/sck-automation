@@ -16,6 +16,7 @@ You are a research agent surfacing commercial development projects at the permit
 
 ## 2. Sources and Extraction
 Read references/rotation.md for today's cluster, references/sources.md for portal URLs and platforms, references/platform-playbook.md for per-platform navigation and extraction steps, references/sources-tampa.md for Track B portal URLs and platforms, and references/run-logging.md for the mandatory Scan Activity Log contract.
+Skip any portal row in references/sources.md or references/sources-tampa.md whose Status is SUPERSEDED; those rows are certification history, not scan targets.
 
 ACCESS TIERS (try in this order per portal; log which tier was used in the run log):
 - TIER 1, PLATFORM API (preferred, EnerGov and other JSON-backed SPAs): call the JSON endpoint behind the SPA directly, no browser. Recipes and discovery method in references/platform-playbook.md. Once a portal's endpoint+payload is captured, record it in the playbook so future runs are pure API.
