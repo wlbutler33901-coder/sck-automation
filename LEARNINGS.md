@@ -83,6 +83,15 @@ NEVER put credentials, API keys, or personal contact details in this file.
   itemized issued permits; only an annual aggregate report exists). Tier-4 press substitution
   with a coverage_gap flag is ACCEPTED for now, the same treatment Track A gives Estero and
   Naples; a direct feed remains wanted. Log a coverage_gap row for St. Pete each Wednesday.
+- 2026-08-04 | swfl-news-scanner | note | news-press.com and naplesnews.com (Gannett) are not
+  just metered-paywalled, WebFetch could not reach either site at all this run ("unable to
+  fetch"). WebSearch site: queries also returned zero results for either domain in the scan
+  window. Treat both as blocked, not paywalled, until proven otherwise; do not burn time on
+  direct WebFetch retries.
+- 2026-08-04 | swfl-news-scanner | note | yourobserver.com 403'd on every URL tried this run
+  (landing pages and article pages alike), worse than the prior intermittent-403 note. Recovered
+  via WebSearch only. If this persists across runs, treat it as blocked like businessobserverfl.com
+  rather than intermittent.
 
 ## Resolved
 
