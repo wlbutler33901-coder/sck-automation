@@ -51,20 +51,31 @@ Use a mobile user agent when a site serves mobile-only layouts. Never bypass log
 SUNDAY DEEP SWEEP (in addition to the night's rotation): once a week, sweep EVERY operator brand site (item 2) across the entire FL/GA/NC/SC footprint. One pass per brand; stage anything new through the same dedup gate.
 
 ## Step 3b - Development Scanner cross-feed (car condo hits from the SWFL permit and news scanners)
-The SWFL Development Scanner writes commercial permits and press to "Development Scanner - Municipality Portals" and "Development Scanner - News Scanner" in the same database. Every night, sweep BOTH for car-condo signals from the last 26 hours:
+The SWFL Development Scanner writes commercial permits and press to "Development Scanner - Municipality Portals" and "Development Scanner - News Scanner" in the same database. Every night, sweep BOTH over a 72 HOUR window.
+
+WHY 72 HOURS, NOT 26: the SWFL scanners now run BEFORE this one (permit 2:00 AM, news 2:45 AM, this scanner 3:30 AM), so same-night rows are in scope. The wider window also self-heals a missed night, and re-staging is impossible because every hit still passes the Step 4 dedup gate.
+
 ```sql
 SELECT id, "Project Name", "Address", "City", "County", "Developer / Sponsor / Key Principal" AS dev, "Development Description" AS detail, "Municipality Posting Look-Up Value" AS src
 FROM "Development Scanner - Municipality Portals"
-WHERE created_at >= now() - interval '26 hours'
-  AND ("Development Description" ILIKE ANY (ARRAY['%car condo%','%garage condo%','%motor condo%','%luxury garage%','%toy storage%','%garage suite%','%motorplex%','%auto condo%','%collector%garage%'])
-    OR "Project Name" ILIKE ANY (ARRAY['%car condo%','%garage%','%motor%','%auto vault%']));
+WHERE created_at >= now() - interval '72 hours'
+  AND ("Development Description" ILIKE ANY (ARRAY['%garage%','%parking%','%car condo%','%motor condo%','%storage condo%','%garage suites%','%garage villas%','%toy barn%','%toy storage%','%motorsports%','%racing%','%race track%','%racing resort%','%motor club%','%car club%','%track club%','%paddock%'])
+    OR "Project Name" ILIKE ANY (ARRAY['%garage%','%parking%','%car condo%','%motor condo%','%storage condo%','%garage suites%','%garage villas%','%toy barn%','%toy storage%','%motorsports%','%racing%','%race track%','%racing resort%','%motor club%','%car club%','%track club%','%paddock%']));
 SELECT id, "Project Name", "City", "County", "Developer / Sponsor" AS dev, "Article Summary" AS detail, "Article URL" AS src
 FROM "Development Scanner - News Scanner"
-WHERE created_at >= now() - interval '26 hours'
-  AND ("Article Summary" ILIKE ANY (ARRAY['%car condo%','%garage condo%','%motor condo%','%luxury garage%','%toy storage%','%garage suite%','%motorplex%'])
-    OR "Project Name" ILIKE ANY (ARRAY['%car condo%','%garage condo%','%motor condo%']));
+WHERE created_at >= now() - interval '72 hours'
+  AND ("Article Summary" ILIKE ANY (ARRAY['%garage%','%parking%','%car condo%','%motor condo%','%storage condo%','%garage suites%','%garage villas%','%toy barn%','%toy storage%','%motorsports%','%racing%','%race track%','%racing resort%','%motor club%','%car club%','%track club%','%paddock%'])
+    OR "Project Name" ILIKE ANY (ARRAY['%garage%','%parking%','%car condo%','%motor condo%','%storage condo%','%garage suites%','%garage villas%','%toy barn%','%toy storage%','%motorsports%','%racing%','%race track%','%racing resort%','%motor club%','%car club%','%track club%','%paddock%']));
 ```
-Each hit is a candidate: run it through the Step 4 dedup gate and, if new, stage it via Step 5 with source_url = the permit look-up value or article URL, confidence = 'high' for permit-sourced, 'medium' for news-sourced. Note "via Development Scanner cross-feed" in scan_notes and log change_type='crossfeed_candidate'.
+
+TWO-STAGE SCREEN (every keyword match passes this BEFORE staging). The keyword list is deliberately broad, so the screen, not the keyword, decides what gets staged:
+1. DEEDED / FOR-SALE / CONDOMINIUM evidence present (deeded units, for sale, condominium, ownership, individually owned suites): STAGE normally through Step 4 dedup and Step 5, confidence per source (high permit-sourced, medium news-sourced).
+2. CLEARLY PUBLIC OR LEASED product (public parking deck or garage, municipal parking, leased self-storage, rental-only flex): DO NOT STAGE. Log change_type='cross_feed_screened' with the reason in detail (for example "public parking deck, not deeded product").
+3. HIGH-PRIOR CATEGORY, OWNERSHIP UNKNOWN (motorsports clubs, racing resorts, track developments): STAGE at confidence='medium' with a scan_notes line reading exactly: verify deeded garage condo component before advancing.
+
+Rule 3 exists because Hyper Club (Naples Racing Resort), a 542 acre Collier County motorsports conversion, was surfaced by the SWFL news scanner on 2026-08-05 and MISSED by the cross-feed purely for lack of a motorsports keyword; it was staged manually on 2026-08-06. A motorsports or track development is a car-condo candidate until proven otherwise, not the reverse.
+
+Every staged hit: source_url = the permit look-up value or article URL, note "via Development Scanner cross-feed" in scan_notes, and log change_type='crossfeed_candidate'. Screened-out hits log change_type='cross_feed_screened' and are never staged.
 
 ## Step 4 - Dedup gate (mandatory, per candidate, MULTI-SIGNAL)
 A candidate is a DUPLICATE if ANY of these signals fires against EITHER "01 - Projects" (live) or "01 - Project - New" (staged), matched within the same COUNTY (not just the same city - the Bonita Auto Vault / Bonita Motor Vault miss happened because the check was city-scoped and name-threshold only):
