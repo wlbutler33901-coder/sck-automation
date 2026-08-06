@@ -328,3 +328,67 @@ Date/PermitNumber/Type/Description/ProjectName/Address inline in the list view, 
 richer list-level data than the Building module. Run evidence 2026-07-23: 2 qualifying written (Juniper Landscaping
 Office/Field Ops facility, Englewood, straight from the list view; Benderson 1660 Ringling Blvd via the "da"
 cross-reference plus press).
+
+## City of St. Petersburg - ArcGIS MultiFamily_Layer, ENTITLEMENTS feed (CERTIFIED-LOCAL 2026-08-06)
+This OVERTURNS the 2026-08-03 "Tier 3 exhausted" conclusion for St. Pete. The Click2Gov portal is still lookup-only
+with no date search (unchanged), but a live ArcGIS feature service carries the multifamily entitlement pipeline with
+full dates. No auth, no headers.
+
+GET https://services2.arcgis.com/9qPLjNtocjo438CJ/ArcGIS/rest/services/MultiFamily_Layer/FeatureServer/0/query
+  ?where=ApplicationReceived >= DATE '<YYYY-MM-DD>'      (DateOnly fields; the DATE 'YYYY-MM-DD' literal works)
+  &outFields=ProjectName,ProjectAddress,DeveloperName,ProjectsTotalUnits,ProjectStatus,PreAppDate,ApplicationReceived,
+             ApplicationApproved,PermitsApproved,ConstructionStarted,OpeningDate,AHSPRNo,CommercialSqFt
+  &orderByFields=ApplicationReceived DESC&returnGeometry=false&f=json
+Response: {features:[{attributes:{...}}]}; dates render as "YYYY-MM-DD" strings. Date fields available: PreAppDate,
+ApplicationReceived, ApplicationApproved, PermitsApproved, ConstructionStarted, OpeningDate, PublicNoticeStart/EndDate.
+The service holds the WHOLE table (44 rows at certification), so poll it in full and diff; it is not append-only.
+
+WHAT IT COVERS: the multifamily and affordable-housing SITE-PLAN ENTITLEMENT pipeline - project name, address,
+developer, unit count, CommercialSqFt, status and the full date chain.
+WHAT IT DOES NOT COVER: issued building permits, and commercial / industrial / retail / self-storage / single-family
+projects of any kind. Treat it as a development-pipeline feed, NOT a permit feed. St. Pete commercial CRE still needs
+Tier 4 press substitution (see the Wednesday rule in sources-tampa.md).
+Evidence pulled 2026-08-06: "The Eden", 1225 9th Ave N, 20 units, ApplicationReceived + Approved 2026-07-24;
+"Warehouse Arts (Emerson) Lofts", 558 28th St S, 75 units, PreApp 2025-12-22, AppReceived 2026-06-11, AHSPR 25-05;
+"HSN Headquarters", 2501 118th Ave N, 396 units, Greystar Development East LLC, AppReceived 2026-02-04, Approved 2026-04-28.
+
+DEAD ENDS confirmed this pass, do not re-spend time on them:
+- Socrata stat.stpete.org is DECOMMISSIONED: /api/views.json 301s to an HTML CMS page and the Socrata catalog API
+  answers "Domain not found: stat.stpete.org". No Socrata instance exists.
+- A second ArcGIS Enterprise org exists at https://egis.stpete.org/arcgis/rest/services. Its ServicesDSD/PermitsExternal
+  FeatureServer has a real permit schema (APPLICATIONNUMBER, PERMITTYPE, PERMITISSUEDATE, ADDRESS, CONSTRUCTIONVALUE,
+  CONTRACTOR, OWNER) but is a FROZEN ARCHIVE: APPLICATIONYEAR only 19/20/21, max PERMITISSUEDATE 2021-12-20. Useless
+  for a live scan. ServicesDOTS/PermitsResidential and ServicesDSD/Active_Development_Projects have NO date field at all.
+- Hub sites data.stpete.org and opendata.stpete.org DNS-fail; stpete-cosp.opendata.arcgis.com has no published catalog.
+- DRC / development-services agenda PDFs were NOT reachable in the time box: the board pages 404, and the Revize CMS
+  renders the agenda list client-side so no PDF hrefs appear in the HTML. Legistar is not provisioned for this client
+  ("LegistarConnectionString setting is not set up"), NovusAgenda returns an empty stub. stpete.granicus.com responds
+  and is the untried lead. Even if reached, agendas yield ENTITLEMENTS (site plans, rezonings, variances), never
+  building permits.
+
+## Charlotte County Accela (BOCC) - RECERTIFIED 2026-08-06: date search works again, and CapDetail is anonymous
+Supersedes the 2026-07-22 "date search broken / rate limited" note and the 2026-08-05 "4 stale rows" report. Both were
+TRANSIENT. Nothing above is deleted; this entry is the current recipe.
+1) goto https://aca-prod.accela.com/BOCC/Cap/CapHome.aspx?module=Building&TabName=Building and wait ~7s for the form.
+2) JS-set #ctl00_PlaceHolderMain_generalSearchForm_txtGSStartDate and _txtGSEndDate (.value, MM/DD/YYYY) AND the paired
+   _ext_ClientState hidden inputs. Do NOT p.fill (stale ViewState -> Error.aspx).
+3) Playwright .click('#ctl00_PlaceHolderMain_btnNewSearch'), wait ~12s. Grid table[id*=dgvPermitList], pager "Next >".
+   A 14 day window (07/23-08/06/2026) returns "Showing 1-10 of 100+"; a no-date search also returns 100+ CURRENT rows
+   (page 1 spanning the last two days), so the degraded-to-4-stale-rows condition has cleared.
+4) DETAIL, new capability: every grid <tr> carries BOTH a hidden <input id="RecordId" value="26CM-00000-00152"> (note it
+   is id, not name, and the id repeats per row, so select it per-<tr>) and an a[id*=hlPermitNumber] whose href is
+   /BOCC/Cap/CapDetail.aspx?Module=Building&TabName=Building&capID1=<A>&capID2=<B>&capID3=<C>&agencyCode=BOCC&IsToShowInspection=
+   The RecordId is exactly capID1-capID2-capID3; capID1 is a record-type prefix (26CM commercial misc, 26SF single
+   family, 26CA cage, 26SW pool, 26WI window, 26DM demo, 26GEN generator, 26SPV solar).
+5) Fetch that CapDetail URL with a PLAIN NODE FETCH: anonymous, no cookie, no session, HTTP 200, roughly 326 KB.
+   CRITICAL GOTCHA: loading CapDetail through the Playwright harness (cold URL or in-session click) 302s to
+   Error.aspx?ErrorId=... Use the browser for the LIST and raw fetch for the DETAIL.
+6) Detail exposes Construction Cost (job value), Parcel Number, Block/Lot/Subdivision, full Job Description, Owner name
+   and address, Applicant with company/phone/email, Licensed Professional and license number, Job Site Location,
+   Record Status, Expiration Date, Flood Zone and In SFHA, and # of Comm Units / # of Res Units / # of Stories.
+   Fees load by async postback and are NOT in the static HTML.
+7) PACING: this tenant IP-rate-limited on 2026-07-22 under rapid replay. Space requests 10-15s; never tight-loop it.
+Evidence 2026-08-06: 20260823731 (26CM-00000-00152, Construction Cost 31815.6, parcel 412031652000, PALM ISLAND VILLAGE,
+10 comm / 4 res units); 20260823690 (26SF-00000-01679, Construction Cost 144105, parcel 402112362015, STRADA DEVELOPMENT LLC).
+NOTE the contrast with the 2026-08-06 Pasco learning: Pasco's CapDetail is anonymous too, but Manatee and North Port
+remain login-gated. Test the RecordId -> CapDetail path per tenant rather than assuming it from the platform.

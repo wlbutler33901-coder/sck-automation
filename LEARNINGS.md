@@ -155,6 +155,85 @@ NEVER put credentials, API keys, or personal contact details in this file.
   ddlGSPermitType filtered per type or an unfiltered search returns 100+ noise rows. Recovered
   from branch hopeful-heisenberg-rnikmc.
 
+- 2026-08-05 | swfl-permit-scanner | blocker | Charlotte County Accela date-range search returned
+  no results for a THIRD time (after 2026-07-22), and the no-date-filter General Search now returns
+  only 4 stale closed permits instead of the ~100-row grid seen at 2026-07-20 certification, so
+  client-side windowing is not viable either. Rely on the Major Projects PDF (lagging, June 2026
+  newest) plus press substitution for Charlotte County until a fresh certification fixes it.
+- 2026-08-06 | swfl-news-scanner | blocker | LSI Cos (lsicos.com) DNS-failed outright
+  (getaddrinfo ENOTFOUND) on two consecutive run days, 2026-08-05 and 2026-08-06. Treat as
+  blocked/down, not paywalled; stop retrying it fresh each run until a health check shows the
+  domain resolving again.
+- 2026-08-05 | swfl-news-scanner | note | Yoursun is the weakest-covered Tier 1 source on the
+  Charlotte deep dive: direct fetch 429'd, section pages returned only stale pre-2026 cached
+  content, and site-scoped search surfaced archive articles only, so Charlotte-day runs lean
+  entirely on Gulfshore Business and WINK. Charlotte is the one county Yoursun uniquely covers, so
+  this is a real coverage gap on Charlotte nights, not noise.
+- 2026-08-06 | swfl-news-scanner | note | The WINK News category URL (/category/news/local-news/)
+  and Fox 4 (/news) both 404 - the entry URLs on file in references/sources.md no longer resolve
+  and need correcting before the next Lee or Charlotte heavy run.
+- 2026-08-05 | cre-report-writer | blocker | The 7 day CONTEXT window SELECT * queries against
+  Municipality Portals and News Scanner now exceed the tool token limit (87k and 62k chars) once
+  either table passes roughly 25-30 rows in a week. Select only the columns the identity check and
+  progression logic need (id, Project Name, City, County, Parcel / Folio Number, Posting Date or
+  Article Date, created_at, Project Stage, Developer / Sponsor, Linked Portal Record) instead of
+  SELECT *.
+- 2026-08-06 | swfl-permit-scanner | fixed | The Tyler EnerGov /apps/selfservice search body for the
+  newer Angular build (Dunedin, Zephyrhills, New Port Richey) MUST carry a top-level FilterModule:2
+  alongside SearchModule:1. Without it the API returns HTTP 200 with Success:false and Result:null,
+  which looks like zero results but is a rejected request. With SearchModule:1, FilterModule:2,
+  PageSize:50, SortBy IssueDate, SortAscending false, pagination plus client-side date windowing
+  works (Zephyrhills PermitsFound 11954, New Port Richey 56550).
+- 2026-08-06 | swfl-permit-scanner | note | Pasco County Accela is the richest CRE feed in the
+  system and shows the pattern to try on other Accela tenants: list rows carry a hidden RecordId
+  (PREFIX-00000-SUFFIX) that decodes into a public no-login CapDetail.aspx URL
+  (capID1=PREFIX&capID2=00000&capID3=SUFFIX&agencyCode=PASCO) exposing Job Value, Building Area,
+  Number of Units, Owner, Site Plan Number, Project Name and Parcel. Always pull CapDetail for every
+  Commercial New or Multifamily hit before disqualifying it; the list view alone looks like noise
+  but named projects hide inside it (Wave at Flora 300-unit approx $68.9M, Life Time Wesley Chapel
+  $25M, a BJs fuel canopy, a $3.86M Discount Tire). Manatee, Charlotte and North Port CapDetail
+  pages are login-gated by contrast.
+- 2026-08-06 | swfl-permit-scanner | note | The Sarasota County Planning ddlGSPermitType dropdown
+  has no option literally labeled "Conditional Use"; the value Planning/Conditional Use/NA/NA is
+  labeled "Development Agreement/CDD" in the UI. The full working type list is exactly: Development
+  Submittal, Rezone / Special Exception, General/Approved Plan Amendment, Development Agreement/CDD,
+  Final Plat. There is no sixth type to search.
+
+- 2026-08-06 | sck-project-scanner | blocker | The car condo cross-feed missed Hyper Club (Naples
+  Racing Resort), a 542 acre Collier County motorsports conversion, purely because it had no
+  motorsports keyword; the SWFL news scanner surfaced it on 2026-08-05 and it was staged manually
+  on 2026-08-06. Cross-feed keywords are now broadened (motorsports, racing, race track, racing
+  resort, motor club, car club, track club, paddock, parking, storage condo, garage villas, toy
+  barn and more) and a two-stage screen decides staging: deeded/for-sale evidence stages normally,
+  clearly public or leased product logs cross_feed_screened and is not staged, and high-prior
+  unknown-ownership categories (motorsports, racing resorts, track developments) stage at medium
+  with "verify deeded garage condo component before advancing" in scan_notes. A motorsports or
+  track development is a car condo candidate until proven otherwise.
+- 2026-08-06 | all routines | note | Nightly schedule reordered: the SWFL permit scanner runs 2:00
+  AM and the SWFL news scanner 2:45 AM, both AHEAD of the car condo project scanner at 3:30 AM, so
+  same-night SWFL rows are in scope for the cross-feed. The cross-feed window widened from 26 to 72
+  hours to match, which also self-heals a missed night; re-staging is impossible because every hit
+  still passes the Step 4 dedup gate.
+
+- 2026-08-06 | swfl-permit-scanner | fixed | St. Pete and Charlotte recertified this session. ST.
+  PETE: the 2026-08-03 "Tier 3 exhausted" conclusion was WRONG - the ArcGIS MultiFamily_Layer
+  FeatureServer (services2.arcgis.com/9qPLjNtocjo438CJ, no auth) carries dated multifamily and
+  affordable-housing site-plan ENTITLEMENTS and is now CERTIFIED-LOCAL. It does NOT cover building
+  permits or any commercial, industrial, retail or self-storage project, so St. Pete commercial
+  still runs as Tier 4 press substitution, and that substitution MUST log a portal_result row with
+  tier press-substitute like Tarpon Springs, never a bare coverage_gap; the 2026-08-05 run logged a
+  coverage_gap while five sibling towns got press substitutes, and that mismatch was the bug.
+  Confirmed dead: Socrata stat.stpete.org is decommissioned, egis.stpete.org PermitsExternal is a
+  frozen archive (max issue date 2021-12-20), DRC agenda PDFs are client-side rendered and Legistar
+  is unprovisioned. CHARLOTTE: the date-range search WORKS again (14 day window returns 100+ rows)
+  and the no-date fallback returns 100+ current rows, so both the 2026-07-22 and 2026-08-05 failures
+  were transient, tied to the IP rate limit. Better still, the Pasco RecordId pattern transfers:
+  each Charlotte grid row carries a hidden RecordId and an hlPermitNumber anchor that decode to an
+  ANONYMOUS CapDetail.aspx exposing Construction Cost, Parcel, Job Description, Owner and unit
+  counts. CRITICAL: CapDetail must be fetched with a plain Node fetch - loading it through the
+  Playwright harness 302s to Error.aspx. Browser for the list, raw fetch for the detail. Pace
+  requests 10-15s; this tenant rate-limits.
+
 ## Resolved
 
 - 2026-07-20 | swfl-permit-scanner | fixed | Portal certification sweep completed. 11 portals
