@@ -215,6 +215,25 @@ NEVER put credentials, API keys, or personal contact details in this file.
   hours to match, which also self-heals a missed night; re-staging is impossible because every hit
   still passes the Step 4 dedup gate.
 
+- 2026-08-06 | swfl-permit-scanner | fixed | St. Pete and Charlotte recertified this session. ST.
+  PETE: the 2026-08-03 "Tier 3 exhausted" conclusion was WRONG - the ArcGIS MultiFamily_Layer
+  FeatureServer (services2.arcgis.com/9qPLjNtocjo438CJ, no auth) carries dated multifamily and
+  affordable-housing site-plan ENTITLEMENTS and is now CERTIFIED-LOCAL. It does NOT cover building
+  permits or any commercial, industrial, retail or self-storage project, so St. Pete commercial
+  still runs as Tier 4 press substitution, and that substitution MUST log a portal_result row with
+  tier press-substitute like Tarpon Springs, never a bare coverage_gap; the 2026-08-05 run logged a
+  coverage_gap while five sibling towns got press substitutes, and that mismatch was the bug.
+  Confirmed dead: Socrata stat.stpete.org is decommissioned, egis.stpete.org PermitsExternal is a
+  frozen archive (max issue date 2021-12-20), DRC agenda PDFs are client-side rendered and Legistar
+  is unprovisioned. CHARLOTTE: the date-range search WORKS again (14 day window returns 100+ rows)
+  and the no-date fallback returns 100+ current rows, so both the 2026-07-22 and 2026-08-05 failures
+  were transient, tied to the IP rate limit. Better still, the Pasco RecordId pattern transfers:
+  each Charlotte grid row carries a hidden RecordId and an hlPermitNumber anchor that decode to an
+  ANONYMOUS CapDetail.aspx exposing Construction Cost, Parcel, Job Description, Owner and unit
+  counts. CRITICAL: CapDetail must be fetched with a plain Node fetch - loading it through the
+  Playwright harness 302s to Error.aspx. Browser for the list, raw fetch for the detail. Pace
+  requests 10-15s; this tenant rate-limits.
+
 ## Resolved
 
 - 2026-07-20 | swfl-permit-scanner | fixed | Portal certification sweep completed. 11 portals

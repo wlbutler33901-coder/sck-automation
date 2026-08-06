@@ -62,6 +62,7 @@ Target: SCK Supabase project llwyvgkqhendgzsgngqh, schema public, table "Develop
 
 ## 7. Logging and QA
 Every run also writes rows to Scan Activity Log exactly per references/run-logging.md, incrementally, never buffered to the end of the run.
+A jurisdiction covered by press substitution gets a portal_result row with access tier press-substitute, NOT a bare coverage_gap. coverage_gap is only for a track or cluster that was skipped entirely. City of St. Petersburg on the Wednesday TPA-WED-PINELLAS-S cluster is press-substitute for commercial and must be logged the same way Tarpon Springs is; the 2026-08-05 run logged it as a coverage_gap while five sibling towns got press substitutes, and that mismatch is the bug this rule closes. Its certified ArcGIS feed covers multifamily entitlements only, so the press substitution still runs.
 Run log: portals scanned/skipped/failed with the ACCESS TIER used per portal (api | browser | pdf | press-substitute | blocked); permits seen/qualified/inserted/updated/skipped; each new record (name + permit + id); data-quality warnings. Self-QA per record: numeric fields numeric or omitted; "Municipality Posting Look-Up Value" populated; parcel captured when obtainable; controlled vocab respected; dedupe ran; at least one cited source; no fabricated values.
 
 ## Guardrails
