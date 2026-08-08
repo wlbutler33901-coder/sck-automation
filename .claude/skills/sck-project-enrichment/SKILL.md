@@ -46,6 +46,7 @@ ORDER BY (confidence='high') DESC, discovered_at ASC;
 ```
 Up to 25 rows per run. Field priority: Address + County, Developer, Sales Broker, Units + Avg Unit Size (SF), Website, Key Amenities, Amenity Tier (per "Amenity Tier Definition"), latitude/longitude (geocode only a verified street address), Proj. Delivery.
 Each fill: UPDATE, append 'Enriched {field} from {source} {date}' to scan_notes, log change_type='field_enriched'.
+AMENITY STANDARDIZATION. For every staged row touched, rewrite "Key Amenities" into canonical vocabulary from "Amenity Type Definition" using the Amenity and Aliases columns, move non-amenity fragments into scan_notes, and repair rows whose amenity strings were broken by embedded commas (fragments like numbers, parenthetical halves, or SF figures are never amenities). New amenity types follow the same proposed-row rule: INSERT into "Amenity Type Definition" with Status 'proposed', a one line Definition, and the observed phrasing in Aliases, then use the canonical value. Also nightly, sweep any remaining staged rows whose Key Amenities contain tokens not in the table, up to 15 rows per night oldest first, so the existing backlog standardizes within a week.
 
 ## Step 4 - Duplicate and error audit (every run)
 a. DEVELOPER dedupe: normalize names (dashes, case, punctuation, strip LLC/Inc). EXACT normalized duplicates: auto-merge (keep oldest, coalesce fields, delete the shell, log change_type='dedupe_merge'). VARIANT names sharing a stem: log change_type='merge_recommendation', never auto-merge.

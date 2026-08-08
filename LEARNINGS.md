@@ -335,3 +335,6 @@ NEVER put credentials, API keys, or personal contact details in this file.
   files.
 - 2026-08-08 | sck-project-enrichment | fix | Per-discovery drafter retired; the Step 5b queue is
   the only outreach path.
+- 2026-08-08 | all-routines | constraint | Key Amenities is a controlled vocabulary backed by
+  "Amenity Type Definition"; skills never freestyle amenity text, and new types enter as
+  proposed rows for Will to approve or kill.
