@@ -23,6 +23,7 @@ EXCLUDE: residential-resale market reports, retailer openings into existing spac
 
 ## 4. Extraction and Classification
 Per qualifying article extract: URL, Publication, Title, Date, Author; project name, property type, city, county, address detail, size, cost, stage; developer/sponsor and named principals; 1-3 short attributed key quotes.
+When the source states a single explicit dollar figure for project cost, construction value, or capitalization, write it to "Est. Cost" as a plain number. Never estimate, derive, or sum; ambiguous or multiple figures stay prose-only and "Est. Cost" stays null.
 Classify: "Article Type", "Financing Opportunity Type", "Financing Relevance Score" (High/Medium/Low), "Outreach Recommendation" (High only). These fields persist for the financing-ops phase; do not let them gate whether a new project gets recorded.
 Web search only when the article omits critical identity info; the article is the primary signal.
 

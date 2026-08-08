@@ -19,8 +19,9 @@ Output: "Development Scanner - Report Summary" plus the Make webhook email.
 1. Pull the PRIMARY window using the high water mark rule in references/report-structure.md and the CONTEXT window of the last 7 days, per references/schema.md (for progressions and first-appearance checks). Also pull the coverage and rotation queries from ../swfl-permit-scanner/references/run-logging.md.
 2. Build the opportunity universe: a news row with "Linked Portal Record" enriches that permit record (one combined item); unlinked articles are standalone news leads; permit rows with no articles are standalone permit leads.
 3. Compose the report in MARKDOWN per the EMAIL FORMATTING RULES below, sections per §2 exactly.
-4. INSERT one row into "Development Scanner - Report Summary" (every column including "Report Markdown" = the full markdown, references/schema.md), read it back by id to confirm. Write every named column, including "Project Updates", "Rotation Audit" and "Updates Count", which already exist on the table.
+4. INSERT one row into "Development Scanner - Report Summary" (every column including "Report Markdown" = the full markdown, references/schema.md), read it back by id to confirm. Write every named column, including "Project Updates", "Rotation Audit", "Updates Count" and "Weekly Rollup", which already exist on the table. "Weekly Rollup" carries the section 1c content on Mondays and stays null on every other day.
 5. Deliver the email per §3, then UPDATE the row's "Delivery Status".
+6. MONDAYS ONLY, after the report send: run the Calusa outreach lane exactly per references/calusa-outreach-template.md, and include the three selections in section 1c. The lane writes only rows with "Lane" = 'calusa-cre' and never touches 'car-condo' rows, which belong to the SCK enrichment queue.
 
 ## 2. Report Sections (exactly these, in order; empty sections say so explicitly)
 Section order, numbering, the report window, the first appearance rules, and the rotation audit are defined in references/report-structure.md; follow that file exactly.

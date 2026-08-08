@@ -34,6 +34,7 @@ Compose exactly these, in this order. An empty section says so explicitly in one
 |---|---|---|---|
 | 0 | WARNINGS | ONLY if a cluster did not run, a track is pending, or a portal is blocked. Omit the section header entirely on a clean night. | folded into "Data Quality Notes" |
 | 1 | EXECUTIVE SUMMARY | Always | "Executive Summary" |
+| 1c | WEEKLY ROLLUP | MONDAYS ONLY. Omit entirely on other days. | "Weekly Rollup" (null on non-Mondays) |
 | 2 | NEW PROJECTS | Always. First appearance only, see below. | "New Projects" |
 | 3 | PROJECT UPDATES | Always. Everything previously reported with new activity. | "Project Updates" |
 | 4 | STAGE PROGRESSIONS | Always | "Stage Progressions" |
@@ -46,6 +47,21 @@ Rationale for the order: sections 2 to 5 are the ones that can change what Will 
 descending order of how likely that is. Section 6 stays secondary until the financing phase
 turns on. Sections 7 and 8 are operational health and belong at the bottom, with the single
 exception of section 0, which is a banner and never longer than three lines.
+
+## Section 2 sort order - entitlements first
+
+Within each financing-relevance band, items tagged [ENTITLEMENT] sort ABOVE permit items regardless
+of missing cost. Cost ordering applies below that, descending, unknown-cost last.
+
+An item is [ENTITLEMENT] when it comes from a development-application feed (the St. Petersburg
+ArcGIS MultiFamily_Layer, the City of Sarasota microapp da search) OR its record type is a
+rezoning, a site plan, or a development application. The reason is financeability: at that stage
+capital is not yet placed, so those are the most financeable leads in the report. A permit means
+the capital decision is already made.
+
+TRANSITION, next 7 days only: rows created before the "Est. Cost" column existed may carry a cost
+figure in prose only. Parse the prose for sorting during that window. After it, the "Est. Cost"
+column is authoritative and prose is not consulted for ordering.
 
 ## Numbering, not bullets
 
@@ -126,6 +142,37 @@ stage now, stage before if it moved | source link.`
 The phrase "what is new" is the whole point of the section. If nothing is materially new, the
 item does not belong in the report at all; it is a re-scrape and gets dropped silently. Never
 pad this section to make the day look busy.
+
+## Section 6 - FINANCING LENS is MOVEMENT ONLY
+
+The numbered items are ONLY new entrants and changes since the last report: a lead that was not in
+the lens before, or one whose stage, cost, or status moved. Determine movement by comparing against
+the prior rows of the "Top Opportunities" column in "Development Scanner - Report Summary"; that
+column is the memory of what was already reported.
+
+The standing pipeline does NOT get numbered items. It compresses to ONE unnumbered line, capped at
+five entries:
+`Standing pipeline: 1. {name} ({$}, {stage}) 2. {name} ({$}, {stage}) ...`
+
+A quiet week is allowed to produce zero numbered items and just the standing line. Re-listing an
+unchanged lead as if it were news is the failure this rule exists to stop.
+
+## Section 1c - WEEKLY ROLLUP (Mondays only)
+
+Compose this section ONLY on Mondays and write the same content to the "Weekly Rollup" column. On
+every other day the section is omitted entirely and the column is null.
+
+Contents, in this order:
+1. SEVEN DAY TOTALS: new projects, updates, and the sum of known "Est. Cost" over the last 7 days.
+   Say plainly how many rows carried a known cost, since the sum is only over those.
+2. CLUSTER COVERAGE MATRIX: all 14 scheduled cluster-nights of the week (7 Track A + 7 Track B),
+   each marked ran, zero, blocked, or missed, built from the run-logging queries in the permit
+   scanner's references/run-logging.md. "zero" means the cluster ran and found nothing; "missed"
+   means it left no trace. Those are different findings and must never be merged.
+3. TOP 5 FINANCEABLE ITEMS of the week, entitlements favored per the section 2 sort.
+4. THE THREE CALUSA OUTREACH LEADS selected per references/calusa-outreach-template.md, followed
+   by exactly this reminder line:
+   Attach the condensed Calusa Financing Capabilities PDF in Outlook before sending each.
 
 ## Section 7 - Rotation and coverage audit
 

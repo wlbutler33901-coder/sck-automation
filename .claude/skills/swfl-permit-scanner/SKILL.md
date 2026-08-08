@@ -30,6 +30,7 @@ Browser expectations per platform:
 - eTRAKiT (Venice), CityView (Naples), FastTrackGov (Sarasota city), Click2Gov (Punta Gorda), BS&A (Palmetto): per playbook.
 - PDF sources (Lee County DCD reports, Fort Myers statistical reports, Collier monthly reports): download the newest report PDF in the browser, read it, extract qualifying commercial permits.
 Capture raw fields per record: permit/case number, description, address, parcel, applicant/owner, valuation, dates, status, jurisdiction.
+When the source states a single explicit dollar figure for project cost, construction value, or capitalization, write it to "Est. Cost" as a plain number. Never estimate, derive, or sum; ambiguous or multiple figures stay prose-only and "Est. Cost" stays null.
 
 Prefer, in order: new commercial building permits; site development / site plan; zoning / rezoning / PUD / land use; large commercial additions and shells; demolition tied to redevelopment.
 

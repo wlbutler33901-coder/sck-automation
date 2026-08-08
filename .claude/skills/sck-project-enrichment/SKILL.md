@@ -61,6 +61,7 @@ Use the scanner's rotation for tonight's regions. Staged rows: UPDATE "Project S
 
 ## Step 5b - FL developer outreach queue
 EVERY morning, run the outreach queue exactly per references/outreach-template.md, using the reworked selection priority in that file (newest staged developers with a usable email first, then the standing backlog): sent-check first against Outlook Sent Items, rotate only when the queue is clear, one Outlook draft per morning to Will's Drafts folder with chance.friedman@calusainvestments.com CCd, Supabase row with Status queued, log outreach_queued or outreach_skipped with the reason. The database columns "Recipient Email" and "Queued At" on "Developer Outreach - Drafts" and resolution / resolved_at on "Scan Activity Log" already exist.
+LANE FILTER: every read and write this step makes against "Developer Outreach - Drafts" filters "Lane" = 'car-condo', and every row it inserts carries "Lane" = 'car-condo'. Rows with any other Lane value, including the Monday 'calusa-cre' lane owned by cre-report-writer, are invisible to this queue and must never be counted, marked sent, or expired by it.
 
 ## Step 6 - FL DEVELOPER OUTREACH DRAFTS (new)
 Superseded 2026-08-08. All developer outreach, including newly discovered developers, flows through the every-morning queue in Step 5b; this step creates nothing.
