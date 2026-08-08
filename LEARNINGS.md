@@ -234,6 +234,30 @@ NEVER put credentials, API keys, or personal contact details in this file.
   Playwright harness 302s to Error.aspx. Browser for the list, raw fetch for the detail. Pace
   requests 10-15s; this tenant rate-limits.
 
+- 2026-08-08 | swfl-permit-scanner, swfl-news-scanner | note | "Est. Cost" is now written at INGEST
+  and is authoritative: both scanners write a single explicit stated dollar figure (project cost,
+  construction value, capitalization) as a plain number, and never estimate, derive or sum.
+  Ambiguous or multiple figures stay prose-only with the column null, because a wrong number
+  ranked confidently is worse than a null. TRANSITION: for 7 days from this date the report writer
+  parses cost from prose for section 2 sorting, since rows created before the column exists carry
+  cost only in text; after that window the column alone is authoritative.
+- 2026-08-08 | cre-report-writer, sck-project-enrichment | blocker | "Developer Outreach - Drafts"
+  is now PARTITIONED by the "Lane" column, default 'car-condo'. The enrichment queue filters every
+  read and write to Lane 'car-condo'; the Monday Calusa lane writes only 'calusa-cre'. Neither may
+  see, count, mark sent, or expire the other's rows. Without this partition the two queues share a
+  table, and the enrichment sent-check would treat a Calusa draft as the occupied slot and refuse
+  to draft a car condo developer all week, or expire it.
+- 2026-08-08 | cre-report-writer | note | New Monday-only lane: after the report send, the report
+  writer runs the Calusa CRE outreach lane per references/calusa-outreach-template.md, up to three
+  Outlook drafts for the prior week's top NON car condo financing leads, positioning Will as an
+  outsourced capital markets and underwriting arm. Selections also appear in the new Monday-only
+  section 1c WEEKLY ROLLUP, which additionally carries 7 day totals, a 14 cluster-night coverage
+  matrix, and the week's top 5 financeable items, and is written to the "Weekly Rollup" column
+  (null on other days). Drafts are never sent; Will attaches the Calusa Financing Capabilities PDF
+  himself. Section 6 also became movement-only in the same pass: numbered items are new entrants
+  and changes measured against the prior "Top Opportunities" rows, with the standing pipeline
+  compressed to one unnumbered line capped at five.
+
 ## Resolved
 
 - 2026-07-20 | swfl-permit-scanner | fixed | Portal certification sweep completed. 11 portals

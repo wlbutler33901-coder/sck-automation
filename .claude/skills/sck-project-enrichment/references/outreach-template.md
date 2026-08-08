@@ -79,20 +79,25 @@ a generic info@ or legal@ inbox when both appear.
    Completed). A new developer with only a generic inbox and no named contact falls to the
    backlog rather than blocking the morning; log the reason. The sent-check in rules 2 and 2b
    still runs first every morning and an occupied queue still skips with outreach_skipped.
-2. SENT CHECK FIRST: before drafting anyone new, take the most recent row in "Developer
+2. SENT CHECK FIRST: LANE FILTER, every read and write in this rule filters "Lane" = 'car-condo';
+   rows with any other Lane value are invisible to this queue. Before drafting anyone new, take
+   the most recent row in "Developer
    Outreach - Drafts" with Status in ('queued','draft'), ordered by "Queued At" then
    created_at. Search Outlook Sent Items for a message from
    will.butler@calusainvestments.com to that row's "Recipient Email" sent after its "Queued
    At". If found: set that row Status = 'sent' and "Sent At" to the send time, and note the
    contact in the developer's Comments. If not found: the queue is occupied; do NOT draft
    another. Log outreach_skipped, reason prior draft still pending, and stop this step.
-2b. LEGACY DRAFTS: eight rows created 2026-08-04 by the per-discovery drafter have Status
+2b. LEGACY DRAFTS: LANE FILTER, every read and write in this rule filters "Lane" = 'car-condo';
+   rows with any other Lane value are invisible to this queue. Eight rows created 2026-08-04 by the per-discovery drafter have Status
    'draft' and no "Queued At". Their "Recipient Email" values have been backfilled. Treat
    them exactly like queued rows for the sent-check: if a matching message appears in Sent
    Items, mark Status 'sent' and set "Sent At". If a legacy draft is older than 14 days with
    no send and no reply, set Status 'expired' and free that developer back into the rotation,
    logging change_type 'outreach_expired'. Never delete a Drafts row.
-3. SELECT the next outstanding developer only when the queue is clear: a Florida developer
+3. SELECT: LANE FILTER, every read and write in this rule filters "Lane" = 'car-condo'; rows with
+   any other Lane value are invisible to this queue, and every row this queue INSERTS carries
+   "Lane" = 'car-condo'. Select the next outstanding developer only when the queue is clear: a Florida developer
    (from "05 - Developers" or approved rows in "05 - Developers - New") with a usable Email,
    no row in "Developer Outreach - Drafts" with Status in ('queued','sent','draft'), and no
    contact already noted in Comments. Priority order: developers with a Pre-Development or

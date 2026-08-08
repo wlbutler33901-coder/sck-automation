@@ -44,6 +44,7 @@ WHERE "Developer / Sponsor" ILIKE '%<name>%';
 | "Stage Progressions" | text (§2.5) |
 | "Project Updates" | text, preserve line breaks (PROJECT UPDATES section, per references/report-structure.md) |
 | "Rotation Audit" | text (ROTATION AND COVERAGE AUDIT section, per references/report-structure.md) |
+| "Weekly Rollup" | text, MONDAYS ONLY (the WEEKLY ROLLUP section 1c per references/report-structure.md); null on every other day |
 | "Updates Count" | integer, items in the PROJECT UPDATES section |
 | "Data Quality Notes" | text (§2.6) |
 | "Report Markdown" | text, the FULL report as markdown (canonical saved artifact) |
