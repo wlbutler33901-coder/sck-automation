@@ -336,5 +336,12 @@ NEVER put credentials, API keys, or personal contact details in this file.
 - 2026-08-08 | sck-project-enrichment | fix | Per-discovery drafter retired; the Step 5b queue is
   the only outreach path.
 - 2026-08-08 | all-routines | constraint | Key Amenities is a controlled vocabulary backed by
-  "Amenity Type Definition"; skills never freestyle amenity text, and new types enter as
+  "11 - Property - Amenity Definition"; skills never freestyle amenity text, and new types enter as
   proposed rows for Will to approve or kill.
+- 2026-08-08 | all-routines | constraint | Amenity taxonomy tables renamed: "Amenity Type
+  Definition" is now "11 - Property - Amenity Definition" and "Amenity Tier Definition" is now
+  "11 - Property - Amenity Tier Definition". Two new property dimensions have their own tables,
+  "11 - Property - Construction Materials" (Tilt Wall, Block, Metal, Wood-Frame, comma
+  separated when mixed) and "11 - Property - Common Area Finish Level" (Luxury, High-Quality,
+  Basic, Utility); construction and finish terms are no longer amenities and belong in those
+  columns. Utility-level projects are excluded from comp sets by default.
