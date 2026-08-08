@@ -46,9 +46,13 @@ Developer Service Package:
 
 Our latest Florida Garage and Car Condo Market Report is worth a skim for where pricing and
 inventory are trending in {their region}:
-[Q2 2026 Florida Garage and Car Condo Market Report](https://llwyvgkqhendgzsgngqh.supabase.co/storage/v1/object/public/Quarterly%20Market%20Reports/florida-car-condo-market-report-q2-2026.pdf)
-Render this as an HTML hyperlink in the Outlook draft body: the linked text is "Q2 2026 Florida
-Garage and Car Condo Market Report" and the href is that URL.
+[{Quarter} {Year} Florida Garage and Car Condo Market Report]({report URL})
+Render this as an HTML hyperlink in the Outlook draft body. Both the href and the label derive
+from the NEWEST object in the "Quarterly Market Reports" bucket, so a Q3 upload updates both
+with no edit here: take that object's public URL as the href, and parse {Quarter} and {Year}
+from its filename (florida-car-condo-market-report-q2-2026.pdf gives Q2 and 2026) to build the
+label "{Quarter} {Year} Florida Garage and Car Condo Market Report". Current newest object:
+https://llwyvgkqhendgzsgngqh.supabase.co/storage/v1/object/public/Quarterly%20Market%20Reports/florida-car-condo-market-report-q2-2026.pdf
 
 Best,
 Will Butler
