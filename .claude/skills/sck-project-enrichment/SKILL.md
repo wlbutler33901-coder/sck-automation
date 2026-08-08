@@ -59,36 +59,11 @@ Nightly, group "05 - Developers - New" rows with each other and against "05 - De
 ## Step 5 - Status watch (rotation-gated)
 Use the scanner's rotation for tonight's regions. Staged rows: UPDATE "Project Status" with evidence, log change_type='status_change' (or 'dead_project'). Live rows: DO NOT TOUCH; log change_type='live_status_suggestion' with evidence URL.
 
-## Step 5b - FL developer outreach queue (fallback)
+## Step 5b - FL developer outreach queue
 EVERY morning, run the outreach queue exactly per references/outreach-template.md, using the reworked selection priority in that file (newest staged developers with a usable email first, then the standing backlog): sent-check first against Outlook Sent Items, rotate only when the queue is clear, one Outlook draft per morning to Will's Drafts folder with chance.friedman@calusainvestments.com CCd, Supabase row with Status queued, log outreach_queued or outreach_skipped with the reason. The database columns "Recipient Email" and "Queued At" on "Developer Outreach - Drafts" and resolution / resolved_at on "Scan Activity Log" already exist.
 
 ## Step 6 - FL DEVELOPER OUTREACH DRAFTS (new)
-For each developer whose contact card gained at least a Contact name or Email this run (or is complete but has no draft yet), AND whose staged/live projects sit in FLORIDA (FL only for now: that is where the market report covers):
-```sql
-INSERT ... WHERE NOT EXISTS (SELECT 1 FROM "Developer Outreach - Drafts" WHERE "Developer" = <name>)
-```
-One draft per developer, ever. Compose per the TEMPLATE below into "Developer Outreach - Drafts" ("Developer", "Project" = their most advanced FL project, "Region", "Subject", "Body", "Status"='draft'). Will reviews and sends from Outlook, attaching the Q2 report himself.
-
-### OUTREACH TEMPLATE (tight version of Will's proven email; 150 to 180 words, no em or en dashes, hyphens fine)
-Subject: Financing and pre-sale resources for {Project} - {City}
-Body structure:
-1. Greeting: "{FirstName}, hope you're doing well." (Contact name known) else "Hi there, hope you're doing well."
-2. Who + why: "I provide non-recourse construction financing and pre-sale solutions for luxury storage condo developers, and {Project} in {City} caught my attention as it {stage phrase: moves through pre-development / goes vertical / opens sales}."
-3. Platform + ONE region-matched data tidbit: "I run Storage Condo King (storagecondoking.com), the Florida garage and car condo platform connecting developers, capital providers, and 2,000+ unit owners with market data, underwriting resources, and pre-sale distribution. {TIDBIT}. The attached Q2 2026 Florida Market Report has the full picture for {Region}."
-4. Three or four capability bullets, one line each: Construction financing: non-recourse options with limited pre-sale requirements, or low-cost recourse bank debt. / Pre-sale distribution: 2,000+ unit-owner database for founding-member sales. / Live sale comps and an institutional development model for underwriting. / Site and pricing evaluation across every Florida market.
-5. CTA: "I'm local in Fort Myers and would enjoy connecting over coffee or a quick call to talk through {Project}."
-6. Sign-off: Will Butler, Calusa Capital Partners | Storage Condo King.
-
-### TIDBIT MENU (Q2 2026 report figures; pick the line matching the project's region, else the statewide line; never invent others)
-- Statewide: "Q2 cleared $530 per SF statewide, up 48% year over year"
-- New construction premium: "new construction cleared $531 per SF YTD versus $421 for re-sales"
-- Southwest Florida: "Southwest Florida averages $361 per SF on the deepest volume in the state"
-- South Florida: "South Florida is averaging $480 per SF"
-- Tampa MSA: "Tampa is averaging $420 per SF on strong volume"
-- Orlando MSA: "Orlando leads the state at $674 per SF"
-- Jacksonville MSA: "Jacksonville averages $344 per SF with room to run"
-- Central-East Florida: "Central-East Florida averages $281 per SF, the value corridor of the state"
-Personalize lightly (project name, city, stage, one tidbit); do not go overboard, and never state a fact about the developer's project that is not in the staged row.
+Superseded 2026-08-08. All developer outreach, including newly discovered developers, flows through the every-morning queue in Step 5b; this step creates nothing.
 
 ## Step 7 - Run summary
 Log run_type='enrichment', change_type='run_summary': developer rows completed and completeness % (count of rows with Contact AND Email), broker rows completed and completeness %, review-pass corrections, project fields filled, merges applied, merge recommendations, status changes, drafts created. If Step 1 processed zero rows while NULLs remain, the summary begins FAILED-DEV-CONTACTS.

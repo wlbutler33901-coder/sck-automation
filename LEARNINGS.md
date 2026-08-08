@@ -309,3 +309,5 @@ NEVER put credentials, API keys, or personal contact details in this file.
   outreach now runs every morning with new discoveries prioritized ahead of the backlog, and
   the market report rides as a public bucket link because the M365 connector cannot attach
   files.
+- 2026-08-08 | sck-project-enrichment | fix | Per-discovery drafter retired; the Step 5b queue is
+  the only outreach path.
