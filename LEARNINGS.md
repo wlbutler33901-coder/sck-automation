@@ -304,3 +304,8 @@ NEVER put credentials, API keys, or personal contact details in this file.
   quarterly; log source_blocked when skipped.
 - 2026-08-08 | sck-project-enrichment | constraint | Developer rows are created only after the
   normalized-name check against both developer tables; duplicates are retired, never deleted.
+- 2026-08-08 | sck-project-enrichment | fix | The zero-new-developers trigger never fired
+  because the scanner finds new developers nearly every night, so the outreach queue sat idle;
+  outreach now runs every morning with new discoveries prioritized ahead of the backlog, and
+  the market report rides as a public bucket link because the M365 connector cannot attach
+  files.

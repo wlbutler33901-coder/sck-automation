@@ -44,8 +44,11 @@ Developer Service Package:
   comp data, pre-sale and re-sale unit valuation engine, listing platform, contact directory,
   and deal email and CRM system.
 
-I have also attached our latest Florida Garage and Car Condo Market Report, worth a skim for
-where pricing and inventory are trending in {their region}.
+Our latest Florida Garage and Car Condo Market Report is worth a skim for where pricing and
+inventory are trending in {their region}:
+[Q2 2026 Florida Garage and Car Condo Market Report](https://llwyvgkqhendgzsgngqh.supabase.co/storage/v1/object/public/Quarterly%20Market%20Reports/florida-car-condo-market-report-q2-2026.pdf)
+Render this as an HTML hyperlink in the Outlook draft body: the linked text is "Q2 2026 Florida
+Garage and Car Condo Market Report" and the href is that URL.
 
 Best,
 Will Butler
@@ -65,10 +68,13 @@ a generic info@ or legal@ inbox when both appear.
 
 ## Selection and rotation
 
-1. TRIGGER: run this step only when the last 26 hours produced zero new developer rows in
-   "05 - Developers - New". On nights with new developers, the existing per-discovery drafter
-   handles outreach and this step is skipped (log outreach_skipped, reason new developers
-   found).
+1. RUN EVERY MORNING. One draft per morning is the target, not the exception. Selection
+   priority: first, developers staged in "05 - Developers - New" within the last 26 hours that
+   have a usable email and ideally a named contact, newest first; then the standing backlog
+   priority (Pre-Development and Under Construction FL first, then Developer Sale, then
+   Completed). A new developer with only a generic inbox and no named contact falls to the
+   backlog rather than blocking the morning; log the reason. The sent-check in rules 2 and 2b
+   still runs first every morning and an occupied queue still skips with outreach_skipped.
 2. SENT CHECK FIRST: before drafting anyone new, take the most recent row in "Developer
    Outreach - Drafts" with Status in ('queued','draft'), ordered by "Queued At" then
    created_at. Search Outlook Sent Items for a message from
@@ -96,9 +102,9 @@ a generic info@ or legal@ inbox when both appear.
    "Developer Outreach - Drafts" with Developer, Project, Region, Subject, Body, "Recipient
    Email", Status = 'queued', "Queued At" = now(). Log change_type = 'outreach_queued' with the
    developer name.
-5. The PDF attachment is Will's step. The morning digest reminds him: attach the current
-   Florida Market Report PDF before sending. Never claim in the email body that anything was
-   attached by anyone but Will; the body's attachment sentence is written for the email HE
-   sends.
+5. The report is linked, never attached; the draft arrives ready to send with no manual
+   attachment step. When a new quarterly report PDF is uploaded to the "Quarterly Market
+   Reports" bucket, this URL is updated to the newest file; check the bucket's newest object
+   each run and use it.
 6. If the Microsoft 365 connector is unavailable, still INSERT the Supabase row with Status =
    'draft' so nothing is lost, and log the connector failure. Never silently skip.
