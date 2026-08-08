@@ -97,6 +97,7 @@ VALUES (...);
 - confidence: high (developer site w/ address+units), medium (developer marketing, partial data), low (aggregator/rumor only).
 - Region/Submarket: assign from the county and city against "Market Coverage - Submarkets". Region must NEVER be null.
 - BROKER CAPTURE: when the listing or project site names a sales broker, populate "Sales Broker", "Sales Broker Contact", and "Sales Broker Email" on the staged row, and ensure a matching row exists in "08 - Brokers - New" ("Broker" name minimum; enrichment completes the contact card). If sales are clearly developer-direct, write 'Developer-Direct' into "Sales Broker" so the field is never silently null. Every property should end up with BOTH a developer and a broker answer.
+- NORMALIZED DEVELOPER CHECK. Normalize the candidate name (lowercase, trim, strip punctuation and parenthetical qualifiers, strip suffix words llc, inc, llp, co, corp, company, group, properties, development, developments, partners, holdings) and match against BOTH "05 - Developers" and "05 - Developers - New" on normalized name, and also on any shared email address, email domain (excluding freemail domains), or phone digits. On any match, do NOT insert; reference the existing row in the project row's scan_notes and log the reuse. Only genuinely new firms get a row.
 - If the Developer is new, ensure a matching row exists in "05 - Developers - New" (name only is fine; enrichment completes contacts).
 - scan_notes: source caveats, tier-2 flag, buy-or-lease flag, price points.
 

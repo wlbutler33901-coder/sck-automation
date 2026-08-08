@@ -295,3 +295,12 @@ NEVER put credentials, API keys, or personal contact details in this file.
   (Harrod Properties, The Vault, ReVest, Storage Caves, Stables Motor Condos); outreach
   selection must match on normalized developer name and deduplicate first, or one developer
   gets drafted twice under variant records.
+- 2026-08-08 | all-routines | constraint | Installed skills at /root/.claude/skills drift stale;
+  the skill of record is ALWAYS the repo copy under .claude/skills on main. Read the repo copy
+  directly at run start and ignore the Skill tool copy; if they differ, log a learning row.
+- 2026-08-08 | sck-project-scanner | constraint | Dead sources as of 2026-08-08: bldup.com
+  project pages and atlantamotorsportspark.com return HTTP 403, and onlygaragecondos.com
+  per-project pages are paywalled. Skip all three without burning fetch budget; retry
+  quarterly; log source_blocked when skipped.
+- 2026-08-08 | sck-project-enrichment | constraint | Developer rows are created only after the
+  normalized-name check against both developer tables; duplicates are retired, never deleted.
