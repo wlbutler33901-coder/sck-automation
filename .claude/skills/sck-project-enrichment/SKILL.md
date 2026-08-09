@@ -79,7 +79,7 @@ At RUN END: append an entry ONLY when something failed, was corrected, surprised
 Then commit the file ("learnings: {routine} {date}") and push. If the push is blocked by branch policy, leave it committed and say so in the run summary.
 
 ## Version self-check (prevents skill/instruction drift)
-This skill version's marker section is "TIDBIT MENU". If the routine instructions reference features this file does not contain, or this file lacks its marker, the deployed skill is stale: log change_type='skill_out_of_date' with run_type='enrichment' detail beginning "SKILL-OUT-OF-DATE", do what the loaded skill supports, and never improvise missing templates or rules.
+This skill version's marker section is "Step 5b". If the routine instructions reference features this file does not contain, or this file lacks its marker, the deployed skill is stale: log change_type='skill_out_of_date' with run_type='enrichment' detail beginning "SKILL-OUT-OF-DATE", do what the loaded skill supports, and never improvise missing templates or rules.
 
 ## Scheduling
 4:15 AM daily: claude -p "Run the SCK project enrichment daily routine per the sck-project-enrichment skill: developer contacts first, then brokers, project fields, audit, status watch, and FL outreach drafts" --permission-mode acceptEdits
