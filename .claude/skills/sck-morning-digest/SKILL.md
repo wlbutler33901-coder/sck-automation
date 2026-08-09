@@ -12,7 +12,7 @@ PURPOSE AND FRAMING: this is a MARKET INTELLIGENCE brief about the project pipel
 ## Step 1 - Pull undigested activity
 ```sql
 SELECT * FROM "Scan Activity Log"
-WHERE digested_at IS NULL AND run_type IN ('scan','enrichment','nightly_scan','project_scan')
+WHERE digested_at IS NULL AND run_type IN ('scan','enrichment','digest','nightly_scan','project_scan')
 ORDER BY ts;
 ```
 (The IN-list is deliberately tolerant of the scanner's historical run_type drift; the scanner is standardized to 'scan' but the digest must never miss rows over a label again.)
@@ -59,7 +59,7 @@ Re-query to confirm. The email is a copy; the row is the record.
 ## Step 4 - Mark digested (only after a successful POST or fallback write)
 ```sql
 UPDATE "Scan Activity Log" SET digested_at = now()
-WHERE digested_at IS NULL AND run_type IN ('scan','enrichment','nightly_scan','project_scan') AND ts < now();
+WHERE digested_at IS NULL AND run_type IN ('scan','enrichment','digest','nightly_scan','project_scan') AND ts < now();
 ```
 
 ## EMAIL FORMATTING RULES (mandatory - no wall-of-text emails)
@@ -75,7 +75,7 @@ At RUN END: append an entry ONLY when something failed, was corrected, surprised
 Then commit the file ("learnings: {routine} {date}") and push. If the push is blocked by branch policy, leave it committed and say so in the run summary.
 
 ## Version self-check (prevents skill/instruction drift)
-This skill version's marker section is "DEVELOPER OUTREACH DRAFTS". If the routine instructions reference features this file does not contain, or this file lacks its marker, the deployed skill is stale: log change_type='skill_out_of_date' with run_type='enrichment' detail beginning "SKILL-OUT-OF-DATE", do what the loaded skill supports, and never improvise missing templates or rules.
+This skill version's marker section is "DEVELOPER OUTREACH DRAFTS". If the routine instructions reference features this file does not contain, or this file lacks its marker, the deployed skill is stale: log change_type='skill_out_of_date' with run_type='digest' detail beginning "SKILL-OUT-OF-DATE", do what the loaded skill supports, and never improvise missing templates or rules.
 
 ## Scheduling
 Daily 5:55 AM: claude -p "Run the SCK morning digest routine per the sck-morning-digest skill" --permission-mode acceptEdits

@@ -42,7 +42,7 @@ NEVER put credentials, API keys, or personal contact details in this file.
   parked, catch it through Manatee County. Estero serves a broken TLS chain, catch it through
   Lee County plus press. Never attempt to defeat a login or a CAPTCHA.
 - 2026-08-03 | all routines | blocker | Scan Activity Log run_type has drifted repeatedly. The
-  ONLY permitted values are: scan, enrichment, swfl_permit_scan, swfl_news_scan, swfl_report.
+  ONLY permitted values are: scan, enrichment, digest, swfl_permit_scan, swfl_news_scan, swfl_report.
   Values nightly_scan, project_scan, project_scanner and scanner have all appeared in
   production and are invisible to the consuming digests. Hard-code the literal, never compose
   it, never abbreviate it. The consuming digests keep a tolerant IN-list as a backstop, but
