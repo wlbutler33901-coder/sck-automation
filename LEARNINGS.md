@@ -345,3 +345,9 @@ NEVER put credentials, API keys, or personal contact details in this file.
   separated when mixed) and "11 - Property - Common Area Finish Level" (Luxury, High-Quality,
   Basic, Utility); construction and finish terms are no longer amenities and belong in those
   columns. Utility-level projects are excluded from comp sets by default.
+- 2026-08-08 | all-routines | fix | The enrichment version self-check still named "TIDBIT MENU",
+  a section retired with the per-discovery drafter, so the check would have logged a false
+  SKILL-OUT-OF-DATE every night and trained everyone to ignore a real drift warning. Self-check
+  markers now point at durable current headings: "Step 5b" for enrichment, "NORMALIZED
+  DEVELOPER CHECK" for the scanner. When a section is retired, re-point any marker naming it in
+  the same change.

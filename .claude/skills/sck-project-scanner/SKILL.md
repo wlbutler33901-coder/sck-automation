@@ -116,7 +116,7 @@ At RUN END: append an entry ONLY when something failed, was corrected, surprised
 Then commit the file ("learnings: {routine} {date}") and push. If the push is blocked by branch policy, leave it committed and say so in the run summary.
 
 ## Version self-check (prevents skill/instruction drift)
-This skill version's marker section is "MULTI-SIGNAL". If the routine instructions reference features this file does not contain, or this file lacks its marker, the deployed skill is stale: log change_type='skill_out_of_date' with run_type='scan' detail beginning "SKILL-OUT-OF-DATE", do what the loaded skill supports, and never improvise missing templates or rules.
+This skill version's marker section is "NORMALIZED DEVELOPER CHECK". If the routine instructions reference features this file does not contain, or this file lacks its marker, the deployed skill is stale: log change_type='skill_out_of_date' with run_type='scan' detail beginning "SKILL-OUT-OF-DATE", do what the loaded skill supports, and never improvise missing templates or rules.
 
 ## Scheduling (document for the operator, do not self-schedule)
 3:00 AM daily: claude -p "Run the SCK project scanner nightly routine per the sck-project-scanner skill" --permission-mode acceptEdits
