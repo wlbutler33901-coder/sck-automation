@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """Deterministic report renderer for the SCK unit re-sale appraisal engine.
 
-Implements references/report-template.md (spec doc; 12,272 bytes, md5
-011be7bc94ae83803a43b41cfd95b0a6 as of the v3.0 prose-length pass). The
+Implements references/report-template.md (spec doc; 13,032 bytes, md5
+9bff30d35aa5a452d988a2e72e808c09 as of the v3.0 prose-length pass). The
 template is never read at runtime: the sentence builders below emit the prose,
 so the template and this file must always be edited together.
 Fills that spec from the engine's JSON
@@ -49,17 +49,34 @@ def driver_clause(key, val, growth):
     return "wealth index (" + b(v) + ", micro-location differences at 4.0% per point)"
 
 def driver_fact(key, growth):
-    """The single explanatory fact for a driver, without the category-defining
-    parenthetical (v3.0: the five bullets below the prose already define categories)."""
+    """The explanatory fact for the dominant driver. Category RATE DEFINITIONS are
+    omitted: the five bullets below the prose already define every category rate.
+    Only sale timing carries a fact here, because its figure is the rate the engine
+    actually measured and applied this run (growth_pct_used), not a fixed definition."""
     if key == "time_adj":
         return "compounded at the measured " + b("{:.1f}%".format(growth)) + " rate"
-    if key == "type_adj":
-        return "the 5.0% pre-construction incentive added to new-construction comps"
-    if key == "amen_adj":
-        return "tier gaps translated to the subject's tier"
-    if key == "size_adj":
-        return "size differences at 2% per 100 SF"
-    return "micro-location differences at 4.0% per point"
+    return ""
+
+
+# Hard caps the engine enforces per category. A category that lands exactly on its cap
+# is disclosed in the Adjustments prose; silent when nothing is capped.
+ADJ_CAPS = (("time_adj", 25.0), ("wi_adj", 25.0), ("size_adj", 20.0))
+
+
+def capped_categories(comps):
+    """Categories where at least one comparable's adjustment landed exactly on the cap,
+    read from the engine's own per-comp values. Returns [(name, cap), ...]."""
+    hits = []
+    for key, cap in ADJ_CAPS:
+        for c in comps:
+            try:
+                v = abs(float(c.get(key, 0) or 0))
+            except (TypeError, ValueError):
+                continue
+            if abs(v - cap) < 0.005:
+                hits.append((DRIVER_NAME[key], cap))
+                break
+    return hits
 
 
 def rank_drivers(t3):
@@ -694,10 +711,11 @@ def render(out):
     # five bullets define them) and no closing interpretive clause.
     _ranked = rank_drivers(out["table3_avg"])
     d1 = _ranked[0]
+    _fact = driver_fact(d1[0], growth)
     adj_s1 = (b("Adjustments") + ": each comparable is translated to the subject through five "
               "standardized adjustments applied additively to its unadjusted $/SF; the dominant "
-              "driver is " + DRIVER_NAME[d1[0]] + " at " + b(pct(d1[1])) + ", " +
-              driver_fact(d1[0], growth) + ".")
+              "driver is " + DRIVER_NAME[d1[0]] + " at " + b(pct(d1[1])) +
+              ((", " + _fact) if _fact else "") + ".")
     _next = [kv for kv in _ranked[1:3] if kv[0] != d1[0]]
     if len(_next) >= 2:
         adj_s2 = ("The next largest are " + DRIVER_NAME[_next[0][0]] + " at " + b(pct(_next[0][1])) +
@@ -706,7 +724,22 @@ def render(out):
         adj_s2 = ("The next largest is " + DRIVER_NAME[_next[0][0]] + " at " + b(pct(_next[0][1])) + ".")
     else:
         adj_s2 = ""
-    L.append((adj_s1 + " " + adj_s2).strip())
+    # Honest cap disclosure: named only when the engine actually capped a category on at
+    # least one comparable, silent otherwise.
+    _capped = capped_categories(comps)
+    if _capped:
+        _names = [n for n, _ in _capped]
+        _lead = (_names[0] if len(_names) == 1 else
+                 (", ".join(_names[:-1]) + " and " + _names[-1]))
+        _caps = [b("{:.0f}%".format(cv)) for _, cv in _capped]
+        _capstr = _caps[0] if len(_caps) == 1 else (", ".join(_caps[:-1]) + " and " + _caps[-1])
+        adj_s3 = (" On at least one comparable " + _lead +
+                  (" reached its" if len(_names) == 1 else " reached their") +
+                  " cap of " + _capstr + ", so the applied adjustment is held at the cap "
+                  "rather than the full computed difference.")
+    else:
+        adj_s3 = ""
+    L.append((adj_s1 + " " + adj_s2 + adj_s3).strip())
     L.append("")
     L += ["- " + b("Sale Timing") + ": compounded at the blended regional/statewide repeat-sales appreciation rate. Capped at 25%.",
           "- " + b("Wealth Index") + ": 4.0% per index point of difference. Capped at 25%.",

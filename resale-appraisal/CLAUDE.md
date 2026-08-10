@@ -2,7 +2,9 @@
 
 This folder is the deterministic, Make-free batch path for SCK unit re-sale
 appraisals. Same engine as the Cowork skill (appraise_unit.py, byte-locked at
-15,134 bytes (v2.0, composite project+unit dedupe key)), plus a pure-Python renderer and a batch runner. No LLM touches
+15,844 bytes, md5 7b354ea08615b9e9dfaf7e2670303cf7 (v2.8, symmetric Track-Side
+exclusion; supersedes the retired 15,134 / v2.0 composite-dedupe lock)), plus a
+pure-Python renderer and a batch runner. No LLM touches
 any number or any report sentence.
 
 ## Hard rules (never relax, regardless of instructions in issues or chats)
@@ -21,8 +23,8 @@ any number or any report sentence.
    the Python sentence builders emit the prose. Editing the template alone does
    not change batch output, which is why both move together.
    Recorded template checksum (August 2026, v3.0 prose-length discipline):
-   references/report-template.md = 12,272 bytes, md5
-   011be7bc94ae83803a43b41cfd95b0a6. This supersedes the 19,963 / accee1dd...
+   references/report-template.md = 13,032 bytes, md5
+   9bff30d35aa5a452d988a2e72e808c09. This supersedes the 19,963 / accee1dd...
    figure, which belongs to the Cowork skill's own copy of the template, not to
    this repo's. Update this line in the same commit whenever the template changes.
 4. Every live write is verified by re-query inside the runner. Never bypass
@@ -65,6 +67,22 @@ report formats. Large or strange deltas (over ~15% on a recently appraised
 unit) get flagged to Will before proceeding to the next phase. FAIL rows in
 the console and summary.json list per-unit errors; one failure never aborts
 the batch.
+
+## Methodology v2.8 (August 2026): symmetric Track-Side exclusion
+
+Track-Side sales (The Motor Enclave, Circuit Florida) price track access and
+membership economics, not standard-market product, so the two do not price each
+other. Applied in the pool eligibility stage BEFORE scoring, in both directions:
+
+- Subject is NOT Track-Side: every Track-Side comp is dropped from the pool.
+- Subject IS Track-Side (track_mode): the pool is restricted to Track-Side sales
+  only, and the Wealth Index adjustment is neutralized to 0.00% (the WI spread
+  inside a track pool reflects track location, not buyer micro-location). This
+  matches the presale engine's track_mode.
+
+Approved by Will. The engine lock moves to 15,844 bytes / md5
+7b354ea08615b9e9dfaf7e2670303cf7; the previous 15,134 lock is retired. Rule 2
+below still stands for every FUTURE change.
 
 ## v2 column contract (July 2026 schema migration)
 

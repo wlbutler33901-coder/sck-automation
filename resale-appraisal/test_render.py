@@ -26,8 +26,14 @@ def subject():
             "number_of_units": 40, "amenity_tier": "Standard-Tier", "wealth_index": 6.0}
 
 
-def run(sales, label):
-    data = {"subject": subject(), "appraisal_date": TODAY.isoformat(),
+def tier_of(comp_row):
+    """Normalized amenity tier of a rendered comp row (engine field `amenity`)."""
+    a = str(comp_row.get("amenity") or "").lower()
+    return "Track-Side" if "track" in a else a
+
+
+def run(sales, label, subj=None):
+    data = {"subject": subj or subject(), "appraisal_date": TODAY.isoformat(),
             "market_growth_pct": 10.0, "sales_comps": sales}
     with tempfile.NamedTemporaryFile("w", suffix=".json", delete=False) as f:
         json.dump(data, f); path = f.name
@@ -80,6 +86,39 @@ def main():
     out3, rpt3 = run(s3, "cross-region")
     assert "sit outside" in rpt3, "cross-region contributor label missing"
     print("PASS scenario 3 (cross-region contributor labeling)")
+
+    # Scenario 4 (v2.8 direction A): NON-Track-Side subject must drop every Track-Side comp
+    # from the pool before scoring, and still value cleanly off the remaining evidence.
+    s4_subj = dict(subject(), amenity_tier="Premium-Tier")
+    s4 = [sale("Test Motor Condos", 500 + i, 3 + i * 3, 320 + i * 6, 1200, "Premium-Tier", "Re-Sale")
+          for i in range(8)]
+    s4 += [sale("The Motor Enclave", 600 + i, 2 + i, 900 + i * 20, 1300, "Track-Side", "Re-Sale")
+           for i in range(6)]
+    out4, rpt4 = run(s4, "track-side excluded", subj=s4_subj)
+    assert all(tier_of(c) != "Track-Side" for c in out4["comps"]), \
+        "Track-Side comp leaked into a non-Track-Side subject's set"
+    assert out4["estimated_market_value"] > 0
+    print("PASS scenario 4 (Track-Side comps excluded for non-Track-Side subject): "
+          "%d comps, none Track-Side, value %s"
+          % (len(out4["comps"]), "${:,}".format(out4["estimated_market_value"])))
+
+    # Scenario 5 (v2.8 direction B): Track-Side SUBJECT is restricted to Track-Side sales only
+    # and the wealth-index adjustment is neutralized (track_mode, presale parity).
+    s5_subj = dict(subject(), project="The Motor Enclave", amenity_tier="Track-Side",
+                   parcel_id="TME-SUBJ", wealth_index=6.0)
+    s5 = [sale("The Motor Enclave", 700 + i, 3 + i * 3, 880 + i * 10, 1250, "Track-Side",
+               "Re-Sale", wi=7.0) for i in range(8)]
+    s5 += [sale("Rival Garage Park", 800 + i, 2 + i, 330 + i * 5, 1200, "Premium-Tier",
+                "Re-Sale", wi=7.0) for i in range(6)]
+    out5, rpt5 = run(s5, "track-side subject", subj=s5_subj)
+    assert all(tier_of(c) == "Track-Side" for c in out5["comps"]), \
+        "non-Track-Side comp leaked into a Track-Side subject's set"
+    assert all(abs(float(c["wi_adj"])) < 1e-9 for c in out5["comps"]), \
+        "wealth-index adjustment not neutralized in track_mode"
+    assert out5["estimated_market_value"] > 0
+    print("PASS scenario 5 (Track-Side subject: track-only pool, WI neutralized): "
+          "%d comps, all Track-Side, value %s"
+          % (len(out5["comps"]), "${:,}".format(out5["estimated_market_value"])))
     print("PASS all render tests")
 
 

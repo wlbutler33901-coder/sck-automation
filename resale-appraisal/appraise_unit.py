@@ -147,12 +147,18 @@ def main():
  else: sys.stderr.write("WARNING: no blended appreciation rate supplied; timing adjustment using 5.0%/yr default.\n")
  subj_parcel=norm_parcel(subj.get("parcel_id"))
  ssf=float(subj["unit_size_sf"])
+ track_mode=(subj["amenity_word"]=="Track-Side")  # v2.8 symmetric Track-Side exclusion
  pool=[]
  for c in data["sales_comps"]:
   psf=num(c.get("$ / SF")); sf=num(c.get("Sq. Ft.")); price=num(c.get("Sale Price"))
   d=parse_date(c.get("Sale Date")); m=months_ago(d,today)
   if psf is None or psf<MIN_PSF or sf is None or sf<=0 or price is None or price<=0: continue
   if m is None or m>STALE_MONTHS: continue
+  # v2.8 symmetric Track-Side exclusion, applied BEFORE scoring. Track-Side sales price
+  # track access and membership economics, not standard-market product, so the wall runs
+  # both ways: a Track-Side subject draws only Track-Side comps; every other subject drops
+  # them. Uses the same tier_word normalization as the rest of the engine.
+  if (tier_word(c.get("Amenity"))=="Track-Side")!=track_mode: continue
   pool.append({"raw":c,"psf":psf,"sf":sf,"price":price,"date":d,"mos":m})
  best={}
  for i,p in enumerate(pool):
@@ -227,7 +233,10 @@ def main():
   a_time=round(timing_adj(c["mos"]),2)
   a_amen=round(float(AMEN_ADJ.get((subj["amenity_word"],c["amen"]),0)),2)
   a_type=round(type_adj(c["raw"].get("Sale Type")),2)
-  a_size=round(size_adj(c["sf"],ssf),2); a_wi=round(wi_adj(swi,c["wi"]),2)
+  # v2.8 track_mode: inside a Track-Side-only pool the wealth-index spread reflects track
+  # location, not buyer micro-location, so the WI adjustment is neutralized (presale parity).
+  a_size=round(size_adj(c["sf"],ssf),2)
+  a_wi=0.0 if track_mode else round(wi_adj(swi,c["wi"]),2)
   net=round(a_time+a_amen+a_type+a_size+a_wi,2)
   rows.append({"project":c["raw"].get("Project Name"),"unit":c["raw"].get("Unit"),
    "address":c["raw"].get("Address"),
