@@ -1,7 +1,11 @@
 #!/usr/bin/env python3
 """Deterministic report renderer for the SCK unit re-sale appraisal engine.
 
-Fills references/report-template.md (skill v1.9 spec) from the engine's JSON
+Implements references/report-template.md (spec doc; 12,272 bytes, md5
+011be7bc94ae83803a43b41cfd95b0a6 as of the v3.0 prose-length pass). The
+template is never read at runtime: the sentence builders below emit the prose,
+so the template and this file must always be edited together.
+Fills that spec from the engine's JSON
 output. No model in the loop: every number comes from the engine, every
 sentence is a fixed pattern with slot filling. validate() enforces the
 structural contract the website parser depends on before anything is written.
@@ -43,6 +47,27 @@ def driver_clause(key, val, growth):
     if key == "size_adj":
         return "unit size (" + b(v) + ", size differences at 2% per 100 SF)"
     return "wealth index (" + b(v) + ", micro-location differences at 4.0% per point)"
+
+def driver_fact(key, growth):
+    """The single explanatory fact for a driver, without the category-defining
+    parenthetical (v3.0: the five bullets below the prose already define categories)."""
+    if key == "time_adj":
+        return "compounded at the measured " + b("{:.1f}%".format(growth)) + " rate"
+    if key == "type_adj":
+        return "the 5.0% pre-construction incentive added to new-construction comps"
+    if key == "amen_adj":
+        return "tier gaps translated to the subject's tier"
+    if key == "size_adj":
+        return "size differences at 2% per 100 SF"
+    return "micro-location differences at 4.0% per point"
+
+
+def rank_drivers(t3):
+    """All five average adjustments ranked by absolute size. Same figures the engine
+    produced (out["table3_avg"]); ranking happens here, never in the engine."""
+    keys = ("time_adj", "wi_adj", "amen_adj", "type_adj", "size_adj")
+    return sorted(((k, float(t3.get(k, 0) or 0)) for k in keys), key=lambda kv: -abs(kv[1]))
+
 
 def fmt_date_long(iso):
     d = datetime.date.fromisoformat(str(iso)[:10])
@@ -91,18 +116,31 @@ def _table5_intro(out):
         if t not in tiers:
             tiers.append(t)
     tier_mix = tiers[0] if len(tiers) == 1 else (", ".join(tiers[:-1]) + " and " + tiers[-1])
+    # v3.0: sentence one counts the ranked projects BY TIER rather than listing a tier-mix phrase.
+    _tc = {}
+    for r in sel:
+        t = tier_label(r.get("tier"))
+        _tc[t] = _tc.get(t, 0) + 1
+    _parts = [b(v) + " " + k for k, v in sorted(_tc.items(), key=lambda kv: -kv[1])]
+    tier_counts = _parts[0] if len(_parts) == 1 else (", ".join(_parts[:-1]) + " and " + _parts[-1])
     note = cs.get("note")
     if contributed:
+        # v3.0 compressed sentence one (35-45 words), connective padding cut. The
+        # region-honesty rule is preserved exactly: when ranked projects sit outside the
+        # subject's region, the scope drops the region claim and the count is disclosed.
         subj_region = str(subj.get("region") or "")
         off = sum(1 for r in sel if str(r.get("region") or "") != subj_region)
         scope = (region + " projects competing for the same regional buyer pool") if off == 0 else \
                 "projects competing for the subject's buyer pool"
         cross = "" if off == 0 else (" (" + b(off) + " of the ranked projects sit outside " + region + ")")
-        s1 = ("The subject's competitive set groups the " + b(len(sel)) + " " + scope + ": the " +
-              b(len(contributed)) +
-              (" project" if len(contributed) == 1 else " projects") +
-              " supplying valuation comps rank first" + cross + ", backfilled by comparability, "
-              "spanning " + tier_mix + ".")
+        _used = sum(int(r.get("comps_used", 0) or 0) for r in contributed)
+        _back = len(sel) - len(contributed)
+        s1 = ("The subject's competitive set is the " + b(len(sel)) + " " + scope + cross +
+              ", ranked by comps used and then by comparability: " + b(len(contributed)) +
+              (" supplying " if len(contributed) == 1 else " supplying ") + b(_used) +
+              (" valuation comp" if _used == 1 else " valuation comps") +
+              ((" and " + b(_back) + " by backfill") if _back else "") +
+              ", spanning " + tier_counts + ".")
     else:
         s1 = ("All " + b(ns["n_comps"]) + " valuation comps come from inside " +
               b(subj["project"]) + "; the table below ranks the " + b(len(sel)) +
@@ -119,17 +157,26 @@ def _table5_intro(out):
     mos = nearest.get("mos_since_last")
     recency = (", which last traded " + b(mos) + (" month" if mos == 1 else " months") + " ago"
                ) if mos is not None else ""
+    # v3.0 sentence two (50-65 words): position against the range ONCE, then keep the full
+    # timing explanation and its figures.
     if vpsf > hi:
         pos = ("sits above the set's " + b(psf(lo)) + " to " + b(psf(hi)) +
-               "/SF range, a " + b(psf(gap)) + "/SF premium to " + nearest["project"] + recency)
+               "/SF range, a " + b(psf(gap)) + "/SF premium to " + nearest["project"] +
+               ", the nearest-priced project" + recency)
     elif vpsf < lo:
         pos = ("sits below the set's " + b(psf(lo)) + " to " + b(psf(hi)) +
-               "/SF range, a " + b(psf(gap)) + "/SF discount to " + nearest["project"] + recency)
+               "/SF range, a " + b(psf(gap)) + "/SF discount to " + nearest["project"] +
+               ", the nearest-priced project" + recency)
     else:
         side = "above" if vpsf >= npsf else "below"
         pos = ("sits within the set's " + b(psf(lo)) + " to " + b(psf(hi)) +
-               "/SF range, " + b(psf(gap)) + "/SF " + side + " " + nearest["project"] + recency)
-    s2 = "The subject's valued " + b(psf(vpsf) + "/SF") + " " + pos + "."
+               "/SF range, " + b(psf(gap)) + "/SF " + side + " " + nearest["project"] +
+               ", the nearest-priced project" + recency)
+    _g = float(out.get("growth_pct_used", 0) or 0)
+    timing = ("; the set averages above are unadjusted for sale timing, so older prints "
+              "understate today's market at the measured " + b("{:.1f}%".format(_g)) +
+              " annual rate the engine applied")
+    s2 = "The subject's valued " + b(psf(vpsf) + "/SF") + " " + pos + timing + "."
     return s1 + " " + s2
 
 
@@ -541,29 +588,38 @@ def render(out):
     L.append("")
     L.append(b("Valuation Overview"))
     L.append("")
+    # v3.0 length discipline (matches the Cowork skill sck-unit-resale-valuation):
+    # paragraph 1 is EXACTLY two sentences, 55-70 words; every sentence carries a figure
+    # or a disclosure; no figure is restated across paragraphs. Sentence one is value,
+    # $/SF, unit, project, tier, size. Sentence two is the comp evidence as one compound
+    # clause leading with the same-project count, then the score band, then the largest
+    # driver. No framing lead-ins.
     own = ns.get("own_sale_included")
-    own_txt = ", including the unit's own prior sale" if own else ""
+    own_txt = ", including the unit's own prior sale," if own else ","
     dk, dv = ns["largest_adj"][0]
-    loc_clause = ""
-    _sm = subj.get("submarket")
-    if _sm and str(_sm) not in ("N/A", "None"):
-        loc_clause = " in the " + str(_sm) + " submarket"
-    p1 = ("The unit carries an estimated market value of " + b(money(value)) + " (" +
-          b(psf(vpsf) + "/SF") + "), Unit " + b(subj.get("unit_number")) + " at " +
-          b(subj["project"]) + ", a " + sub_tier + " project" + loc_clause + ". " +
-          ((b(ns["class_a"]) + " of " + b(n) + " comparables are sales inside " +
-            subj["project"] + " itself" + own_txt + ", anchoring the value in the "
-            "project's own trading history.") if ns["class_a"] else
-           ("All " + b(n) + " comparables are drawn from adjacent projects, as " +
-            subj["project"] + " recorded no qualifying sales in the analysis window.")) +
-          " The largest adjustment driver this run is " +
-          DRIVER_NAME[dk] + " at " + b(pct(dv)) + ".")
+    p1_s1 = ("Unit " + b(subj.get("unit_number")) + " at " + b(subj["project"]) + ", a " +
+             b("{:,}".format(ssf)) + " SF unit in a " + sub_tier + " project, carries an "
+             "estimated market value of " + b(money(value)) + ", or " + b(psf(vpsf) + "/SF") + ".")
+    if ns["class_a"]:
+        p1_s2 = (b(ns["class_a"]) + " of the " + b(n) + " comparables are recorded sales inside " +
+                 b(subj["project"]) + " itself" + own_txt + " a same-project core spanning "
+                 "selection scores " + b("{:.2f}".format(ns["score_min"])) + " to " +
+                 b("{:.2f}".format(ns["score_max"])) + ", with " + DRIVER_NAME[dk] +
+                 " the largest adjustment driver at " + b(pct(dv)) + ".")
+    else:
+        p1_s2 = ("All " + b(n) + " comparables are drawn from adjacent projects, as " +
+                 b(subj["project"]) + " recorded no qualifying sales in the analysis window, "
+                 "spanning selection scores " + b("{:.2f}".format(ns["score_min"])) + " to " +
+                 b("{:.2f}".format(ns["score_max"])) + ", with " + DRIVER_NAME[dk] +
+                 " the largest adjustment driver at " + b(pct(dv)) + ".")
+    p1 = p1_s1 + " " + p1_s2
     L.append(p1)
     L.append("")
+    # Paragraph 2 stands alone and never restates paragraph 1's value, $/SF or unit size.
     p2 = ("The " + b(n) + " comparables average an unadjusted " + b(psf(t1["comp_avg_psf"]) + "/SF") +
-          " and a " + b(pct(t1["total_adj"])) + " total adjustment reconciles to " +
-          b(psf(vpsf) + "/SF") + " (" + b(money(value)) + " at " + b("{:,}".format(ssf)) +
-          " SF), with adjusted values spanning " + b(psf(band["low_psf"])) + " to " +
+          " before adjustment, and a " + b(pct(t1["total_adj"])) + " net adjustment for sale "
+          "timing, wealth index, amenity tier, unit size and sale type reconciles them to the "
+          "valued rate, with adjusted values spanning " + b(psf(band["low_psf"])) + " to " +
           b(psf(band["high_psf"]) + "/SF") + ", the finish-level band a shell versus a "
           "built-out unit could realize.")
     L.append(p2)
@@ -632,12 +688,25 @@ def render(out):
     L.append("")
     L.append("### Tab 3 - Comp Adjustments")
     L.append("")
-    d1, d2 = ns["largest_adj"][0], ns["largest_adj"][1] if len(ns["largest_adj"]) > 1 else ns["largest_adj"][0]
-    adj_sent = (b("Adjustments") + ": each comparable is translated to the subject through five "
-                "standardized adjustments applied additively to its unadjusted $/SF; this run's "
-                "largest drivers are " + driver_clause(d1[0], d1[1], growth) + " and " +
-                driver_clause(d2[0], d2[1], growth) + ".")
-    L.append(adj_sent)
+    # v3.0 length discipline: TWO short sentences, 45-65 words. Sentence one is framing plus
+    # the dominant driver with its figure and the one fact explaining it; sentence two names
+    # the next-largest drivers with figures and nothing else. No category parentheticals (the
+    # five bullets define them) and no closing interpretive clause.
+    _ranked = rank_drivers(out["table3_avg"])
+    d1 = _ranked[0]
+    adj_s1 = (b("Adjustments") + ": each comparable is translated to the subject through five "
+              "standardized adjustments applied additively to its unadjusted $/SF; the dominant "
+              "driver is " + DRIVER_NAME[d1[0]] + " at " + b(pct(d1[1])) + ", " +
+              driver_fact(d1[0], growth) + ".")
+    _next = [kv for kv in _ranked[1:3] if kv[0] != d1[0]]
+    if len(_next) >= 2:
+        adj_s2 = ("The next largest are " + DRIVER_NAME[_next[0][0]] + " at " + b(pct(_next[0][1])) +
+                  " and " + DRIVER_NAME[_next[1][0]] + " at " + b(pct(_next[1][1])) + ".")
+    elif _next:
+        adj_s2 = ("The next largest is " + DRIVER_NAME[_next[0][0]] + " at " + b(pct(_next[0][1])) + ".")
+    else:
+        adj_s2 = ""
+    L.append((adj_s1 + " " + adj_s2).strip())
     L.append("")
     L += ["- " + b("Sale Timing") + ": compounded at the blended regional/statewide repeat-sales appreciation rate. Capped at 25%.",
           "- " + b("Wealth Index") + ": 4.0% per index point of difference. Capped at 25%.",
@@ -746,7 +815,10 @@ def validate(report, out):
     for r in out["competitive_set"].get("selected") or []:
         if r["project"] == subj["project"]:
             p.append("subject project appears in Table 5")
-    if "supplying valuation comps rank first" not in report and \
+    # v3.0: the contributed branch's compressed sentence one reads "ranked by comps used";
+    # the legacy phrase is still accepted so older stored reports keep validating.
+    if "ranked by comps used" not in report and \
+       "supplying valuation comps rank first" not in report and \
        "valuation comps come from inside" not in report:
         p.append("Table 5 two-sentence intro missing")
     return p

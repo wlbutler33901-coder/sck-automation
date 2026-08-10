@@ -17,6 +17,14 @@ any number or any report sentence.
 3. render_report.py follows references/report-template.md exactly. If a format
    change is requested, edit the template AND the renderer together, run
    test_render.py, and show Will a diff plus one sample report before merging.
+   NOTE: the template is a SPEC DOC. render_report.py never reads it at runtime;
+   the Python sentence builders emit the prose. Editing the template alone does
+   not change batch output, which is why both move together.
+   Recorded template checksum (August 2026, v3.0 prose-length discipline):
+   references/report-template.md = 12,272 bytes, md5
+   011be7bc94ae83803a43b41cfd95b0a6. This supersedes the 19,963 / accee1dd...
+   figure, which belongs to the Cowork skill's own copy of the template, not to
+   this repo's. Update this line in the same commit whenever the template changes.
 4. Every live write is verified by re-query inside the runner. Never bypass
    run_appraisals.py with hand-written REST or SQL writes to "02 - Units".
 5. Dry-run first for any new scope. Review out/summary.csv value deltas and at

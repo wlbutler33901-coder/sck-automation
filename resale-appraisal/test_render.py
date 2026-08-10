@@ -68,7 +68,7 @@ def main():
                 "New Construction") for i in range(4)]
     out2, rpt2 = run(s2, "contributed")
     assert any(r["comps_used"] > 0 for r in out2["competitive_set"]["selected"])
-    assert "supplying valuation comps rank first" in rpt2
+    assert "ranked by comps used" in rpt2  # v3.0 compressed sentence one
     print("PASS scenario 2 (contributed intro): value %s, %d comps, %d Table 5 rows"
           % ("${:,}".format(out2["estimated_market_value"]),
              out2["narrative_stats"]["n_comps"], len(out2["competitive_set"]["selected"])))
