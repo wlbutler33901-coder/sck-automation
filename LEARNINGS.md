@@ -362,3 +362,9 @@ NEVER put credentials, API keys, or personal contact details in this file.
   markers now point at durable current headings: "Step 5b" for enrichment, "NORMALIZED
   DEVELOPER CHECK" for the scanner. When a section is retired, re-point any marker naming it in
   the same change.
+- 2026-08-09 | sck-morning-digest | note | Unit reservation requests land in "08 - Unit
+  Reservation Requests" and are alerted in real time by the Postgres trigger
+  notify_on_unit_reservation, which POSTs each new row to the same Make webhook the digest
+  uses. The digest therefore never alerts on fresh rows: its UNIT RESERVATIONS section recaps
+  the last 24 hours, reports trailing 30/60/90 day counts per project, and flags any row still
+  at Status 'New' after 24 hours as an SLA breach, promoted into WARNINGS.
