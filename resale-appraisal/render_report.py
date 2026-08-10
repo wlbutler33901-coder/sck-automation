@@ -667,7 +667,10 @@ def render(out):
     sub_mismatch = sum(1 for c in comps if (c.get("submarket") or subj.get("submarket")) != subj.get("submarket"))
     mm = ("; " + b(sub_mismatch) + (" comp sits" if sub_mismatch == 1 else " comps sit") +
           " outside the subject's submarket") if sub_mismatch else ""
-    a_txt = (b(ns["class_a"]) + " inside " + subj["project"] + " itself" + own_txt) if ns["class_a"] \
+    # own_txt carries a trailing comma for the paragraph-1 clause; this sentence supplies its
+    # own ", scoring ..." continuation, so strip it here to avoid a doubled comma.
+    _own_cs = own_txt.rstrip(",")
+    a_txt = (b(ns["class_a"]) + " inside " + subj["project"] + " itself" + _own_cs) if ns["class_a"] \
         else ("all from adjacent projects with none inside " + subj["project"] + " itself")
     cs_sent = (b("Comp Selection") + ": the valuation draws on " + b(n) + " comparable sales, " +
                a_txt +
