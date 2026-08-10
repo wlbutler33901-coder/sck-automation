@@ -170,8 +170,10 @@ Contents, in this order:
    scanner's references/run-logging.md. "zero" means the cluster ran and found nothing; "missed"
    means it left no trace. Those are different findings and must never be merged.
 3. TOP 5 FINANCEABLE ITEMS of the week, entitlements favored per the section 2 sort.
-4. THE THREE CALUSA OUTREACH LEADS selected per references/calusa-outreach-template.md, followed
-   by exactly this reminder line:
+4. THE CALUSA OUTREACH LANE per references/calusa-outreach-template.md: list EVERY candidate
+   considered with its outcome (drafted, drafted-needs-address, skipped and why), not just the
+   three drafted, so no Monday selection is ever invisible. A drafted-needs-address item names its
+   contact path. Follow the list with exactly this reminder line:
    Attach the condensed Calusa Financing Capabilities PDF in Outlook before sending each.
 
 ## Section 7 - Rotation and coverage audit

@@ -258,6 +258,17 @@ NEVER put credentials, API keys, or personal contact details in this file.
   and changes measured against the prior "Top Opportunities" rows, with the standing pipeline
   compressed to one unnumbered line capped at five.
 
+- 2026-08-10 | cre-report-writer | fixed | The Calusa Monday lane could silently produce fewer than
+  three drafts: the old rule allowed ONE time-boxed lookup per candidate and skipped anyone whose
+  email was not found, with no record that the candidate was ever considered. Now: research each
+  candidate up to 5 minutes (Sunbiz, firm site, LinkedIn, press, pattern evidence) and continue
+  down the ranking until 3 drafts exist or 10 candidates are exhausted; a strong lead with no
+  VERIFIED address still gets a draft with To left EMPTY and its contact path named (phone, form,
+  LinkedIn, PropStream parcel skip-trace), never a guessed address; and section 1c lists every
+  candidate considered with its outcome (drafted, drafted-needs-address, skipped and why). Section
+  1c item 4 in report-structure.md was reworded to match, since it still said to list only the
+  three drafted, which would have re-hidden the skips this fix exists to expose.
+
 ## Resolved
 
 - 2026-07-20 | swfl-permit-scanner | fixed | Portal certification sweep completed. 11 portals
