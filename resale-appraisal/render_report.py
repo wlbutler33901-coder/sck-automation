@@ -271,21 +271,11 @@ def demo_strengths(d):
     return wi_clause, [(k, ph) for k, _, ph in sig]
 
 
-DEVELOPER_SALES_URL = "/pre-sale-deals"  # live frontend route (verified against App.tsx, July 2026)
-
-# In-block tab anchors. SEEDED from the repo snapshot's stable URL slugs; the frontend's
-# #tab- routing recently changed, so VERIFY this map against the live routing map
-# (ProjectDetail/UnitAppraisals tab link maps) before any batch run, update here, and
-# report the slugs used. One dict, one place to fix.
-ANCHORS = {
-    "value_summary": "#tab-value-summary",
-    "unit_financials": "#tab-unit-financials",
-    "key_contacts": "#tab-key-contacts",
-    "demographics": "#tab-demographic-profile",
-    "competitive_set": "#tab-competitive-set",
-    "market_summary": "#tab-market-data",
-    "contact": "#contact",
-}
+# v3.1: the ANCHORS map and DEVELOPER_SALES_URL are RETIRED. The Unit Summary block no longer
+# authors any link. The website renders the tab strip and the listing calls to action, so an
+# authored "#tab-..." or "/pre-sale-deals" link duplicated a live control. Sections now end on
+# their last prose sentence or last bullet. Do not reintroduce authored links here.
+# The "# Unit Summary" delimiter string is UNCHANGED: it is a frontend parsing contract.
 
 
 def pw(v):
@@ -332,7 +322,8 @@ def unit_summary_block(out):
     """Owner-facing Unit Summary block. Copy and disclosure per website-chat review:
     concentration disclosure over 80% same-project share, exact comp-source shares,
     prior-sale trend line when the unit's own sale is in the set, honest cap language,
-    whole-dollar PSF, prose submarket names, ANCHORS-mapped links, deduped bullets.
+    whole-dollar PSF, prose submarket names, deduped bullets. v3.1: NO authored links in
+    any section, and Unit Highlights emits exactly five priority-ordered bullets.
     Every figure from engine output; no valuation math here."""
     subj = out["subject"]
     ns = out["narrative_stats"]
@@ -395,9 +386,6 @@ def unit_summary_block(out):
                      ") are sales within " + bp + own +
                      "; the concentration anchors direct evidence but limits cross-market validation.")
     L.append(sent)
-    L.append("- [Value Summary \u2192](" + ANCHORS["value_summary"] + ")")
-    L.append("- [Unit Financials \u2192](" + ANCHORS["unit_financials"] + ")")
-    L.append("- [Key Contacts \u2192](" + ANCHORS["key_contacts"] + ")")
     L.append("")
 
     # 2. Your Unit
@@ -466,7 +454,6 @@ def unit_summary_block(out):
             else:
                 loc += ", where " + b("Storage Condo King") + " tracks every recorded garage condo sale"
         L.append(loc + ".")
-    L.append("- [Demographic Profile \u2192](" + ANCHORS["demographics"] + ")")
     L.append("")
 
     # 4. Market Summary
@@ -500,60 +487,79 @@ def unit_summary_block(out):
         mo += (" Against " + _set_size(len(sel)) + " " + region + " competitive set " + setspan +
                ", the unit prices " + pos + " the set on tier and quality.")
     L.append(mo)
-    L.append("- [Competitive Set \u2192](" + ANCHORS["competitive_set"] + ")")
-    L.append("- [Market Summary \u2192](" + ANCHORS["market_summary"] + ")")
     L.append("")
 
-    # 5. Owner Highlights
-    L.append("## Owner Highlights")
+    # 5. Unit Highlights (v3.1). EXACTLY five bullets, chosen by a fixed priority order: the
+    # first five candidates that qualify are emitted and the rest are dropped silently. Bullets
+    # are never merged to fit. Prior Sale Trend qualifies only when the unit's own prior sale is
+    # in the comp set; when it suppresses, the next candidate moves up.
+    L.append("## Unit Highlights")
+    candidates = []
+
+    # 1. Prior Sale Trend - conditional.
     if own_comp:
         prior = round(float(own_comp["psf"]) * float(own_comp["size"]))
         chg = 100.0 * (float(value) - prior) / prior
-        L.append("- " + b("Prior Sale Trend:") + " Last sold for " + b(money(prior)) + " in " +
-                 month_year_before(out["appraisal_date"], own_comp["mos"]) +
-                 "; today's " + b(money(value)) + " estimate marks a " +
-                 b("{:+.1f}%".format(chg)) + " change.")
-    L.append("- " + b("Current Value:") + " " + b(money(value)) + " at " + b(pw(vpsf) + "/SF") +
-             ", effective " + fmt_date_long(out["appraisal_date"]) + ".")
+        candidates.append("- " + b("Prior Sale Trend:") + " Last sold for " + b(money(prior)) + " in " +
+                          month_year_before(out["appraisal_date"], own_comp["mos"]) +
+                          "; today's " + b(money(value)) + " estimate marks a " +
+                          b("{:+.1f}%".format(chg)) + " change.")
+
+    # 2. Current Value - always qualifies.
+    candidates.append("- " + b("Current Value:") + " " + b(money(value)) + " at " + b(pw(vpsf) + "/SF") +
+                      ", effective " + fmt_date_long(out["appraisal_date"]) + ".")
+
+    # 3. Value Anchor - always qualifies; keeps the >80% concentration clause.
     dpct = 100.0 * (vpsf - float(t1["comp_avg_psf"])) / float(t1["comp_avg_psf"])
     va = ("Sits " + b("{:+.1f}%".format(dpct)) + " " + ("above" if dpct >= 0 else "below") +
           " the comp set's " + b(pw(t1["comp_avg_psf"]) + "/SF") + " unadjusted average")
     if n and share > 80:
         va += (", on evidence drawn " + ("entirely" if a == n else "predominantly") +
                " from inside the project")
-    L.append("- " + b("Value Anchor:") + " " + va + ".")
+    candidates.append("- " + b("Value Anchor:") + " " + va + ".")
+
+    # 4. Trophy Quality Product - always qualifies; keeps the finish-level range.
+    candidates.append("- " + b("Trophy Quality Product:") + " " + tier + " unit at " + bp +
+                      ", finish level carrying a " + b(rw(band["low_psf"], band["high_psf"])) +
+                      " value range from shell to full custom buildout.")
+
+    # 5. Competitive Positioning - always qualifies; never names a project.
     if sel:
         avgs = [float(r["avg_psf"]) for r in sel]
         lo, hi = min(avgs), max(avgs)
         pos = "above" if vpsf > hi else ("below" if vpsf < lo else "within")
         rng = (b(rw(lo, hi)) + " range") if abs(hi - lo) >= 0.5 else (b(pw(lo) + "/SF") + " mark")
-        L.append("- " + b("Competitive Positioning:") + " Values " + pos + " the " + region +
-                 " competitive set's " + rng + " on tier and quality.")
+        candidates.append("- " + b("Competitive Positioning:") + " Values " + pos + " the " + region +
+                          " competitive set's " + rng + " on tier and quality.")
     else:
-        L.append("- " + b("Competitive Positioning:") + " No competing " + region +
-                 " projects recorded qualifying sales in the analysis window.")
-    L.append("- " + b("Trophy Quality Product:") + " " + tier + " unit at " + bp +
-             ", finish level carrying a " + b(rw(band["low_psf"], band["high_psf"])) +
-             " value range from shell to full custom buildout.")
+        candidates.append("- " + b("Competitive Positioning:") + " No competing " + region +
+                          " projects recorded qualifying sales in the analysis window.")
+
+    # 6. Dynamic Growth Market - keeps the honest-cap language when it renders.
     if subj.get("rate_capped"):
-        L.append("- " + b("Dynamic Growth Market:") + " Sale timing compounded at " +
-                 b("{:.1f}%".format(growth)) + " annually, the policy ceiling; the measured "
-                 "blended rate was higher and was capped.")
+        candidates.append("- " + b("Dynamic Growth Market:") + " Sale timing compounded at " +
+                          b("{:.1f}%".format(growth)) + " annually, the policy ceiling; the measured "
+                          "blended rate was higher and was capped.")
     else:
-        L.append("- " + b("Dynamic Growth Market:") + " Sale timing compounded at the measured " +
-                 b("{:.1f}%".format(growth)) + " blended annual appreciation rate.")
+        candidates.append("- " + b("Dynamic Growth Market:") + " Sale timing compounded at the measured " +
+                          b("{:.1f}%".format(growth)) + " blended annual appreciation rate.")
+
+    # 7. Local Demand Drivers.
     if strengths:
         dd = [ph for k, ph in strengths if k not in ("scale",)]
-        L.append("- " + b("Local Demand Drivers:") + " " + _cap(dd[0] if dd else strengths[0][1]) + ".")
+        candidates.append("- " + b("Local Demand Drivers:") + " " + _cap(dd[0] if dd else strengths[0][1]) + ".")
     elif subj.get("demo") and (subj["demo"].get("total_households_5mi")):
-        L.append("- " + b("Local Demand Drivers:") + " A " +
-                 b("{:,.0f}".format(float(subj["demo"]["total_households_5mi"]))) +
-                 " household five mile trade area.")
+        candidates.append("- " + b("Local Demand Drivers:") + " A " +
+                          b("{:,.0f}".format(float(subj["demo"]["total_households_5mi"]))) +
+                          " household five mile trade area.")
     else:
-        L.append("- " + b("Local Demand Drivers:") + " " + subp +
-                 " submarket demand tracked across every recorded garage condo sale.")
-    L.append("- [Explore Developer Sales \u2192](" + DEVELOPER_SALES_URL + ")")
-    L.append("- [Get an Updated Valuation \u2192](" + ANCHORS["contact"] + ")")
+        candidates.append("- " + b("Local Demand Drivers:") + " " + subp +
+                          " submarket demand tracked across every recorded garage condo sale.")
+
+    chosen = candidates[:5]
+    if len(chosen) != 5:
+        raise AssertionError("Unit Highlights must emit exactly 5 bullets, got %d" % len(chosen))
+    L.extend(chosen)
     L.append("")
     L.append(DISCLOSURE)
     L.append("")
@@ -843,11 +849,20 @@ def validate(report, out):
         if "prepared by Storage Condo King" not in head:
             p.append("valuation half must end with the disclosure before the block")
         for sec in ("## Unit Value Summary", "## Your Unit", "## Location Overview",
-                    "## Market Summary", "## Owner Highlights"):
+                    "## Market Summary", "## Unit Highlights"):
             if sec not in report[i_block:]:
                 p.append("block section missing: " + sec)
-        if "[Explore Developer Sales \u2192](" not in report[i_block:]:
-            p.append("Developer Sales funnel link missing")
+        # v3.1: Unit Highlights emits EXACTLY five bullets. Fail loudly rather than ship six.
+        block = report[i_block:]
+        hi = block.find("## Unit Highlights")
+        if hi >= 0:
+            tail = block[hi:].split("\n\n")[0]
+            n_bul = sum(1 for ln in tail.splitlines() if ln.startswith("- "))
+            if n_bul != 5:
+                p.append("Unit Highlights must have exactly 5 bullets, found %d" % n_bul)
+        # v3.1: the block authors NO links; the website owns the tab strip and the CTAs.
+        if "](#tab-" in block or "](/pre-sale-deals)" in block or "](#contact)" in block:
+            p.append("authored link found in the Unit Summary block (v3.1 removes all links)")
     for r in out["competitive_set"].get("selected") or []:
         if r["project"] == subj["project"]:
             p.append("subject project appears in Table 5")
