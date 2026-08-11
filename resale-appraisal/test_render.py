@@ -59,7 +59,8 @@ def main():
     out1, rpt1 = run(s1, "same-project-only")
     assert all(r["comps_used"] == 0 for r in out1["competitive_set"]["selected"])
     assert "valuation comps come from inside" in rpt1
-    assert "limits cross-market validation" in rpt1, "concentration disclosure missing"
+    # v3.2 voice pass: same disclosure, plain-owner wording.
+    assert "cross-check against other projects" in rpt1, "concentration disclosure missing"
     assert "Prior Sale Trend" in rpt1, "prior-sale trend missing"
     print("PASS scenario 1 (same-project-only intro): value %s, %d comps, %d Table 5 rows"
           % ("${:,}".format(out1["estimated_market_value"]),

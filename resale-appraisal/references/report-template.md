@@ -87,3 +87,84 @@ The FINAL element of the Market Value Report AND of the Sale Listing Summary is 
 *This report is a market analysis prepared by Storage Condo King from recorded comparable sales. It is not an appraisal and was not prepared by a licensed appraiser. Values shown are estimates and are not a substitute for an appraisal.*
 
 Rules: last element after all other content, never omitted, collapsed, or truncated. Plain italic markdown only (no box, no bold, no all-caps, no icon). The PDF renderer restyles it (taupe, small, tan hairline rule); the site renders the italic markdown as-is.
+
+---
+
+# UNIT SUMMARY SPEC (owner-facing block; the final section of the single report document)
+
+Mirror of the Cowork skill sck-unit-resale-valuation v3.2. The renderer NEVER reads this file at
+runtime: render_report.py's sentence builders emit the prose, so this spec and that file must
+always be edited together. The block is appended after the valuation half's closing disclosure,
+separated by a horizontal rule, and opens with the exact H1 `# Unit Summary` (a frontend parsing
+contract: do not alter that string).
+
+SECTION ORDER (fixed, v3.2): Unit Value Summary, Your Unit, Market Summary, Location Overview,
+Unit Highlights. Market Summary sits ABOVE Location Overview, matching the developer sale listing
+order. Content moves with its section.
+
+NO AUTHORED LINKS anywhere in the block (v3.1). The website renders the tab strip and the listing
+calls to action, so an authored `#tab-...`, `/pre-sale-deals` or `#contact` link duplicates a live
+control. Sections end on their last prose sentence or last bullet.
+
+WHOLE-DOLLAR PSF throughout the block; the valuation Tables above keep 2-decimal precision for
+tie-outs. Every figure comes from engine output; no valuation math in the renderer.
+
+## Unit Value Summary
+Value, $/SF and effective date, the finish-level band, the prior-sale trend line when the unit's
+own sale is in the comp set, the product bow, and the concentration disclosure when same-project
+share exceeds 80%. CLOSES with one action sentence (v3.2) tying value to what the unit has earned
+and the owner's option to list it for sale on Storage Condo King. Prose only, no link, never
+hard-sell.
+
+## Your Unit
+LEAD SENTENCE carries PRODUCT CHARACTER ONLY: project, tier, market or corridor position, and what
+the product is built for. It must NOT contain the unit number, unit size, year built, or a tier-pill
+restatement; the site's hero grid renders all of those directly above this tab.
+Then EXACTLY 4 bold-headed bullets, in order:
+- **Unit Profile:** address + parcel. Omitted ONLY when the unit has neither.
+- **Construction:** read from "01 - Projects" for the subject's project: "Construction Materials",
+  "Common Area Finish Level", and the flood zone with its risk read, as one plain sentence
+  mirroring the developer sale Construction Materials bullet, e.g.
+  "Tilt wall concrete, Luxury common areas, FEMA Flood Zone X (low risk)." Any null component
+  renders "-" in its slot; NEVER drop the component and NEVER drop the bullet. SFHA zones
+  (A, AE, AH, AO, AR, A99, V, VE) read "high risk"; every other zone reads "low risk".
+- **Value Basis:** comp count and the same-project share.
+- **Finish-Level Range:** the band in dollars and $/SF.
+
+## Market Summary
+OPENS on market depth as liquidity: "The {submarket} submarket recorded N sales in the trailing
+twelve months at a $X/SF median, a re-sale market deep enough to price and absorb a listing."
+When N is under 10, emit the honest count WITHOUT the depth claim. Then the unit's value, its comp
+count and source shares, the average before adjustments and the net adjustment, and the competitive
+set positioning. CLOSES with one sentence stating the owner's compounded growth or position as
+EQUITY, never as advice.
+
+## Location Overview
+The project's Location Summary narrative extract, spliced with the ranked demographic strengths and
+the wealth-index percentile clause. Prose submarket names. Falls back to demographic strengths when
+no Location Summary exists.
+
+## Unit Highlights
+EXACTLY 5 bold-headed bullets (v3.1), chosen by this priority order, taking the first five that
+qualify and dropping the rest silently. Bullets are NEVER merged to fit:
+  1. Prior Sale Trend (only when the unit's own prior sale is in the comp set; suppresses cleanly
+     and the next candidate moves up)
+  2. Current Value
+  3. Value Anchor (keeps the >80% concentration clause)
+  4. Trophy Quality Product (keeps the finish-level range)
+  5. Competitive Positioning (never names a project)
+  6. Dynamic Growth Market (keeps the honest-cap language when it renders)
+  7. Local Demand Drivers
+The renderer raises on any count other than 5 and validate() independently counts the rendered
+bullets, failing the run loudly rather than shipping a 6-bullet report.
+
+## VOICE (v3.2)
+Plain owner language over analyst language, figures untouched: "recent sales, weighted toward the
+newest" not "time-adjusted evidence"; "the comp set's average before adjustments" not "unadjusted
+average"; "sales recorded" not "transaction pool"; "no sales recorded in the last 60 months" not
+"no qualifying sales in the analysis window"; "gives less to cross-check against other projects"
+not "limits cross-market validation".
+
+## CLOSING DISCLOSURE
+The block ends with the same three-sentence italic footnote that closes the valuation half, so the
+stored document carries it exactly twice.

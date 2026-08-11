@@ -22,11 +22,13 @@ any number or any report sentence.
    NOTE: the template is a SPEC DOC. render_report.py never reads it at runtime;
    the Python sentence builders emit the prose. Editing the template alone does
    not change batch output, which is why both move together.
-   Recorded template checksum (August 2026, v3.0 prose-length discipline):
-   references/report-template.md = 13,032 bytes, md5
-   9bff30d35aa5a452d988a2e72e808c09. This supersedes the 19,963 / accee1dd...
-   figure, which belongs to the Cowork skill's own copy of the template, not to
-   this repo's. Update this line in the same commit whenever the template changes.
+   SPEC OF RECORD: the Cowork skill sck-unit-resale-valuation's own copy of
+   report-template.md is the spec of record; this repo's references/report-template.md
+   is its MIRROR and must be updated in the same commit as any renderer change.
+   Recorded mirror checksum (August 2026, v3.2 Unit Summary shape):
+   references/report-template.md = 17,874 bytes, md5
+   eaa848ed167508b8d0ccecd747ec7761. Update this line in the same commit whenever
+   the template changes.
 4. Every live write is verified by re-query inside the runner. Never bypass
    run_appraisals.py with hand-written REST or SQL writes to "02 - Units".
 5. Dry-run first for any new scope. Review out/summary.csv value deltas and at

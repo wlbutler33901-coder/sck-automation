@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
 """Deterministic report renderer for the SCK unit re-sale appraisal engine.
 
-Implements references/report-template.md (spec doc; 13,032 bytes, md5
-9bff30d35aa5a452d988a2e72e808c09 as of the v3.0 prose-length pass). The
-template is never read at runtime: the sentence builders below emit the prose,
-so the template and this file must always be edited together.
-Fills that spec from the engine's JSON
-output. No model in the loop: every number comes from the engine, every
+Implements references/report-template.md (mirror of the Cowork skill
+sck-unit-resale-valuation's spec of record; 17,874 bytes, md5
+eaa848ed167508b8d0ccecd747ec7761 as of the v3.2 Unit Summary pass). The template
+is never read at runtime: the sentence builders below emit the prose, so the
+template and this file must always be edited together.
+Fills that spec from the engine's JSON output. No model in the loop: every number comes from the engine, every
 sentence is a fixed pattern with slot filling. validate() enforces the
 structural contract the website parser depends on before anything is written.
 
@@ -318,6 +318,29 @@ def _range_phrase(lo, hi):
 def _set_size(k):
     return ("a single competing" if k == 1 else ("a " + str(k) + " project")) 
 
+SFHA_ZONES = ("A", "AE", "AH", "AO", "AR", "A99", "V", "VE")
+
+
+def flood_read(zone):
+    """FEMA zone with its plain-language risk read. Returns '-' when unset, so the
+    Construction bullet always keeps three slots (v3.2)."""
+    z = str(zone or "").strip().upper()
+    if not z or z in ("N/A", "NONE"):
+        return "-"
+    risk = "high risk" if z in SFHA_ZONES else "low risk"
+    return "FEMA Flood Zone " + z + " (" + risk + ")"
+
+
+def construction_line(subj):
+    """v3.2 Construction bullet, mirroring the developer sale Construction Materials bullet:
+    materials, common area finish, flood zone + risk. Any null component renders '-' in its
+    slot; the component and the bullet are never dropped."""
+    mats = str(subj.get("construction_materials") or "").strip() or "-"
+    fin = str(subj.get("common_area_finish") or "").strip()
+    fin = (fin + " common areas") if fin else "-"
+    return ", ".join([mats, fin, flood_read(subj.get("flood_zone"))]) + "."
+
+
 def unit_summary_block(out):
     """Owner-facing Unit Summary block. Copy and disclosure per website-chat review:
     concentration disclosure over 80% same-project share, exact comp-source shares,
@@ -359,7 +382,7 @@ def unit_summary_block(out):
     L.append("## Unit Value Summary")
     sent = (b("Storage Condo King") + " values Unit " + b(unit) + " at " + bp + " at " +
             b(money(value)) + " (" + b(pw(vpsf) + "/SF") + ") as of " +
-            fmt_date_long(out["appraisal_date"]) + ". Recorded comparable evidence supports " +
+            fmt_date_long(out["appraisal_date"]) + ". Sales recorded in this market support " +
             b(money(band["low_value"])) + " to " + b(money(band["high_value"])) +
             " depending on interior buildout.")
     if own_comp:
@@ -376,24 +399,31 @@ def unit_summary_block(out):
         bow_bits += " in a demand-deep " + subp + " trade area"
     sent += (" It is " + bow_bits + ", valued " + side + " its comp set's " +
              b(pw(t1["comp_avg_psf"]) + "/SF") + " average.")
+    # v3.2 action orientation: tie the value to what the unit has earned and the owner's
+    # option to act on it. Prose only, no link, never hard-sell.
+    _earned = ("built real equity over its last recorded sale" if own_comp
+               else "held its value against the surrounding market")
+    _act = (" The unit has " + _earned + ", and owners ready to harvest that equity can list "
+            "it for sale on " + b("Storage Condo King") + ".")
     if n and share > 80:
         if a == n:
             sent += (" All " + b(n) + " comparables are sales within " + bp + own +
                      "; concentration in a single project anchors the value in direct "
-                     "evidence but limits cross-market validation.")
+                     "evidence, though it gives less to cross-check against other projects.")
         else:
             sent += (" " + b(a) + " of " + b(n) + " comparables (" + b(str(share) + "%") +
                      ") are sales within " + bp + own +
-                     "; the concentration anchors direct evidence but limits cross-market validation.")
-    L.append(sent)
+                     "; that concentration anchors the value in direct evidence, though it gives less to cross-check against other projects.")
+    L.append(sent + _act)
     L.append("")
 
-    # 2. Your Unit
+    # 2. Your Unit (v3.2). The lead carries PRODUCT CHARACTER ONLY. It must not repeat the unit
+    # number, size, year built or tier pill: the site's hero grid renders all of those directly
+    # above this tab. Then EXACTLY four bold-headed bullets.
     L.append("## Your Unit")
-    yr = subj.get("year_built")
-    L.append("Unit " + b(unit) + " at " + bp + " in " + str(subj.get("city") or "N/A") +
-             " is a " + b("{:,} SF".format(ssf)) + " " + tier + " unit" +
-             (" built in " + b(yr) if yr else "") + ".")
+    _corridor = (subp + " corridor") if subp and subp != "N/A" else (region + " market")
+    L.append(bp + " is " + tier.replace("-Tier", "-tier") + " garage condo product in the " +
+             _corridor + ", built for owners who store and work on vehicles they care about.")
     addr = subj.get("address")
     pid = subj.get("parcel_id")
     if addr or pid:
@@ -403,18 +433,65 @@ def unit_summary_block(out):
         if pid:
             idbits.append("parcel " + str(pid))
         L.append("- " + b("Unit Profile:") + " " + ", ".join(idbits) + ".")
+    L.append("- " + b("Construction:") + " " + construction_line(subj))
     if a:
         vb = b(n) + " recorded comparable sales, " + b(a) + " inside " + bp + " itself" + own + "."
     else:
         vb = ("All " + b(n) + " comparables come from neighboring projects, as " + bp +
-              " recorded no qualifying sales in the 60 month analysis window.")
+              " has no sales recorded in the last 60 months.")
     L.append("- " + b("Value Basis:") + " " + vb)
     L.append("- " + b("Finish-Level Range:") + " " + b(money(band["low_value"])) + " to " +
              b(money(band["high_value"])) + " (" + b(rw(band["low_psf"], band["high_psf"])) +
              "), reflecting buildout differences not visible in recorded sales.")
     L.append("")
 
-    # 3. Location Overview
+    # 3. Market Summary (v3.2: moved ABOVE Location, matching the developer sale listing order)
+    L.append("## Market Summary")
+    ttm = subj.get("market_ttm")
+    if a == n and n:
+        comp_src = "all " + b(n) + " from inside " + bp
+    elif a:
+        comp_src = (b(a) + " from inside " + bp + " and " + b(n - a) + " from competing projects")
+    elif contributed:
+        comp_src = ("drawn from " + b(len(contributed)) + " competing " +
+                    ("project" if len(contributed) == 1 else "projects") +
+                    " in the " + subp + " submarket")
+    else:
+        comp_src = "drawn from neighboring projects"
+    # v3.2 opener: market depth read as LIQUIDITY. The depth claim is earned, not automatic:
+    # under 10 trailing sales the count is still reported, without the claim.
+    mo = ""
+    if ttm:
+        mo = ("The " + subp + " submarket recorded " + b(ttm["count"]) +
+              (" sale" if ttm["count"] == 1 else " sales") +
+              " in the trailing twelve months at a " + b("${:,.0f}".format(ttm["med_psf"]) + "/SF") +
+              " median")
+        mo += (", a re-sale market deep enough to price and absorb a listing. "
+               if ttm["count"] >= 10 else ". ")
+    mo += ("Unit " + b(unit) + "'s " + b(pw(vpsf) + "/SF") + " value rests on " + b(n) +
+           " comparable sales, " + comp_src + ", averaging " +
+           b(pw(t1["comp_avg_psf"]) + "/SF") + " before adjustments and " +
+           b(pct(t1["total_adj"])) + " after, using recent sales, weighted toward the newest.")
+    if sel:
+        avgs = [float(r["avg_psf"]) for r in sel]
+        lo, hi = min(avgs), max(avgs)
+        pos = "above" if vpsf > hi else ("below" if vpsf < lo else "within")
+        setspan = ("spanning " + b(rw(lo, hi))) if abs(hi - lo) >= 0.5 else ("at " + b(pw(lo) + "/SF"))
+        mo += (" Against " + _set_size(len(sel)) + " " + region + " competitive set " + setspan +
+               ", the unit prices " + pos + " the set on tier and quality.")
+    # v3.2 closer: state the owner's position as equity, never as advice.
+    if own_comp:
+        _p = round(float(own_comp["psf"]) * float(own_comp["size"]))
+        _c = 100.0 * (float(value) - _p) / _p
+        mo += (" For the owner that is " + b("{:+.1f}%".format(_c)) + " of compounded growth "
+               "since the last recorded sale, held as equity in the unit today.")
+    else:
+        mo += (" For the owner that value sits in the unit as equity, priced off what this "
+               "market has actually paid.")
+    L.append(mo)
+    L.append("")
+
+    # 4. Location Overview
     L.append("## Location Overview")
     narrative = subj.get("location_extract")
     if narrative:
@@ -456,39 +533,6 @@ def unit_summary_block(out):
         L.append(loc + ".")
     L.append("")
 
-    # 4. Market Summary
-    L.append("## Market Summary")
-    ttm = subj.get("market_ttm")
-    if a == n and n:
-        comp_src = "all " + b(n) + " from inside " + bp
-    elif a:
-        comp_src = (b(a) + " from inside " + bp + " and " + b(n - a) + " from competing projects")
-    elif contributed:
-        comp_src = ("drawn from " + b(len(contributed)) + " competing " +
-                    ("project" if len(contributed) == 1 else "projects") +
-                    " in the " + subp + " submarket")
-    else:
-        comp_src = "drawn from neighboring projects"
-    mo = ""
-    if ttm:
-        mo = ("The " + subp + " submarket recorded " + b(ttm["count"]) +
-              (" sale" if ttm["count"] == 1 else " sales") +
-              " in the trailing twelve months at a " + b("${:,.0f}".format(ttm["med_psf"]) + "/SF") +
-              " median. ")
-    mo += ("Unit " + b(unit) + "'s " + b(pw(vpsf) + "/SF") + " value rests on " + b(n) +
-           " comparable sales, " + comp_src + ", averaging an unadjusted " +
-           b(pw(t1["comp_avg_psf"]) + "/SF") + " before a " + b(pct(t1["total_adj"])) +
-           " net time and quality adjustment.")
-    if sel:
-        avgs = [float(r["avg_psf"]) for r in sel]
-        lo, hi = min(avgs), max(avgs)
-        pos = "above" if vpsf > hi else ("below" if vpsf < lo else "within")
-        setspan = ("spanning " + b(rw(lo, hi))) if abs(hi - lo) >= 0.5 else ("at " + b(pw(lo) + "/SF"))
-        mo += (" Against " + _set_size(len(sel)) + " " + region + " competitive set " + setspan +
-               ", the unit prices " + pos + " the set on tier and quality.")
-    L.append(mo)
-    L.append("")
-
     # 5. Unit Highlights (v3.1). EXACTLY five bullets, chosen by a fixed priority order: the
     # first five candidates that qualify are emitted and the rest are dropped silently. Bullets
     # are never merged to fit. Prior Sale Trend qualifies only when the unit's own prior sale is
@@ -512,7 +556,7 @@ def unit_summary_block(out):
     # 3. Value Anchor - always qualifies; keeps the >80% concentration clause.
     dpct = 100.0 * (vpsf - float(t1["comp_avg_psf"])) / float(t1["comp_avg_psf"])
     va = ("Sits " + b("{:+.1f}%".format(dpct)) + " " + ("above" if dpct >= 0 else "below") +
-          " the comp set's " + b(pw(t1["comp_avg_psf"]) + "/SF") + " unadjusted average")
+          " the comp set's average before adjustments of " + b(pw(t1["comp_avg_psf"]) + "/SF"))
     if n and share > 80:
         va += (", on evidence drawn " + ("entirely" if a == n else "predominantly") +
                " from inside the project")
@@ -533,7 +577,7 @@ def unit_summary_block(out):
                           " competitive set's " + rng + " on tier and quality.")
     else:
         candidates.append("- " + b("Competitive Positioning:") + " No competing " + region +
-                          " projects recorded qualifying sales in the analysis window.")
+                          " projects have sales recorded in the last 60 months.")
 
     # 6. Dynamic Growth Market - keeps the honest-cap language when it renders.
     if subj.get("rate_capped"):
@@ -848,10 +892,27 @@ def validate(report, out):
             p.append("Unit Summary block must follow a horizontal rule")
         if "prepared by Storage Condo King" not in head:
             p.append("valuation half must end with the disclosure before the block")
-        for sec in ("## Unit Value Summary", "## Your Unit", "## Location Overview",
-                    "## Market Summary", "## Unit Highlights"):
-            if sec not in report[i_block:]:
+        # v3.2 section ORDER is part of the contract: Market Summary sits above Location
+        # Overview, matching the developer sale listing order.
+        order = ("## Unit Value Summary", "## Your Unit", "## Market Summary",
+                 "## Location Overview", "## Unit Highlights")
+        pos = []
+        for sec in order:
+            at = report.find(sec, i_block)
+            if at < 0:
                 p.append("block section missing: " + sec)
+            else:
+                pos.append((sec, at))
+        if len(pos) == len(order) and [x[1] for x in pos] != sorted(x[1] for x in pos):
+            p.append("Unit Summary sections out of order; expected " + " then ".join(order))
+        # v3.2 Your Unit emits exactly four bold-headed bullets (Unit Profile is omitted only
+        # when the unit has neither an address nor a parcel).
+        yu = report.find("## Your Unit", i_block)
+        if yu >= 0:
+            ytail = report[yu:].split("\n\n")[0]
+            ybul = sum(1 for ln in ytail.splitlines() if ln.startswith("- "))
+            if ybul not in (3, 4):
+                p.append("Your Unit must have 4 bullets (3 without Unit Profile), found %d" % ybul)
         # v3.1: Unit Highlights emits EXACTLY five bullets. Fail loudly rather than ship six.
         block = report[i_block:]
         hi = block.find("## Unit Highlights")

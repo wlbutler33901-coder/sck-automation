@@ -165,6 +165,11 @@ def load_project_meta(sb):
         meta[norm(nm)] = {
             "location_extract": extract_location_open(p.get("Location Summary")),
             "submarket": p.get("Submarket"),
+            # v3.2 Construction bullet inputs. These columns already arrive (this select is
+            # "*"); they simply were not carried through before.
+            "construction_materials": p.get("Construction Materials"),
+            "common_area_finish": p.get("Common Area Finish Level"),
+            "flood_zone": p.get("Flood Zone"),
         }
     have = sum(1 for m in meta.values() if m["location_extract"])
     print("Location narratives: %d of %d projects carry a Location Summary "
@@ -407,6 +412,9 @@ def main():
                 subject["demo"] = demo_map.get(norm(u.get("Project")))
                 pm = proj_meta.get(norm(u.get("Project"))) or {}
                 subject["location_extract"] = pm.get("location_extract")
+                subject["construction_materials"] = pm.get("construction_materials")
+                subject["common_area_finish"] = pm.get("common_area_finish")
+                subject["flood_zone"] = pm.get("flood_zone")
                 subject["market_ttm"] = compute_ttm(sales, subject.get("submarket") or pm.get("submarket"))
                 subject["rate_capped"] = rate_capped
                 if not subject["unit_size_sf"]:
