@@ -368,3 +368,66 @@ NEVER put credentials, API keys, or personal contact details in this file.
   uses. The digest therefore never alerts on fresh rows: its UNIT RESERVATIONS section recaps
   the last 24 hours, reports trailing 30/60/90 day counts per project, and flags any row still
   at Status 'New' after 24 hours as an SLA breach, promoted into WARNINGS.
+
+- 2026-08-11 | sck-project-scanner | note | onlygaragecondos.com main-site
+  pages are paywalled or 404, but the Only Garage Condos SUBSTACK is free,
+  fetches cleanly, and publishes periodic multi-state development updates (the
+  March 2026 edition covered 15 projects across 13 states). Add the Substack to
+  the aggregator checklist as the usable substitute for the blocked directory;
+  its state-level absences are also a legitimate negative signal.
+- 2026-08-11 | sck-project-scanner | note | County-scoped dedup nearly let a
+  rediscovery through: "Storage Caves Buford" matched a staged row on exact
+  address, developer and distinctive token, but research placed it in Hall
+  County while the staged row says Gwinnett, and a strict county gate would
+  have cleared it as new. When address AND developer AND name all match, treat
+  the COUNTY FIELD as the thing in doubt and flag a near match anyway; the
+  county is the weakest, most often miscoded signal in the set.
+- 2026-08-11 | sck-project-scanner | note | A duplicate pair cleared as "not a
+  duplicate" must be reopened when the evidence the clearance rested on is
+  later contradicted. The 2026-08-04 error_check cleared The Hargrove Car Condo
+  Club vs the live The Auto Ranch Palm Coast because Gelman and Gelcorp looked
+  like distinct developers; enrichment on 2026-08-06 then established Jeffrey
+  B. Gelman as the founder of Gelcorp Industries, collapsing that distinction,
+  and nothing re-examined the pair. Cleared-pair calls should be re-tested
+  whenever a developer identity is later resolved.
+- 2026-08-11 | sck-project-scanner | degraded | The Dawson County GA Planning
+  Commission packet PDF (pc-mtg-packet-051926.pdf) downloaded but uses CID-
+  encoded fonts, so text extraction returned nothing and the agenda went
+  unreviewed. pdftotext -layout is the standing recipe for permit PDFs and it
+  does not cover this case; a CID-font fallback (OCR pass) is needed before
+  county agenda PDFs can be relied on as a discovery channel in North Georgia.
+- 2026-08-11 | sck-project-scanner | note | A zero-hit cross-feed is not
+  evidence of a missed upstream run, and this routine should check the log
+  before implying one. The 72-hour cross-feed returned 0 news hits and the News
+  Scanner table held no rows dated 2026-08-11, but the Scan Activity Log shows
+  swfl_news_scan ran normally at 06:31 UTC, scanned 13 sources and qualified 0
+  articles by design. Confirm upstream run status from run_summary rows in the
+  log, not from the absence of rows in the destination table.
+- 2026-08-11 | sck-project-enrichment | note | A staged "Sales Broker" sourced
+  from a project's PRIOR brand can silently go stale. Motor District Mt.
+  Pleasant carried Peninsula Company Commercial from a Getaway Garage USA co-
+  branded flyer; getawaygarageusa.com now redirects to motordistrict.com and
+  the current page names no brokerage. When a project rebrands, re-verify the
+  broker against the new brand's own site rather than trusting the flyer-era
+  value.
+- 2026-08-11 | sck-project-enrichment | blocker | Outreach selection must
+  cross-check Outlook Sent Items by EMAIL DOMAIN before drafting, not just the
+  developer Comments field. The Hangar Group ranked top of tonight's backlog
+  and passed every template test, but Sent Items showed Will had already
+  emailed Scott Cunningham directly twice in 2025; a "Nice to e-meet you" intro
+  would have been a duplicate first touch. Pre-platform outreach exists only in
+  the mailbox, so the Comments test alone is not sufficient.
+- 2026-08-11 | sck-project-enrichment | note | Do not re-burn budget geocoding
+  the five staged addresses that fail both gazetteers. 700 Joe Lane Cox Dr
+  Dawsonville GA, 605 Julian Rd Ringgold GA, 220 Mac Gray Rd Mooresville NC,
+  5705 Stables Way Alpharetta GA and 55 Cessna Way St. Augustine FL all return
+  NO MATCH from the US Census geocoder AND OSM Nominatim, verified against a
+  control address that matched. These are new or rural roads absent from both
+  gazetteers; a parcel or PropStream source is needed. The other 21 lat/lon
+  gaps are corridor text, not addresses, and are correctly not geocodable.
+- 2026-08-11 | sck-project-enrichment | note | The distinctive-token dedup rule
+  has a blind spot: it cannot split concatenated product words, so "CarVillage
+  USA" reduces to "carvillage" while "Car Village Bluffton" reduces to "village
+  bluffton" and the pair never groups, even though they share developer,
+  county, corridor, unit count and average unit size. Any future token rule
+  should split closed-up compounds before stripping generic words.
