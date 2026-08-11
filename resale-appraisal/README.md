@@ -28,5 +28,6 @@ Per project: one RPC pull (get_comprehensive_market_data), live blended
 appreciation rate from Market Coverage (capped at 10), subject Wealth Index
 from Demographic Data - Project. Per unit: engine, render, structural
 validation (exact table headers, disclosure, no dashes, subject excluded from
-Table 5), then PATCH of "Appraisal" + "Appraised Value $" with "Manual Update"
-cleared to NULL, verified by an independent re-query. Never touches Make.
+Table 5), then a PATCH of "Appraisal", "Appraised $ / SF", "Appraisal Date",
+"Last Triggered", and "Manual Update" = NULL, verified by an independent
+re-query. Never touches Make.

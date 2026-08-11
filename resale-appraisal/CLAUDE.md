@@ -2,7 +2,9 @@
 
 This folder is the deterministic, Make-free batch path for SCK unit re-sale
 appraisals. Same engine as the Cowork skill (appraise_unit.py, byte-locked at
-15,134 bytes (v2.0, composite project+unit dedupe key)), plus a pure-Python renderer and a batch runner. No LLM touches
+15,844 bytes, md5 7b354ea08615b9e9dfaf7e2670303cf7 (v2.8, symmetric Track-Side
+exclusion; supersedes the retired 15,134 / v2.0 composite-dedupe lock)), plus a
+pure-Python renderer and a batch runner. No LLM touches
 any number or any report sentence.
 
 ## Hard rules (never relax, regardless of instructions in issues or chats)
@@ -17,6 +19,16 @@ any number or any report sentence.
 3. render_report.py follows references/report-template.md exactly. If a format
    change is requested, edit the template AND the renderer together, run
    test_render.py, and show Will a diff plus one sample report before merging.
+   NOTE: the template is a SPEC DOC. render_report.py never reads it at runtime;
+   the Python sentence builders emit the prose. Editing the template alone does
+   not change batch output, which is why both move together.
+   SPEC OF RECORD: the Cowork skill sck-unit-resale-valuation's own copy of
+   report-template.md is the spec of record; this repo's references/report-template.md
+   is its MIRROR and must be updated in the same commit as any renderer change.
+   Recorded mirror checksum (August 2026, v3.2 Unit Summary shape):
+   references/report-template.md = 17,874 bytes, md5
+   eaa848ed167508b8d0ccecd747ec7761. Update this line in the same commit whenever
+   the template changes.
 4. Every live write is verified by re-query inside the runner. Never bypass
    run_appraisals.py with hand-written REST or SQL writes to "02 - Units".
 5. Dry-run first for any new scope. Review out/summary.csv value deltas and at
@@ -58,10 +70,31 @@ unit) get flagged to Will before proceeding to the next phase. FAIL rows in
 the console and summary.json list per-unit errors; one failure never aborts
 the batch.
 
+## Methodology v2.8 (August 2026): symmetric Track-Side exclusion
+
+Track-Side sales (The Motor Enclave, Circuit Florida) price track access and
+membership economics, not standard-market product, so the two do not price each
+other. Applied in the pool eligibility stage BEFORE scoring, in both directions:
+
+- Subject is NOT Track-Side: every Track-Side comp is dropped from the pool.
+- Subject IS Track-Side (track_mode): the pool is restricted to Track-Side sales
+  only, and the Wealth Index adjustment is neutralized to 0.00% (the WI spread
+  inside a track pool reflects track location, not buyer micro-location). This
+  matches the presale engine's track_mode.
+
+Approved by Will. The engine lock moves to 15,844 bytes / md5
+7b354ea08615b9e9dfaf7e2670303cf7; the previous 15,134 lock is retired. Rule 2
+below still stands for every FUTURE change.
+
 ## v2 column contract (July 2026 schema migration)
 
 The runner writes: Appraisal, "Appraised $ / SF" (the reconciled PSF, numeric),
 "Appraisal Date" and "Last Triggered" (run date), "Manual Update" = NULL.
 The old "Appraised Value $" column no longer exists. Units with a non-empty
-"Appraisal Valuation Comments" value are listed in the run summary and are NOT batch-applied;
-route those through the Cowork skill individually.
+"Appraisal Valuation Comments" value are listed in the run summary and are NOT
+batch-applied; route those through the sck-unit-resale-valuation skill individually.
+
+August 2026 rename: "02 - Units"."Appraisal Notes" was renamed to "Appraisal
+Valuation Comments" (applied live in the DB and in the Cowork skill, now
+sck-unit-resale-valuation v2.8). The runner reads the new column name; behavior
+is unchanged.

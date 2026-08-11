@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """SCK unit re-sale batch appraisal runner (deterministic, Make-free).
 
-Replicates the unit-resale-appraisal-system skill headlessly:
+Replicates the sck-unit-resale-valuation skill headlessly:
   scope -> live rates + WI -> RPC per project -> engine per unit ->
   deterministic render -> structural validation -> write-back -> re-query verify.
 
@@ -9,7 +9,7 @@ HARD SAFETY RULES (do not relax):
   * NEVER sets "Manual Update" = TRUE anywhere (that fires the legacy Make
     webhook). Completed units get "Manual Update" = NULL, which never fires.
   * Never touches region/project batch trigger tables or any Make webhook.
-  * appraise_unit.py is byte-locked (15,134 bytes); this script refuses to run
+  * appraise_unit.py is byte-locked (15,844 bytes); this script refuses to run
     if the engine file size differs.
 
 Usage examples:
@@ -32,7 +32,7 @@ except ImportError:
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ENGINE = os.path.join(HERE, "appraise_unit.py")
-ENGINE_BYTES = 15134
+ENGINE_BYTES = 15844
 sys.path.insert(0, HERE)
 from render_report import render, validate  # noqa: E402
 
@@ -165,6 +165,11 @@ def load_project_meta(sb):
         meta[norm(nm)] = {
             "location_extract": extract_location_open(p.get("Location Summary")),
             "submarket": p.get("Submarket"),
+            # v3.2 Construction bullet inputs. These columns already arrive (this select is
+            # "*"); they simply were not carried through before.
+            "construction_materials": p.get("Construction Materials"),
+            "common_area_finish": p.get("Common Area Finish Level"),
+            "flood_zone": p.get("Flood Zone"),
         }
     have = sum(1 for m in meta.values() if m["location_extract"])
     print("Location narratives: %d of %d projects carry a Location Summary "
@@ -407,6 +412,9 @@ def main():
                 subject["demo"] = demo_map.get(norm(u.get("Project")))
                 pm = proj_meta.get(norm(u.get("Project"))) or {}
                 subject["location_extract"] = pm.get("location_extract")
+                subject["construction_materials"] = pm.get("construction_materials")
+                subject["common_area_finish"] = pm.get("common_area_finish")
+                subject["flood_zone"] = pm.get("flood_zone")
                 subject["market_ttm"] = compute_ttm(sales, subject.get("submarket") or pm.get("submarket"))
                 subject["rate_capped"] = rate_capped
                 if not subject["unit_size_sf"]:
