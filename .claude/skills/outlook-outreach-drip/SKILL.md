@@ -1,6 +1,6 @@
 ---
 name: outlook-outreach-drip
-description: Draft 1:1 Outlook outreach emails to quarantined (unverified) SCK unit owner emails and process NDR kickbacks. Two modes. DRAFT mode (default, nightly) pulls the next batch of quarantined emails from "04d - Email Verification", personalizes a short plain text outreach sent from Will Butler's Calusa Investments mailbox with Chance Friedman CCd, saves them to Outlook Drafts so Will can press send in the morning, and stamps "Drafted At". KICKBACK mode scans the mailbox for bounce and NDR messages, marks bounced addresses in 04d, suppresses them in "04a - Email Suppression", clears them from the CRM, and promotes drafts with no kickback after 4 days to clean. Use whenever asked to run the outreach drip, draft the outreach batch, prep tomorrow's outreach emails, scan for kickbacks, process NDRs, or check outreach bounces. Requires the "Supabase - Storage Condo King" and Microsoft 365 connectors.
+description: Draft 1:1 Outlook outreach emails to quarantined (unverified) SCK unit owner emails, process NDR kickbacks, and run the BMV owner marketing campaign. Three modes. DRAFT mode (default, nightly) pulls the next batch of quarantined emails from "04d - Email Verification", personalizes a short plain text outreach sent from Will Butler's Calusa Investments mailbox with Chance Friedman CCd, saves them to Outlook Drafts so Will can press send in the morning, and stamps "Drafted At". KICKBACK mode scans the mailbox for bounce and NDR messages, marks bounced addresses in 04d, suppresses them in "04a - Email Suppression", clears them from the CRM, and promotes drafts with no kickback after 4 days to clean. CAMPAIGN mode runs only after the verification queue is empty and drafts up to 50 Bonita Motor Vault owner emails per morning from "04 - Unit Owner CRM" in region order, logging each to "04e - Campaign Sends". Use whenever asked to run the outreach drip, draft the outreach batch, prep tomorrow's outreach emails, scan for kickbacks, process NDRs, check outreach bounces, or run the BMV owner campaign. Requires the "Supabase - Storage Condo King" and Microsoft 365 connectors.
 ---
 
 # SCK Outlook Outreach Drip
@@ -37,15 +37,32 @@ sees the outreach and can pick up replies.
 
 ## Mode selection
 
-This skill runs UNATTENDED inside a scheduled Claude Code cloud routine. There
-is no user to ask questions. Every run is a FULL CYCLE: KICKBACK mode first
-(process NDRs and promote proven deliveries), then DRAFT mode (prepare the next
-batch). On ambiguity or any unexpected state, stop that item, leave the data
-untouched, and explain it in the run report instead of guessing.
+This skill runs UNATTENDED inside a scheduled Claude Code cloud routine at
+5:15 AM. There is no user to ask questions. Every run is a FULL CYCLE in this
+fixed order:
+
+1. KICKBACK mode (process NDRs and promote proven deliveries).
+2. DRAFT mode (prepare the next verification batch).
+3. CAMPAIGN mode, ONLY if the verification queue had nothing to draft.
+
+The verification queue always outranks the campaign. CAMPAIGN mode runs only
+when Step 1 of DRAFT mode returned zero rows, meaning "04d - Email
+Verification" holds no quarantined address still waiting on a draft. If DRAFT
+mode drafted even one message this run, skip CAMPAIGN mode entirely and say so
+in the report. The queue is empty as of 2026-08-11, so the campaign is
+currently the working part of each run.
+
+On ambiguity or any unexpected state, stop that item, leave the data untouched,
+and explain it in the run report instead of guessing.
 
 Idempotence guard: before DRAFT mode, check whether any 04d row already has
 "Drafted At"::date = current_date. If yes, the day's batch exists (the routine
 re-ran); skip DRAFT mode and say so in the report.
+
+Campaign idempotence guard: before CAMPAIGN mode, count "04e - Campaign Sends"
+rows for the campaign with "Drafted At"::date = current_date. If that count is
+already at or above the 50 per morning cap, the campaign batch exists (the
+routine re-ran); skip CAMPAIGN mode and say so in the report.
 
 ---
 
@@ -242,10 +259,203 @@ Report: NDRs found, addresses suppressed, contacts retired, drafts promoted to c
 
 ---
 
+## CAMPAIGN mode
+
+Campaign name: `BMV-Owner-1`. This is a VOLUME marketing campaign to existing
+verified unit owners, not 1:1 verification correspondence. It runs at the end
+of each 5:15 AM run, only when the verification queue had nothing to draft, and
+only after the asset reachability gate passes. Up to 50 drafts per morning.
+
+The ledger is "04e - Campaign Sends" (columns "Email", "Campaign", "Project",
+"Unit", "Region", "Drafted At"), unique on lower("Email") plus "Campaign", so a
+contact can receive this campaign exactly once. The table and the public
+"Marketing Materials" bucket already exist. NEVER run a migration from this
+skill.
+
+### Step 1. Asset reachability gate (BEFORE the first draft of any run)
+
+Fetch BOTH asset URLs with a HEAD or ranged GET before building a single draft:
+
+- Brochure: https://llwyvgkqhendgzsgngqh.supabase.co/storage/v1/object/public/Marketing%20Materials/BMV_Marketing_Brochure_v2.pdf
+- Report: https://llwyvgkqhendgzsgngqh.supabase.co/storage/v1/object/public/Quarterly%20Market%20Reports/florida-car-condo-market-report-q2-2026.pdf
+
+A URL passes only on a 2xx or 206 response whose content type is
+application/pdf. Supabase storage returns a JSON body with
+`{"error":"not_found","code":"NoSuchKey"}` for a missing object, so a JSON
+content type is a FAILURE even when the status line looks survivable.
+
+If EITHER URL fails, draft NOTHING for this campaign. Insert no ledger rows,
+log the failure as a learning, and state plainly in the run summary which URL
+failed and with what status. Fifty emails carrying a dead download button is
+worse than a day's delay, and the campaign simply resumes the next morning once
+the file is in place. This gate is never bypassed or worked around.
+
+Known state on 2026-08-11: the "Marketing Materials" bucket is public but
+EMPTY, so the brochure URL returns 404 NoSuchKey and this gate blocks the
+campaign. The report URL passes. The campaign starts producing drafts the first
+morning after BMV_Marketing_Brochure_v2.pdf is uploaded to that bucket.
+
+### Step 2. Verify the BMV facts against the live row
+
+Read the live Bonita Motor Vault row each run and prefer live values over the
+stock copy when they differ:
+
+```sql
+select "Project", "# of Units", "Unit Size", "Asking $ PSF", "Developer Listing Comments"
+from "06 - Pre-Sales" where "Project" = 'Bonita Motor Vault';
+```
+
+- Pricing line. Derive the entry price from the live "Asking $ PSF" times the
+  smallest unit size (900 SF) and state the hundreds band it lands in. At
+  $480/SF the average 1,125 SF unit is about $540,000, which supports
+  "introductory pricing from the $500s". If the live figure moves the band,
+  use the live band and say so in the run summary.
+- Released buildings line. "06 - Pre-Sales" has NO released-buildings column
+  today. Check "Developer Listing Comments" for a statement of which buildings
+  are released and prefer it when present. When that column is null, keep
+  "Buildings 1 and 2 released" and note in the run summary that the line could
+  not be verified against a live field.
+- Unit count and delivery cross-check against "01 - Projects" ("Units" = 58,
+  "Proj. Delivery" = 2027, "Flood Zone" = X). Report any mismatch rather than
+  silently rewriting the copy.
+
+### Step 3. Select the batch
+
+Region order is fixed: South Florida, then Tampa MSA, then Southwest Florida,
+then Central-East Florida, then Jacksonville MSA, then Orlando MSA. Within a
+region, order by "Project" then "Index". Draft to "Email 1" ONLY; the other
+email columns are never used by this campaign.
+
+```sql
+select c."Index", c."First Name", c."Region", c."Project", c."Unit #",
+       lower(btrim(c."Email 1")) as email
+from "04 - Unit Owner CRM" c
+where coalesce(btrim(c."Email 1"), '') <> ''
+  and coalesce(btrim(c."Litigator"), '') = ''
+  and not exists (
+    select 1 from "04e - Campaign Sends" s
+    where lower(btrim(s."Email")) = lower(btrim(c."Email 1"))
+      and s."Campaign" = 'BMV-Owner-1'
+  )
+  and not exists (
+    select 1 from "04a - Email Suppression" x
+    where lower(btrim(x."Email")) = lower(btrim(c."Email 1"))
+      and x."Suppress" = true
+  )
+order by array_position(array[
+    'South Florida','Tampa MSA','Southwest Florida',
+    'Central-East Florida','Jacksonville MSA','Orlando MSA'], c."Region"),
+  c."Project", c."Index"
+limit 50;
+```
+
+"Litigator" is text and holds either null or the literal 'Litigator', so the
+blank test above excludes the flagged rows. The CRM holds 965 contacts across
+exactly those six regions, 843 of them with a non-empty "Email 1", so the
+campaign takes roughly 17 mornings to work through the eligible population.
+
+If zero rows come back, report "BMV owner campaign complete, no eligible
+contacts remain" and stop.
+
+### Step 4. Create the drafts
+
+One Outlook draft per contact with outlook_create_draft, addressed to "Email 1".
+NO CC on this campaign: it is volume marketing, and CCing Chance on hundreds of
+messages would bury him. This is the one deliberate exception to the CC rule
+that governs the verification drip.
+
+Subject: `Your unit at {Project} and a first look at Bonita Motor Vault`
+
+Body is HTML in Will's voice, no em dashes and no en dashes, following the
+DRAFT mode body format rules: plain HTML, no inline style attributes, one `<p>`
+per paragraph, no manual line breaks inside a sentence. Each "button" is a
+standalone `<p>` holding a single `<a href>` anchor whose visible text is the
+button label. The M365 draft tool strips inline styles, so a styled button is
+not achievable and the plain anchor is the accepted rendering; it lands in
+Outlook's default blue.
+
+Structure, in this order:
+
+1. `Hi {First Name},` then one paragraph: they own Unit {Unit #} at {Project},
+   and it is tracked on Storage Condo King, the Florida garage and car condo
+   market platform, with live sale comps and a current market value.
+   Button: `View Your Unit's Market Value` linking to
+   `https://storagecondoking.com/projects/{URL-encoded Project}?tab=market-value&utm_source=drip&utm_campaign=bmv-owner-1`
+   URL-encode the project name exactly as it appears in "01 - Projects",
+   normalizing en dashes and em dashes to hyphens first per the repo join
+   convention.
+2. One short paragraph of owner benefits: live comps from their project and
+   submarket, unit value tracking, quarterly market reports, and a listing
+   platform when they are ready to sell.
+   Button: `Download the Q2 2026 Florida Market Report` linking to the report
+   URL above.
+3. The BMV block: Bonita Motor Vault, a new luxury garage condo enclave in
+   Bonita Springs listed with Storage Condo King, is now accepting
+   reservations. 58 deeded units on 4 landscaped acres, 900 to 2,275 SF with
+   mezzanines, 20 to 21 foot ceilings, Category 5 concrete construction in FEMA
+   Zone X, introductory pricing from the $500s, Buildings 1 and 2 released,
+   delivery 2027. Use the live values from Step 2 wherever they differ.
+   Button: `Download the Bonita Motor Vault Brochure` linking to the brochure
+   URL above.
+4. Closing: reply to this email with questions or to reserve. Signed:
+
+```
+Will Butler
+Storage Condo King
+will.butler@calusainvestments.com
+```
+
+5. Footer line, exactly:
+   `If you'd rather not receive owner updates, reply unsubscribe and we'll remove you.`
+
+If "First Name" is null or blank, open with "Hello" instead of a name. If
+"Unit #" is null or blank, drop the unit clause and say they own a unit at
+{Project}. The campaign signature is these three lines, NOT the four line
+Calusa block used by DRAFT mode.
+
+### Step 5. Log each draft
+
+After EACH successful draft, insert the ledger row:
+
+```sql
+insert into "04e - Campaign Sends" ("Email", "Campaign", "Project", "Unit", "Region", "Drafted At")
+values (<email>, 'BMV-Owner-1', <project>, <unit>, <region>, now())
+on conflict do nothing;
+```
+
+Insert only for drafts that were actually created. If a draft call fails, write
+no ledger row so the contact re enters tomorrow's batch. Verify the run with a
+separate query:
+
+```sql
+select count(*) from "04e - Campaign Sends"
+where "Campaign" = 'BMV-Owner-1' and "Drafted At"::date = current_date;
+```
+
+### Step 6. Unsubscribe handling
+
+Unsubscribe replies ride the existing suppression flow. Any reply containing
+the word unsubscribe gets that address added to "04a - Email Suppression" with
+"Suppression Type" = 'Opt-Out' and "Suppress" = true. The Step 3 suppression
+cross-check then excludes the address from this and every future campaign
+permanently. Never remove an Opt-Out row to re-reach someone.
+
+### Step 7. Report
+
+Report: gate result for both assets, any BMV fact that differed from the stock
+copy, drafts created this morning, region worked, sent so far against that
+region's total, campaign total against the 965 contact CRM, drafts failed, and
+eligible contacts remaining.
+
+---
+
 ## Hard rules
 
 - Never send email directly. Create drafts only. Will presses send.
-- Every draft CCs chance.friedman@calusainvestments.com. No exceptions.
+- Every verification drip draft (DRAFT mode) CCs chance.friedman@calusainvestments.com. No exceptions. CAMPAIGN mode drafts carry NO CC; it is volume marketing and CCing Chance on hundreds of messages would bury him.
+- CAMPAIGN mode never runs while the verification queue still has something to draft, and never before the asset reachability gate passes on BOTH the brochure and the report URL. A failed gate means zero drafts and zero ledger rows that morning.
+- 50 campaign drafts per morning maximum, one campaign row per address per campaign, enforced by the unique index on lower("Email") plus "Campaign" in "04e - Campaign Sends". Log the ledger row only after the draft actually exists.
+- Run NO migrations from this skill. "04e - Campaign Sends" and the public "Marketing Materials" bucket already exist.
 - Draft bodies are plain HTML with no inline style attributes. Body text stays black through the plain structure, and the value link is a standard `<a href>` anchor. The M365 draft tool strips inline styles, so the link renders in Outlook's default blue, and that is accepted. No colored fonts, images, or other styling.
 - The CRM contains only verified emails. Never write an address into any CRM email column without stamping "Email Verified At" and deleting the matching 04d row in the same operation.
 - 04d holds only unresolved addresses. An address must never exist in both 04d and the CRM. Resolved means deleted from 04d: good addresses go to the CRM, bad addresses go to 04a.

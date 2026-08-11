@@ -368,3 +368,25 @@ NEVER put credentials, API keys, or personal contact details in this file.
   uses. The digest therefore never alerts on fresh rows: its UNIT RESERVATIONS section recaps
   the last 24 hours, reports trailing 30/60/90 day counts per project, and flags any row still
   at Status 'New' after 24 hours as an SLA breach, promoted into WARNINGS.
+- 2026-08-11 | outlook-outreach-drip | note | CAMPAIGN mode added as a third mode for the
+  BMV-Owner-1 owner campaign. It runs last in each 5:15 run and only when the verification queue
+  had nothing to draft, so 04d work always outranks marketing. Selection is 50 per morning from
+  "04 - Unit Owner CRM" in fixed region order (South Florida, Tampa MSA, Southwest Florida,
+  Central-East Florida, Jacksonville MSA, Orlando MSA), "Email 1" only, excluding Litigator rows,
+  suppressed addresses, and anyone already in the ledger. Campaign drafts carry NO CC, which is a
+  deliberate exception to the drip CC rule; the four line Calusa signature is also replaced by a
+  three line Storage Condo King block.
+- 2026-08-11 | outlook-outreach-drip | note | "04e - Campaign Sends" is the per-campaign ledger
+  (Email, Campaign, Project, Unit, Region, Drafted At), unique on lower(Email) plus Campaign, so an
+  address receives a given campaign exactly once. Write the ledger row only AFTER the draft exists;
+  a failed draft must leave no row so the contact returns in tomorrow's batch. Unsubscribe replies
+  go to "04a - Email Suppression" as Suppression Type 'Opt-Out', and the selection cross-check then
+  excludes them permanently.
+- 2026-08-11 | outlook-outreach-drip | blocker | Hosted-asset reachability gate is mandatory before
+  the first campaign draft of any run: HEAD or ranged GET both the brochure and the report URL and
+  require a 2xx or 206 with content type application/pdf. Supabase storage answers a missing object
+  with a JSON not_found/NoSuchKey body, so a JSON content type is a failure even when the status
+  line looks survivable. On failure draft nothing, write no ledger rows, and say which URL failed;
+  50 emails with a dead download button is worse than a day's delay. As of this entry the public
+  "Marketing Materials" bucket is EMPTY, so BMV_Marketing_Brochure_v2.pdf 404s and the gate blocks
+  the campaign until that file is uploaded. The Q2 2026 report URL passes.
