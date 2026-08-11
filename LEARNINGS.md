@@ -390,3 +390,10 @@ NEVER put credentials, API keys, or personal contact details in this file.
   50 emails with a dead download button is worse than a day's delay. As of this entry the public
   "Marketing Materials" bucket is EMPTY, so BMV_Marketing_Brochure_v2.pdf 404s and the gate blocks
   the campaign until that file is uploaded. The Q2 2026 report URL passes.
+- 2026-08-13 | all-routines | constraint | FINISH SCALE. Luxury, High-Quality and Basic are the
+  CAR CONDO range; most projects land High-Quality. Basic means bare bones car condo product,
+  flex-grade quality in the personal storage and condo bucket. Utility applies to FLEX product
+  only and pairs with Flex-Tier; a car condo is never Utility and a flex building is never
+  Basic. Assign Basic on strong evidence of bare-bones car condo product; assign Utility only
+  to genuine business or industrial flex. Vehicle Fortress (all phases) and Hideout Phase I
+  were reclassified Basic on 2026-08-13, and Utility now marks flex only.
