@@ -397,3 +397,33 @@ NEVER put credentials, API keys, or personal contact details in this file.
   Basic. Assign Basic on strong evidence of bare-bones car condo product; assign Utility only
   to genuine business or industrial flex. Vehicle Fortress (all phases) and Hideout Phase I
   were reclassified Basic on 2026-08-13, and Utility now marks flex only.
+- 2026-08-12 | outlook-outreach-drip | fix | BMV-Owner-1 selection deduplicates on
+  lower(btrim("Email 1")) BEFORE the 50 limit, so a run delivers 50 UNIQUE RECIPIENTS rather than
+  50 CRM rows. Owners hold multiple units and a plain row limit collapsed 50 rows to 21 people on
+  2026-08-12. Rank each owner's rows by unit number (digits stripped from "Unit #" cast to bigint,
+  raw text as fallback) and keep the lowest, which supplies the unit named in the copy and the
+  Project, Region and Unit written to the ledger; an owner spanning regions is worked once under
+  their lowest-numbered unit. One draft and one ledger row per recipient, never per unit. Eligible
+  population at this date: 823 rows collapsing to 658 unique recipients, about 14 mornings. Report
+  people, not rows, or the runway reads long.
+- 2026-08-12 | outlook-outreach-drip | note | Campaign body order now puts the bold "Storage Condo
+  King Unit Benefits" heading and its five bullets ABOVE the signature, with the four line Calusa
+  signature (Will Butler / Calusa Capital Partners / C: 239-898-5840 / E:
+  will.butler@calusainvestments.com) as the last content block and the unsubscribe footer below it.
+  Order: greeting, unit paragraph, unit link, comps paragraph, report link, Bonita paragraph,
+  brochure link, "Happy to answer anything about unit values or about Bonita. Just reply.",
+  benefits block, signature, footer.
+- 2026-08-12 | outlook-outreach-drip | blocker | FONT CANNOT BE SET through the M365 connector.
+  Both methods were tested on this date and BOTH were rejected on create AND on update: inline
+  style (font-family Aptos, font-size 12pt) fails because style= is outside the outbound allowlist,
+  and legacy <font face size> fails because font is named in the reject list with span and
+  blockquote. Rejection is a hard VALIDATION_ERROR, not silent stripping, so any font attempt kills
+  the outlook_create_draft call and would abort the morning batch. Drafts inherit Outlook's default
+  HTML font; Aptos 12 must come from a mailbox or client setting instead. Do not retry either
+  method.
+- 2026-08-12 | outlook-outreach-drip | fix | The empty gap above the greeting was the default TOP
+  MARGIN Outlook gives the first <p>, not stray whitespace in the body string. Campaign bodies now
+  build blocks with <div> and space them with <div><br></div>, which removes the gap and keeps
+  paragraph spacing; the body string starts flush at the greeting div. Graph prepends its own \r\n
+  to stored content (confirmed by reading a draft back), which is inert HTML whitespace and renders
+  nothing, so do not chase it.

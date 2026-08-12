@@ -1,6 +1,6 @@
 ---
 name: outlook-outreach-drip
-description: Draft 1:1 Outlook outreach emails to quarantined (unverified) SCK unit owner emails, process NDR kickbacks, and run the BMV owner marketing campaign. Three modes. DRAFT mode (default, nightly) pulls the next batch of quarantined emails from "04d - Email Verification", personalizes a short plain text outreach sent from Will Butler's Calusa Investments mailbox with Chance Friedman CCd, saves them to Outlook Drafts so Will can press send in the morning, and stamps "Drafted At". KICKBACK mode scans the mailbox for bounce and NDR messages, marks bounced addresses in 04d, suppresses them in "04a - Email Suppression", clears them from the CRM, and promotes drafts with no kickback after 4 days to clean. CAMPAIGN mode runs only after the verification queue is empty and drafts up to 50 Bonita Motor Vault owner emails per morning from "04 - Unit Owner CRM" in region order, logging each to "04e - Campaign Sends". Use whenever asked to run the outreach drip, draft the outreach batch, prep tomorrow's outreach emails, scan for kickbacks, process NDRs, check outreach bounces, or run the BMV owner campaign. Requires the "Supabase - Storage Condo King" and Microsoft 365 connectors.
+description: Draft 1:1 Outlook outreach emails to quarantined (unverified) SCK unit owner emails, process NDR kickbacks, and run the BMV owner marketing campaign. Three modes. DRAFT mode (default, nightly) pulls the next batch of quarantined emails from "04d - Email Verification", personalizes a short plain text outreach sent from Will Butler's Calusa Investments mailbox with Chance Friedman CCd, saves them to Outlook Drafts so Will can press send in the morning, and stamps "Drafted At". KICKBACK mode scans the mailbox for bounce and NDR messages, marks bounced addresses in 04d, suppresses them in "04a - Email Suppression", clears them from the CRM, and promotes drafts with no kickback after 4 days to clean. CAMPAIGN mode runs only after the verification queue is empty and drafts up to 50 UNIQUE Bonita Motor Vault owner recipients per morning from "04 - Unit Owner CRM" in region order, deduplicated by email so multi-unit owners are contacted once, logging each to "04e - Campaign Sends". Use whenever asked to run the outreach drip, draft the outreach batch, prep tomorrow's outreach emails, scan for kickbacks, process NDRs, check outreach bounces, or run the BMV owner campaign. Requires the "Supabase - Storage Condo King" and Microsoft 365 connectors.
 ---
 
 # SCK Outlook Outreach Drip
@@ -326,33 +326,62 @@ then Central-East Florida, then Jacksonville MSA, then Orlando MSA. Within a
 region, order by "Project" then "Index". Draft to "Email 1" ONLY; the other
 email columns are never used by this campaign.
 
+**FIFTY UNIQUE RECIPIENTS, NOT FIFTY ROWS.** Owners hold multiple units, so a
+plain row limit under-delivers badly: on 2026-08-12 fifty rows collapsed to
+twenty one people. DEDUPLICATE on lower(btrim("Email 1")) FIRST, then take 50
+unique recipients, pulling as many rows as needed to reach 50 addresses. One
+draft and one ledger row per recipient, never per unit.
+
+Where an owner holds several units, reference that owner's LOWEST unit number
+in the copy. Unit numbers are text, so rank on the digits ("Unit #" stripped to
+digits, cast to bigint) and fall back to the raw text when a unit carries no
+digits. The chosen row also supplies the "Project", "Region" and "Unit" written
+to the ledger. An owner holding units in more than one region is worked once,
+under the region of their lowest-numbered unit.
+
 ```sql
-select c."Index", c."First Name", c."Region", c."Project", c."Unit #",
-       lower(btrim(c."Email 1")) as email
-from "04 - Unit Owner CRM" c
-where coalesce(btrim(c."Email 1"), '') <> ''
-  and coalesce(btrim(c."Litigator"), '') = ''
-  and not exists (
-    select 1 from "04e - Campaign Sends" s
-    where lower(btrim(s."Email")) = lower(btrim(c."Email 1"))
-      and s."Campaign" = 'BMV-Owner-1'
-  )
-  and not exists (
-    select 1 from "04a - Email Suppression" x
-    where lower(btrim(x."Email")) = lower(btrim(c."Email 1"))
-      and x."Suppress" = true
-  )
+with eligible as (
+  select lower(btrim(c."Email 1")) as email, c."Index", c."First Name",
+         c."Region", c."Project", c."Unit #"
+  from "04 - Unit Owner CRM" c
+  where coalesce(btrim(c."Email 1"), '') <> ''
+    and coalesce(btrim(c."Litigator"), '') = ''
+    and not exists (
+      select 1 from "04e - Campaign Sends" s
+      where lower(btrim(s."Email")) = lower(btrim(c."Email 1"))
+        and s."Campaign" = 'BMV-Owner-1'
+    )
+    and not exists (
+      select 1 from "04a - Email Suppression" x
+      where lower(btrim(x."Email")) = lower(btrim(c."Email 1"))
+        and x."Suppress" = true
+    )
+), ranked as (
+  select e.*, row_number() over (
+      partition by e.email
+      order by nullif(regexp_replace(e."Unit #", '\D', '', 'g'), '')::bigint nulls last,
+               e."Unit #",
+               array_position(array[
+                 'South Florida','Tampa MSA','Southwest Florida',
+                 'Central-East Florida','Jacksonville MSA','Orlando MSA'], e."Region"),
+               e."Project", e."Index") as rn
+  from eligible e
+)
+select email, "Index", "First Name", "Region", "Project", "Unit #"
+from ranked
+where rn = 1
 order by array_position(array[
     'South Florida','Tampa MSA','Southwest Florida',
-    'Central-East Florida','Jacksonville MSA','Orlando MSA'], c."Region"),
-  c."Project", c."Index"
+    'Central-East Florida','Jacksonville MSA','Orlando MSA'], "Region"),
+  "Project", "Index"
 limit 50;
 ```
 
 "Litigator" is text and holds either null or the literal 'Litigator', so the
-blank test above excludes the flagged rows. The CRM holds 965 contacts across
-exactly those six regions, 843 of them with a non-empty "Email 1", so the
-campaign takes roughly 17 mornings to work through the eligible population.
+blank test above excludes the flagged rows. As of 2026-08-12 the eligible set
+is 823 CRM rows collapsing to 658 unique recipients, so the campaign takes
+roughly 14 mornings at 50 unique recipients per run. Report the unique
+recipient count, never the row count, or the remaining runway reads long.
 
 If zero rows come back, report "BMV owner campaign complete, no eligible
 contacts remain" and stop.
@@ -366,52 +395,105 @@ that governs the verification drip.
 
 Subject: `Your unit at {Project} and a first look at Bonita Motor Vault`
 
-Body is HTML in Will's voice, no em dashes and no en dashes, following the
-DRAFT mode body format rules: plain HTML, no inline style attributes, one `<p>`
-per paragraph, no manual line breaks inside a sentence. Each "button" is a
-standalone `<p>` holding a single `<a href>` anchor whose visible text is the
-button label. The M365 draft tool strips inline styles, so a styled button is
-not achievable and the plain anchor is the accepted rendering; it lands in
-Outlook's default blue.
+Body is HTML in Will's voice, no em dashes and no en dashes.
 
-Structure, in this order:
+**Markup rules, tested against the connector on 2026-08-12.**
 
-1. `Hi {First Name},` then one paragraph: they own Unit {Unit #} at {Project},
-   and it is tracked on Storage Condo King, the Florida garage and car condo
-   market platform, with live sale comps and a current market value.
-   Button: `View Your Unit's Market Value` linking to
+- Build blocks with `<div>`, NOT `<p>`. Outlook gives `<p>` a default top
+  margin, and that margin on the first block is what rendered as an empty gap
+  above the greeting. `<div>` carries no margin, so the greeting sits flush at
+  the top.
+- Separate blocks with a `<div><br></div>` spacer. That reproduces paragraph
+  spacing without the `<p>` margin.
+- The body string MUST begin with the greeting `<div>`. No leading newline, no
+  empty `<div>`, `<p>` or `<br>`, no wrapper padding ahead of it. Graph
+  prepends its own `\r\n` to the stored content, which is inert HTML
+  whitespace and renders nothing; do not try to strip it and do not add one.
+- Each "button" is a standalone `<div>` holding a single `<a href>` anchor
+  whose visible text is the button label. A styled button is not achievable,
+  and the anchor lands in Outlook's default blue.
+- The benefits heading is a `<div>` wrapping `<b>`, not an `<h1>` to `<h6>`,
+  which would render oversized.
+
+**FONT: NOT ACHIEVABLE. Do not attempt it.** Both approaches were tested and
+BOTH were rejected outright by the connector, on create and on update:
+
+- Inline style (`<div style="font-family:Aptos,'Segoe UI',sans-serif;font-size:12pt">`)
+  fails; `style=` is outside the outbound allowlist.
+- Legacy `<font face="Aptos" size="3">` fails; `font` is named in the reject
+  list alongside `span` and `blockquote`.
+
+The allowlist is p, br, a[href|name|target], b/strong, i/em, ul/ol/li, h1-h6,
+table, code, pre, hr, div, strike, and nothing else. Bodies carrying anything
+else are REJECTED, not silently cleaned, so a font attempt hard-fails the
+outlook_create_draft call and would abort the morning's batch. The drafts
+therefore inherit Outlook's default HTML font and cannot be forced to Aptos 12
+through this connector. If Will needs Aptos, it has to come from a mailbox or
+client setting, not from this skill.
+
+Structure, in this order. The benefits block sits ABOVE the signature, and the
+signature is the LAST content block:
+
+1. Greeting: `Hi {First Name},`
+2. One paragraph: they own Unit {Unit #} at {Project}, and it is tracked on
+   Storage Condo King, the Florida garage and car condo market platform, with
+   live sale comps and a current market value. Use the owner's LOWEST unit
+   number per Step 3.
+3. Unit link: `View Your Unit's Market Value` linking to
    `https://storagecondoking.com/projects/{URL-encoded Project}?tab=market-value&utm_source=drip&utm_campaign=bmv-owner-1`
    URL-encode the project name exactly as it appears in "01 - Projects",
    normalizing en dashes and em dashes to hyphens first per the repo join
    convention.
-2. One short paragraph of owner benefits: live comps from their project and
-   submarket, unit value tracking, quarterly market reports, and a listing
-   platform when they are ready to sell.
-   Button: `Download the Q2 2026 Florida Market Report` linking to the report
-   URL above.
-3. The BMV block: Bonita Motor Vault, a new luxury garage condo enclave in
+4. Comps paragraph: live comps from their project and submarket, unit value
+   tracking, quarterly market reports, and a listing platform when they are
+   ready to sell.
+5. Report link: `Download the Q2 2026 Florida Market Report` linking to the
+   report URL above.
+6. Bonita paragraph: Bonita Motor Vault, a new luxury garage condo enclave in
    Bonita Springs listed with Storage Condo King, is now accepting
    reservations. 58 deeded units on 4 landscaped acres, 900 to 2,275 SF with
    mezzanines, 20 to 21 foot ceilings, Category 5 concrete construction in FEMA
    Zone X, introductory pricing from the $500s, Buildings 1 and 2 released,
    delivery 2027. Use the live values from Step 2 wherever they differ.
-   Button: `Download the Bonita Motor Vault Brochure` linking to the brochure
-   URL above.
-4. Closing: reply to this email with questions or to reserve. Signed:
+7. Brochure link: `Download the Bonita Motor Vault Brochure` linking to the
+   brochure URL above.
+8. Closing line, exactly:
+   `Happy to answer anything about unit values or about Bonita. Just reply.`
+9. Benefits block: a bold heading `Storage Condo King Unit Benefits` followed
+   by a `<ul>` of exactly these five items:
+   - Current market valuations, with a valuation engine covering both pre-sale
+     and re-sale units.
+   - Verified sale comps across every Florida garage and car condo project.
+   - Live listings and a marketing distribution network when you are ready to
+     sell.
+   - Investment cash flow models and market research.
+   - Project level detail: demographics, amenities, and the new supply
+     pipeline.
+10. Signature block, LAST, exactly these four lines:
 
 ```
 Will Butler
-Storage Condo King
-will.butler@calusainvestments.com
+Calusa Capital Partners
+C: 239-898-5840
+E: will.butler@calusainvestments.com
 ```
 
-5. Footer line, exactly:
-   `If you'd rather not receive owner updates, reply unsubscribe and we'll remove you.`
+11. Footer line, exactly, below the signature:
+    `If you'd rather not receive owner updates, reply unsubscribe and we'll remove you.`
+
+The campaign signature is the four line Calusa block, matching DRAFT mode. The
+unsubscribe footer stays as the final line: it sits below the signature because
+it is a footer, not body content, and a volume campaign must always carry it.
 
 If "First Name" is null or blank, open with "Hello" instead of a name. If
 "Unit #" is null or blank, drop the unit clause and say they own a unit at
-{Project}. The campaign signature is these three lines, NOT the four line
-Calusa block used by DRAFT mode.
+{Project}.
+
+Skeleton, with the greeting flush at the start and no leading whitespace:
+
+```html
+<div>Hi {First Name},</div><div><br></div><div>{unit paragraph}</div><div><br></div><div><a href="{unit url}">View Your Unit's Market Value</a></div><div><br></div><div>{comps paragraph}</div><div><br></div><div><a href="{report url}">Download the Q2 2026 Florida Market Report</a></div><div><br></div><div>{bonita paragraph}</div><div><br></div><div><a href="{brochure url}">Download the Bonita Motor Vault Brochure</a></div><div><br></div><div>Happy to answer anything about unit values or about Bonita. Just reply.</div><div><br></div><div><b>Storage Condo King Unit Benefits</b></div><ul><li>...</li></ul><div><br></div><div>Will Butler<br>Calusa Capital Partners<br>C: 239-898-5840<br>E: will.butler@calusainvestments.com</div><div><br></div><div>If you'd rather not receive owner updates, reply unsubscribe and we'll remove you.</div>
+```
 
 ### Step 5. Log each draft
 
@@ -423,9 +505,11 @@ values (<email>, 'BMV-Owner-1', <project>, <unit>, <region>, now())
 on conflict do nothing;
 ```
 
-Insert only for drafts that were actually created. If a draft call fails, write
-no ledger row so the contact re enters tomorrow's batch. Verify the run with a
-separate query:
+One ledger row per RECIPIENT, never one per unit. "Unit" and "Project" carry
+the owner's lowest-numbered unit chosen in Step 3, which is the same unit named
+in the copy. Insert only for drafts that were actually created. If a draft call
+fails, write no ledger row so the contact re enters tomorrow's batch. Verify the
+run with a separate query:
 
 ```sql
 select count(*) from "04e - Campaign Sends"
@@ -443,9 +527,11 @@ permanently. Never remove an Opt-Out row to re-reach someone.
 ### Step 7. Report
 
 Report: gate result for both assets, any BMV fact that differed from the stock
-copy, drafts created this morning, region worked, sent so far against that
-region's total, campaign total against the 965 contact CRM, drafts failed, and
-eligible contacts remaining.
+copy, unique recipients drafted this morning, region worked, unique recipients
+sent so far against that region's unique owner total, campaign total against
+the eligible unique recipient population (658 as of 2026-08-12), drafts failed,
+and unique recipients remaining. Count PEOPLE, not CRM rows, everywhere in this
+report.
 
 ---
 
@@ -454,7 +540,8 @@ eligible contacts remaining.
 - Never send email directly. Create drafts only. Will presses send.
 - Every verification drip draft (DRAFT mode) CCs chance.friedman@calusainvestments.com. No exceptions. CAMPAIGN mode drafts carry NO CC; it is volume marketing and CCing Chance on hundreds of messages would bury him.
 - CAMPAIGN mode never runs while the verification queue still has something to draft, and never before the asset reachability gate passes on BOTH the brochure and the report URL. A failed gate means zero drafts and zero ledger rows that morning.
-- 50 campaign drafts per morning maximum, one campaign row per address per campaign, enforced by the unique index on lower("Email") plus "Campaign" in "04e - Campaign Sends". Log the ledger row only after the draft actually exists.
+- 50 UNIQUE RECIPIENTS per morning maximum, deduplicated on lower(btrim("Email 1")) BEFORE the limit is applied, never 50 CRM rows. Owners hold multiple units, so a row limit silently under-delivers. One draft and one campaign row per address per campaign, enforced by the unique index on lower("Email") plus "Campaign" in "04e - Campaign Sends". Log the ledger row only after the draft actually exists.
+- Never put a font declaration in a campaign body. Inline `style=` and the legacy `<font>` tag are both outside the connector allowlist and are REJECTED, not stripped, which hard-fails the draft call and aborts the batch. Bodies use `<div>` blocks with `<div><br></div>` spacers and start flush at the greeting.
 - Run NO migrations from this skill. "04e - Campaign Sends" and the public "Marketing Materials" bucket already exist.
 - Draft bodies are plain HTML with no inline style attributes. Body text stays black through the plain structure, and the value link is a standard `<a href>` anchor. The M365 draft tool strips inline styles, so the link renders in Outlook's default blue, and that is accepted. No colored fonts, images, or other styling.
 - The CRM contains only verified emails. Never write an address into any CRM email column without stamping "Email Verified At" and deleting the matching 04d row in the same operation.
