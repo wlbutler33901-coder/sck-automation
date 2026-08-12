@@ -478,12 +478,14 @@ C: 239-898-5840
 E: will.butler@calusainvestments.com
 ```
 
-11. Footer line, exactly, below the signature:
-    `If you'd rather not receive owner updates, reply unsubscribe and we'll remove you.`
-
-The campaign signature is the four line Calusa block, matching DRAFT mode. The
-unsubscribe footer stays as the final line: it sits below the signature because
-it is a footer, not body content, and a volume campaign must always carry it.
+The campaign signature is the four line Calusa block, matching DRAFT mode, and
+it is the LAST thing in the body. There is NO unsubscribe footer: Will has
+instructed this directly and it is not an oversight, so never add one back.
+These read as personal correspondence from a named person, not as a bulk
+marketing send. Opt-outs are still honored in full through Step 6: a recipient
+who replies asking out goes into "04a - Email Suppression" as 'Opt-Out' and the
+Step 3 cross-check excludes them from this and every future campaign
+permanently.
 
 If "First Name" is null or blank, open with "Hello" instead of a name. If
 "Unit #" is null or blank, drop the unit clause and say they own a unit at
@@ -492,7 +494,7 @@ If "First Name" is null or blank, open with "Hello" instead of a name. If
 Skeleton, with the greeting flush at the start and no leading whitespace:
 
 ```html
-<div>Hi {First Name},</div><div><br></div><div>{unit paragraph}</div><div><br></div><div><a href="{unit url}">View Your Unit's Market Value</a></div><div><br></div><div>{comps paragraph}</div><div><br></div><div><a href="{report url}">Download the Q2 2026 Florida Market Report</a></div><div><br></div><div>{bonita paragraph}</div><div><br></div><div><a href="{brochure url}">Download the Bonita Motor Vault Brochure</a></div><div><br></div><div>Happy to answer anything about unit values or about Bonita. Just reply.</div><div><br></div><div><b>Storage Condo King Unit Benefits</b></div><ul><li>...</li></ul><div><br></div><div>Will Butler<br>Calusa Capital Partners<br>C: 239-898-5840<br>E: will.butler@calusainvestments.com</div><div><br></div><div>If you'd rather not receive owner updates, reply unsubscribe and we'll remove you.</div>
+<div>Hi {First Name},</div><div><br></div><div>{unit paragraph}</div><div><br></div><div><a href="{unit url}">View Your Unit's Market Value</a></div><div><br></div><div>{comps paragraph}</div><div><br></div><div><a href="{report url}">Download the Q2 2026 Florida Market Report</a></div><div><br></div><div>{bonita paragraph}</div><div><br></div><div><a href="{brochure url}">Download the Bonita Motor Vault Brochure</a></div><div><br></div><div>Happy to answer anything about unit values or about Bonita. Just reply.</div><div><br></div><div><b>Storage Condo King Unit Benefits</b></div><ul><li>...</li></ul><div><br></div><div>Will Butler<br>Calusa Capital Partners<br>C: 239-898-5840<br>E: will.butler@calusainvestments.com</div>
 ```
 
 ### Step 5. Log each draft
@@ -518,11 +520,13 @@ where "Campaign" = 'BMV-Owner-1' and "Drafted At"::date = current_date;
 
 ### Step 6. Unsubscribe handling
 
-Unsubscribe replies ride the existing suppression flow. Any reply containing
-the word unsubscribe gets that address added to "04a - Email Suppression" with
-"Suppression Type" = 'Opt-Out' and "Suppress" = true. The Step 3 suppression
-cross-check then excludes the address from this and every future campaign
-permanently. Never remove an Opt-Out row to re-reach someone.
+The body carries NO unsubscribe footer, so opt-outs arrive as ordinary replies
+and this step is the whole mechanism. Watch for them and act on every one. Any
+reply asking to be removed, whether or not it uses the word unsubscribe, gets
+that address added to "04a - Email Suppression" with "Suppression Type" =
+'Opt-Out' and "Suppress" = true. The Step 3 suppression cross-check then
+excludes the address from this and every future campaign permanently. Never
+remove an Opt-Out row to re-reach someone.
 
 ### Step 7. Report
 

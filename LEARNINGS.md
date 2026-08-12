@@ -409,10 +409,17 @@ NEVER put credentials, API keys, or personal contact details in this file.
 - 2026-08-12 | outlook-outreach-drip | note | Campaign body order now puts the bold "Storage Condo
   King Unit Benefits" heading and its five bullets ABOVE the signature, with the four line Calusa
   signature (Will Butler / Calusa Capital Partners / C: 239-898-5840 / E:
-  will.butler@calusainvestments.com) as the last content block and the unsubscribe footer below it.
-  Order: greeting, unit paragraph, unit link, comps paragraph, report link, Bonita paragraph,
-  brochure link, "Happy to answer anything about unit values or about Bonita. Just reply.",
-  benefits block, signature, footer.
+  will.butler@calusainvestments.com) as the last content block. Order: greeting, unit paragraph,
+  unit link, comps paragraph, report link, Bonita paragraph, brochure link, "Happy to answer
+  anything about unit values or about Bonita. Just reply.", benefits block, signature.
+- 2026-08-12 | outlook-outreach-drip | constraint | The BMV campaign body carries NO UNSUBSCRIBE
+  FOOTER. Will instructed this directly and repeated it; it is a standing decision, not an
+  oversight, so never add one back and never flag it again. These are personal correspondence from
+  a named person rather than a bulk send. Opt-outs are still honored in full: a recipient who
+  replies asking out is written to "04a - Email Suppression" as Suppression Type 'Opt-Out' with
+  Suppress true, and the campaign selection cross-check then excludes them permanently. With no
+  footer prompting them, reply-watching in CAMPAIGN mode Step 6 is the entire opt-out mechanism, so
+  act on every such reply.
 - 2026-08-12 | outlook-outreach-drip | blocker | FONT CANNOT BE SET through the M365 connector.
   Both methods were tested on this date and BOTH were rejected on create AND on update: inline
   style (font-family Aptos, font-size 12pt) fails because style= is outside the outbound allowlist,
