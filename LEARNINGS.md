@@ -441,3 +441,26 @@ NEVER put credentials, API keys, or personal contact details in this file.
   sentence entirely (noting it in the run report) when either field is null. The body links the
   project listing page instead of the brochure, the brochure is no longer gated, and the
   reachability gate now covers the Q2 report PDF plus a 2xx check on the listing URL.
+- 2026-08-13 | outlook-outreach-drip | constraint | CAMPAIGN mode Step 4 is now the COMPLETE COPY
+  SPECIFICATION for the BMV owner campaign and every future edit must preserve every item in it.
+  Several rounds of approved changes were lost by editing one line in isolation, so when changing
+  one item, re-read the whole block and carry the rest forward. The spec is: one fixed subject
+  "Your unit at {Project} and a first look at Bonita Motor Vault" with an explicit guard against
+  the DRAFT-mode three-subject rotation; CC chance.friedman@calusainvestments.com on EVERY campaign
+  draft (the old no-CC exception is removed); NEVER assert ownership, the unit is described as
+  carrying a market value on the platform and never as the recipient's property; greeting "Hi
+  {First Name}," or exactly "Hello," when no first name; the Bonita section sells and reads
+  Founding Cap, Units Committed, # of Units, Asking $ PSF, Ground Breaking and Developer Listing
+  Comments live from "06 - Pre-Sales" each run, omitting the scarcity sentence when either scarcity
+  field is null; the listing link replaces the brochure link and the brochure is no longer linked
+  or gated; five benefits bullets each with a bold lead-in header above the signature; the four
+  line Calusa signature LAST; no unsubscribe footer; 50 unique recipients deduplicated on
+  lower(btrim("Email 1")) before the cap with the owner's lowest unit; div spacing and no font
+  styling.
+- 2026-08-13 | outlook-outreach-drip | blocker | A 5:15 run applied the DRAFT-mode three-subject
+  rotation to CAMPAIGN mode and 43 of 50 drafts went out titled "{Project} resale values" or "Quick
+  question about your unit at {Project}" instead of the campaign subject; all 43 were corrected by
+  hand. The bodies were correct, so the failure was subject-only and easy to miss. The subject
+  guard now lives in Step 4 and in Hard rules. Campaign gate assets are the report PDF (2xx or 206
+  with content type application/pdf) and the listing page (any 2xx, no content type test); both
+  passed on this date.

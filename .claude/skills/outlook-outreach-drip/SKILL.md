@@ -405,11 +405,22 @@ contacts remain" and stop.
 ### Step 4. Create the drafts
 
 One Outlook draft per contact with outlook_create_draft, addressed to "Email 1".
-NO CC on this campaign: it is volume marketing, and CCing Chance on hundreds of
-messages would bury him. This is the one deliberate exception to the CC rule
-that governs the verification drip.
 
-Subject: `Your unit at {Project} and a first look at Bonita Motor Vault`
+**CC chance.friedman@calusainvestments.com on EVERY campaign draft.** The old
+no-CC campaign exception is REMOVED. Chance is copied on the campaign exactly as
+he is on the verification drip, so he sees the outreach and can pick up replies.
+
+**SUBJECT, always exactly:**
+
+`Your unit at {Project} and a first look at Bonita Motor Vault`
+
+**SUBJECT GUARD.** CAMPAIGN mode uses this ONE fixed subject for every draft and
+NEVER the DRAFT-mode three-subject rotation. Do not vary it, do not alternate it,
+do not borrow "{Project} resale values" or "Quick question about your unit at
+{Project}" from DRAFT mode. Those belong to the verification drip only. On
+2026-08-13 a run applied the rotation to 43 of 50 campaign drafts and every one
+had to be corrected by hand. The only value that changes between drafts is
+{Project}.
 
 Body is HTML in Will's voice, no em dashes and no en dashes.
 
@@ -447,14 +458,28 @@ therefore inherit Outlook's default HTML font and cannot be forced to Aptos 12
 through this connector. If Will needs Aptos, it has to come from a mailbox or
 client setting, not from this skill.
 
+**THIS IS THE COMPLETE COPY SPECIFICATION FOR CAMPAIGN MODE.** Everything from
+here to the end of Step 4 is the whole spec: the fixed subject and its guard, the
+CC, the no-ownership rule, the greeting fallback, the ten body blocks in order,
+the live Bonita section, the bold-header bullets, the four line signature last,
+and no unsubscribe footer. Any future edit must PRESERVE EVERY ITEM. When
+changing one line, re-read the whole block and carry the rest forward; several
+rounds of fixes have been lost by editing one item in isolation.
+
 Structure, in this order. The benefits block sits ABOVE the signature, and the
 signature is the LAST content block:
 
-1. Greeting: `Hi {First Name},`
-2. One paragraph: they own Unit {Unit #} at {Project}, and it is tracked on
-   Storage Condo King, the Florida garage and car condo market platform, with
-   live sale comps and a current market value. Use the owner's LOWEST unit
-   number per Step 3.
+1. Greeting: `Hi {First Name},` when a first name exists, otherwise exactly
+   `Hello,`.
+2. Project and unit paragraph. **NEVER ASSERT OWNERSHIP.** The body must not say
+   "You own Unit X at Y" or any equivalent, in any wording. Our data links the
+   contact to the unit; it does not prove they own it today, and telling someone
+   they own something they may have sold is the fastest way to lose them. Use
+   exactly this shape:
+
+   `{Project} is tracked on Storage Condo King, the Florida garage and car condo market platform, and Unit {Unit} carries a current market value there along with the closed sales behind it.`
+
+   Use the owner's LOWEST unit number per Step 3.
 3. Unit link: `View Your Unit's Market Value` linking to
    `https://storagecondoking.com/projects/{URL-encoded Project}?tab=market-value&utm_source=drip&utm_campaign=bmv-owner-1`
    URL-encode the project name exactly as it appears in "01 - Projects",
@@ -515,9 +540,10 @@ who replies asking out goes into "04a - Email Suppression" as 'Opt-Out' and the
 Step 3 cross-check excludes them from this and every future campaign
 permanently.
 
-If "First Name" is null or blank, open with "Hello" instead of a name. If
-"Unit #" is null or blank, drop the unit clause and say they own a unit at
-{Project}.
+If "First Name" is null or blank, open with exactly `Hello,` instead of a name.
+If "Unit #" is null or blank, drop the unit clause and say only that {Project}
+is tracked on Storage Condo King with current market values and the closed sales
+behind them. Never substitute an ownership claim for the missing unit.
 
 Skeleton, with the greeting flush at the start and no leading whitespace:
 
@@ -570,7 +596,9 @@ report.
 ## Hard rules
 
 - Never send email directly. Create drafts only. Will presses send.
-- Every verification drip draft (DRAFT mode) CCs chance.friedman@calusainvestments.com. No exceptions. CAMPAIGN mode drafts carry NO CC; it is volume marketing and CCing Chance on hundreds of messages would bury him.
+- EVERY draft in EVERY mode CCs chance.friedman@calusainvestments.com. No exceptions. The old no-CC campaign exception is removed; CAMPAIGN drafts are CC'd exactly like DRAFT drafts.
+- CAMPAIGN mode uses ONE fixed subject, `Your unit at {Project} and a first look at Bonita Motor Vault`. Never apply the DRAFT-mode three-subject rotation to a campaign draft.
+- Campaign bodies NEVER assert ownership. No "You own Unit X at Y" or any equivalent phrasing. The unit is described as carrying a market value on the platform, never as the recipient's property.
 - CAMPAIGN mode never runs while the verification queue still has something to draft, and never before the asset reachability gate passes on BOTH the brochure and the report URL. A failed gate means zero drafts and zero ledger rows that morning.
 - 50 UNIQUE RECIPIENTS per morning maximum, deduplicated on lower(btrim("Email 1")) BEFORE the limit is applied, never 50 CRM rows. Owners hold multiple units, so a row limit silently under-delivers. One draft and one campaign row per address per campaign, enforced by the unique index on lower("Email") plus "Campaign" in "04e - Campaign Sends". Log the ledger row only after the draft actually exists.
 - Never put a font declaration in a campaign body. Inline `style=` and the legacy `<font>` tag are both outside the connector allowlist and are REJECTED, not stripped, which hard-fails the draft call and aborts the batch. Bodies use `<div>` blocks with `<div><br></div>` spacers and start flush at the greeting.
