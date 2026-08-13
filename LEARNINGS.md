@@ -434,3 +434,10 @@ NEVER put credentials, API keys, or personal contact details in this file.
   paragraph spacing; the body string starts flush at the greeting div. Graph prepends its own \r\n
   to stored content (confirmed by reading a draft back), which is inert HTML whitespace and renders
   nothing, so do not chase it.
+- 2026-08-13 | outlook-outreach-drip | note | The BMV campaign Bonita section now sells rather
+  than dumping specs: it pulls "Founding Cap", "Units Committed", "# of Units", "Asking $ PSF",
+  "Ground Breaking" and "Developer Listing Comments" live from "06 - Pre-Sales" every run,
+  states positions remaining as Founding Cap minus Units Committed, and omits the scarcity
+  sentence entirely (noting it in the run report) when either field is null. The body links the
+  project listing page instead of the brochure, the brochure is no longer gated, and the
+  reachability gate now covers the Q2 report PDF plus a 2xx check on the listing URL.
