@@ -274,26 +274,29 @@ skill.
 
 ### Step 1. Asset reachability gate (BEFORE the first draft of any run)
 
-Fetch BOTH asset URLs with a HEAD or ranged GET before building a single draft:
+Fetch BOTH linked assets with a HEAD or ranged GET before building a single
+draft:
 
-- Brochure: https://llwyvgkqhendgzsgngqh.supabase.co/storage/v1/object/public/Marketing%20Materials/BMV_Marketing_Brochure_v2.pdf
-- Report: https://llwyvgkqhendgzsgngqh.supabase.co/storage/v1/object/public/Quarterly%20Market%20Reports/florida-car-condo-market-report-q2-2026.pdf
+- Report (PDF): https://llwyvgkqhendgzsgngqh.supabase.co/storage/v1/object/public/Quarterly%20Market%20Reports/florida-car-condo-market-report-q2-2026.pdf
+- Listing (page): https://storagecondoking.com/projects/Bonita%20Motor%20Vault?utm_source=drip&utm_campaign=bmv-owner-1
 
-A URL passes only on a 2xx or 206 response whose content type is
+The report URL passes only on a 2xx or 206 response whose content type is
 application/pdf. Supabase storage returns a JSON body with
 `{"error":"not_found","code":"NoSuchKey"}` for a missing object, so a JSON
 content type is a FAILURE even when the status line looks survivable.
 
-If EITHER URL fails, draft NOTHING for this campaign. Insert no ledger rows,
-log the failure as a learning, and state plainly in the run summary which URL
-failed and with what status. Fifty emails carrying a dead download button is
-worse than a day's delay, and the campaign simply resumes the next morning once
-the file is in place. This gate is never bypassed or worked around.
+The listing URL passes on any 2xx. It is a web page, not a PDF, so do not
+apply the content type test to it; a redirect that lands on a 2xx is fine, a
+404 or 5xx is not.
 
-Known state on 2026-08-11: the "Marketing Materials" bucket is public but
-EMPTY, so the brochure URL returns 404 NoSuchKey and this gate blocks the
-campaign. The report URL passes. The campaign starts producing drafts the first
-morning after BMV_Marketing_Brochure_v2.pdf is uploaded to that bucket.
+If EITHER asset fails, draft NOTHING for this campaign. Insert no ledger rows,
+log the failure as a learning, and state plainly in the run summary which URL
+failed and with what status. Fifty emails carrying a dead link is worse than a
+day's delay, and the campaign simply resumes the next morning once the asset is
+in place. This gate is never bypassed or worked around.
+
+The brochure is no longer linked in the campaign body and is NOT gated. The
+"Marketing Materials" bucket state no longer blocks this campaign.
 
 ### Step 2. Verify the BMV facts against the live row
 
@@ -301,9 +304,22 @@ Read the live Bonita Motor Vault row each run and prefer live values over the
 stock copy when they differ:
 
 ```sql
-select "Project", "# of Units", "Unit Size", "Asking $ PSF", "Developer Listing Comments"
+select "Project", "Founding Cap", "Units Committed", "# of Units", "Unit Size",
+       "Asking $ PSF", "Ground Breaking", "Developer Listing Comments"
 from "06 - Pre-Sales" where "Project" = 'Bonita Motor Vault';
 ```
+
+Every number in the Bonita section comes from this row on the run that drafts
+it. Nothing in that section is hardcoded.
+
+- Scarcity. Positions remaining is "Founding Cap" minus "Units Committed".
+  Use the returned values, never the example numbers in the target shape below.
+- NULL RULE. If "Founding Cap" or "Units Committed" is null, OMIT the scarcity
+  sentence entirely rather than inventing one, and note the omission in the run
+  report. The rest of the Bonita section still sends.
+- Groundbreaking. Use "Ground Breaking" as returned.
+- Release detail. Which buildings are released, and how many units that covers,
+  come from "Developer Listing Comments".
 
 - Pricing line. Derive the entry price from the live "Asking $ PSF" times the
   smallest unit size (900 SF) and state the hundreds band it lands in. At
@@ -449,26 +465,38 @@ signature is the LAST content block:
    ready to sell.
 5. Report link: `Download the Q2 2026 Florida Market Report` linking to the
    report URL above.
-6. Bonita paragraph: Bonita Motor Vault, a new luxury garage condo enclave in
-   Bonita Springs listed with Storage Condo King, is now accepting
-   reservations. 58 deeded units on 4 landscaped acres, 900 to 2,275 SF with
-   mezzanines, 20 to 21 foot ceilings, Category 5 concrete construction in FEMA
-   Zone X, introductory pricing from the $500s, Buildings 1 and 2 released,
-   delivery 2027. Use the live values from Step 2 wherever they differ.
-7. Brochure link: `Download the Bonita Motor Vault Brochure` linking to the
-   brochure URL above.
+6. Bonita paragraph. This section SELLS: lead with the opportunity, carry the
+   live scarcity numbers from Step 2, and end with the call to action. Will's
+   voice, no hype words such as "incredible" or "unmatched", no em-dashes or
+   en-dashes. Target shape, adapted to whatever the live numbers say:
+
+   `We are also representing Bonita Motor Vault in Bonita Springs, and it is worth a look before it prices up. Buildings 1 and 2 released 21 of the 58 deeded units, with introductory pricing from the $500s and 20 to 21 foot ceilings, mezzanines, and Category 5 concrete construction in Flood Zone X. The Founding Owner Program is capped at 10 positions and 5 are left. Founding pricing ends when those fill, and groundbreaking is Q3 2026 with 2027 delivery.`
+
+   The counts, the cap, the positions remaining, the pricing band and the
+   groundbreaking quarter are all live values from Step 2; the shape above is a
+   model, not a script. Per the Step 2 NULL RULE, drop the Founding Owner
+   Program sentence entirely when either scarcity field is null.
+7. Call to action, exactly:
+   `Take a look at the listing and reply if you want me to hold a unit for you.`
+   followed by the listing link `See the Bonita Motor Vault listing` pointing to
+   `https://storagecondoking.com/projects/Bonita%20Motor%20Vault?utm_source=drip&utm_campaign=bmv-owner-1`
+   This link REPLACES the brochure link. The brochure is no longer linked in the
+   campaign body.
 8. Closing line, exactly:
    `Happy to answer anything about unit values or about Bonita. Just reply.`
 9. Benefits block: a bold heading `Storage Condo King Unit Benefits` followed
-   by a `<ul>` of exactly these five items:
-   - Current market valuations, with a valuation engine covering both pre-sale
-     and re-sale units.
-   - Verified sale comps across every Florida garage and car condo project.
-   - Live listings and a marketing distribution network when you are ready to
-     sell.
-   - Investment cash flow models and market research.
-   - Project level detail: demographics, amenities, and the new supply
-     pipeline.
+   by a `<ul>` of exactly these five items. Each bullet carries a BOLD lead-in
+   header, then a colon, then the description, worded exactly as below:
+   - `<b>Live Market Values</b>: current valuations on your unit, covering both
+     pre-sale and re-sale, refreshed as new sales record.`
+   - `<b>Verified Sale Comps</b>: recorded closed sales across every Florida
+     garage and car condo project, not asking prices.`
+   - `<b>Listing Platform</b>: live listings and a marketing distribution
+     network when you are ready to sell.`
+   - `<b>Investment Tools</b>: cash flow models and market research built for
+     owners and investors.`
+   - `<b>Project Intelligence</b>: demographics, amenities, and the new supply
+     pipeline for every project we track.`
 10. Signature block, LAST, exactly these four lines:
 
 ```
@@ -494,7 +522,7 @@ If "First Name" is null or blank, open with "Hello" instead of a name. If
 Skeleton, with the greeting flush at the start and no leading whitespace:
 
 ```html
-<div>Hi {First Name},</div><div><br></div><div>{unit paragraph}</div><div><br></div><div><a href="{unit url}">View Your Unit's Market Value</a></div><div><br></div><div>{comps paragraph}</div><div><br></div><div><a href="{report url}">Download the Q2 2026 Florida Market Report</a></div><div><br></div><div>{bonita paragraph}</div><div><br></div><div><a href="{brochure url}">Download the Bonita Motor Vault Brochure</a></div><div><br></div><div>Happy to answer anything about unit values or about Bonita. Just reply.</div><div><br></div><div><b>Storage Condo King Unit Benefits</b></div><ul><li>...</li></ul><div><br></div><div>Will Butler<br>Calusa Capital Partners<br>C: 239-898-5840<br>E: will.butler@calusainvestments.com</div>
+<div>Hi {First Name},</div><div><br></div><div>{unit paragraph}</div><div><br></div><div><a href="{unit url}">View Your Unit's Market Value</a></div><div><br></div><div>{comps paragraph}</div><div><br></div><div><a href="{report url}">Download the Q2 2026 Florida Market Report</a></div><div><br></div><div>{bonita paragraph}</div><div><br></div><div>Take a look at the listing and reply if you want me to hold a unit for you.</div><div><br></div><div><a href="{listing url}">See the Bonita Motor Vault listing</a></div><div><br></div><div>Happy to answer anything about unit values or about Bonita. Just reply.</div><div><br></div><div><b>Storage Condo King Unit Benefits</b></div><ul><li><b>Live Market Values</b>: ...</li></ul><div><br></div><div>Will Butler<br>Calusa Capital Partners<br>C: 239-898-5840<br>E: will.butler@calusainvestments.com</div>
 ```
 
 ### Step 5. Log each draft
