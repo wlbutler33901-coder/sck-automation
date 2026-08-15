@@ -464,3 +464,28 @@ NEVER put credentials, API keys, or personal contact details in this file.
   guard now lives in Step 4 and in Hard rules. Campaign gate assets are the report PDF (2xx or 206
   with content type application/pdf) and the listing page (any 2xx, no content type test); both
   passed on this date.
+- 2026-08-15 | outlook-outreach-drip | constraint | FONT STYLING IS CONFIRMED IMPOSSIBLE AND NO RUN
+  MAY EVER ATTEMPT IT. The M365 connector allowlist (p, br, a, b/strong, i/em, ul/ol/li, h1-h6,
+  table, code, pre, hr, div, strike) has no styling hook at all: inline style= and the legacy
+  <font> tag are both rejected outright on create AND on update, and rejection is a hard
+  VALIDATION_ERROR that kills the whole draft call, so one attempt would abort a morning batch. Do
+  not re-test either method and do not hunt for a third. Drafts inherit Outlook's default HTML font;
+  Aptos 12 must come from a mailbox or client setting. Any lingering instruction to try font
+  styling is an error and should be deleted on sight.
+- 2026-08-15 | outlook-outreach-drip | constraint | The BMV campaign Bonita section is PRICING LED
+  and carries NO HARDCODED FIGURES. Every dollar, PSF, percent and count is read live per CAMPAIGN
+  Step 2: asking PSF, appraised PSF and unit size from "06 - Pre-Sales", asking price / market value
+  / dollar discount DERIVED as PSF times unit size, and submarket annual growth plus trailing twelve
+  month sales count and median PSF from the get_presale_appraisal_data RPC under project_context
+  (the last two nested in region_kpis). Founding Cap, Units Committed, # of Units, Ground Breaking
+  and Developer Listing Comments come from "06 - Pre-Sales". ROUNDING MATTERS: floor every dollar
+  figure to the nearest $1,000 and compute the discount percent from unrounded values to one
+  decimal. "Appraised $ / SF" is stored already rounded, so rounding derived dollars up overstates
+  the equity and drifts off the published valuation; flooring reconciles to the listing page and is
+  conservative for a discount claim. Verified this date: $480 and $597 PSF on 1,125 SF gives
+  $540,000 asking, $671,000 value, $131,000 discount, 19.6 percent, matching the appraisal. If any
+  figure is null, omit its sentence and note it in the run report.
+- 2026-08-15 | outlook-outreach-drip | note | Campaign body now opens warm before it opens with
+  data: greeting, then a summer-pleasantry and one line on what Storage Condo King is and why Will
+  is writing, then the unit line. The no-ownership rule covers the new blocks too; nothing in the
+  body may say the recipient owns anything.

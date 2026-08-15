@@ -298,42 +298,68 @@ in place. This gate is never bypassed or worked around.
 The brochure is no longer linked in the campaign body and is NOT gated. The
 "Marketing Materials" bucket state no longer blocks this campaign.
 
-### Step 2. Verify the BMV facts against the live row
+### Step 2. Pull the live BMV pricing data
 
-Read the live Bonita Motor Vault row each run and prefer live values over the
-stock copy when they differ:
+**HARD RULE: NO HARDCODED FIGURES.** Every dollar and every percent in the
+Bonita section comes from the RPC or the live table on the run that drafts it,
+so the email can never contradict the listing page. The example numbers in the
+target shape below are illustration only, never values to copy.
+
+Run this once per run. It returns every figure the Bonita section needs:
 
 ```sql
-select "Project", "Founding Cap", "Units Committed", "# of Units", "Unit Size",
-       "Asking $ PSF", "Ground Breaking", "Developer Listing Comments"
-from "06 - Pre-Sales" where "Project" = 'Bonita Motor Vault';
+with p as (
+  select "Unit Size"::numeric as sf, "Asking $ PSF"::numeric as ask_psf,
+         "Appraised $ / SF"::numeric as val_psf, "# of Units" as units,
+         "Founding Cap" as cap, "Units Committed" as committed,
+         "Ground Breaking" as gb, "Developer Listing Comments" as listing_comments
+  from "06 - Pre-Sales" where "Project" = 'Bonita Motor Vault'
+), r as (
+  select (get_presale_appraisal_data('Bonita Motor Vault') -> 'project_context') as pc
+)
+select p.sf, p.ask_psf, p.val_psf,
+       floor(p.ask_psf * p.sf / 1000) * 1000 as asking_price,
+       floor(p.val_psf * p.sf / 1000) * 1000 as market_value,
+       floor((p.val_psf - p.ask_psf) * p.sf / 1000) * 1000 as discount_dollars,
+       round((p.val_psf - p.ask_psf) / p.val_psf * 100, 1) as discount_pct,
+       p.units, p.cap, p.committed, (p.cap - p.committed) as positions_left,
+       p.gb, p.listing_comments,
+       (r.pc ->> 'annual_appreciation_pct') as annual_growth_pct,
+       (r.pc -> 'region_kpis' ->> 'unit_sales_ttm') as sales_ttm,
+       (r.pc -> 'region_kpis' ->> 'median_psf_ttm') as median_psf_ttm
+from p, r;
 ```
 
-Every number in the Bonita section comes from this row on the run that drafts
-it. Nothing in that section is hardcoded.
+Field sourcing, exactly:
+
+- Asking PSF, valuation PSF and average unit size come from "06 - Pre-Sales"
+  ("Asking $ PSF", "Appraised $ / SF", "Unit Size").
+- Asking price, market value and dollar discount are DERIVED as PSF times unit
+  size. Submarket annual growth, trailing twelve month sales count and median
+  PSF come from the get_presale_appraisal_data RPC under "project_context",
+  the last two nested in "region_kpis".
+- Founding fields ("Founding Cap", "Units Committed", "# of Units",
+  "Ground Breaking", "Developer Listing Comments") come from "06 - Pre-Sales".
+
+**ROUNDING, follow exactly or the email will disagree with the listing page.**
+FLOOR every dollar figure to the nearest $1,000. Compute the discount percent
+from the UNROUNDED values and round to one decimal. "Appraised $ / SF" is
+stored already rounded, so deriving dollars from it and then rounding up would
+overstate the equity and drift off the published valuation; flooring reconciles
+to the listing page and is the conservative direction for a discount claim.
+Verified on 2026-08-15: $480 and $597 PSF on 1,125 SF floor to $540,000 asking
+and $671,000 value, a $131,000 discount at 19.6 percent, which matches the
+published appraisal.
 
 - Scarcity. Positions remaining is "Founding Cap" minus "Units Committed".
-  Use the returned values, never the example numbers in the target shape below.
-- NULL RULE. If "Founding Cap" or "Units Committed" is null, OMIT the scarcity
-  sentence entirely rather than inventing one, and note the omission in the run
-  report. The rest of the Bonita section still sends.
-- Groundbreaking. Use "Ground Breaking" as returned.
+- NULL RULE. If ANY figure comes back null, OMIT the sentence that carries it
+  rather than inventing a value, and note the omission in the run report. The
+  rest of the Bonita section still sends. This applies to every figure, not
+  only the scarcity fields.
 - Release detail. Which buildings are released, and how many units that covers,
   come from "Developer Listing Comments".
-
-- Pricing line. Derive the entry price from the live "Asking $ PSF" times the
-  smallest unit size (900 SF) and state the hundreds band it lands in. At
-  $480/SF the average 1,125 SF unit is about $540,000, which supports
-  "introductory pricing from the $500s". If the live figure moves the band,
-  use the live band and say so in the run summary.
-- Released buildings line. "06 - Pre-Sales" has NO released-buildings column
-  today. Check "Developer Listing Comments" for a statement of which buildings
-  are released and prefer it when present. When that column is null, keep
-  "Buildings 1 and 2 released" and note in the run summary that the line could
-  not be verified against a live field.
-- Unit count and delivery cross-check against "01 - Projects" ("Units" = 58,
-  "Proj. Delivery" = 2027, "Flood Zone" = X). Report any mismatch rather than
-  silently rewriting the copy.
+- Cross-check unit count, delivery year and flood zone against "01 - Projects".
+  Report any mismatch rather than silently rewriting the copy.
 
 ### Step 3. Select the batch
 
@@ -442,8 +468,9 @@ Body is HTML in Will's voice, no em dashes and no en dashes.
 - The benefits heading is a `<div>` wrapping `<b>`, not an `<h1>` to `<h6>`,
   which would render oversized.
 
-**FONT: NOT ACHIEVABLE. Do not attempt it.** Both approaches were tested and
-BOTH were rejected outright by the connector, on create and on update:
+**FONT: CONFIRMED IMPOSSIBLE. NO RUN MAY EVER ATTEMPT FONT STYLING.** This is
+settled, not open. Both approaches were tested and BOTH were rejected outright
+by the connector, on create and on update:
 
 - Inline style (`<div style="font-family:Aptos,'Segoe UI',sans-serif;font-size:12pt">`)
   fails; `style=` is outside the outbound allowlist.
@@ -453,16 +480,20 @@ BOTH were rejected outright by the connector, on create and on update:
 The allowlist is p, br, a[href|name|target], b/strong, i/em, ul/ol/li, h1-h6,
 table, code, pre, hr, div, strike, and nothing else. Bodies carrying anything
 else are REJECTED, not silently cleaned, so a font attempt hard-fails the
-outlook_create_draft call and would abort the morning's batch. The drafts
-therefore inherit Outlook's default HTML font and cannot be forced to Aptos 12
+outlook_create_draft call and takes the whole draft with it, which would abort
+the morning's batch. Do not re-test either method and do not look for a third:
+there is no styling hook in the allowlist at all. The drafts inherit Outlook's
+default HTML font and cannot be forced to Aptos 12
 through this connector. If Will needs Aptos, it has to come from a mailbox or
 client setting, not from this skill.
 
 **THIS IS THE COMPLETE COPY SPECIFICATION FOR CAMPAIGN MODE.** Everything from
 here to the end of Step 4 is the whole spec: the fixed subject and its guard, the
-CC, the no-ownership rule, the greeting fallback, the ten body blocks in order,
-the live Bonita section, the bold-header bullets, the four line signature last,
-and no unsubscribe footer. Any future edit must PRESERVE EVERY ITEM. When
+CC, the no-ownership rule, the greeting fallback, the warm opening, the body
+blocks in order, the two-block pricing-led Bonita section sourced live per Step 2
+with no hardcoded figures, the bold-header bullets, the four line signature last,
+no unsubscribe footer, and no font styling ever. Any future edit must PRESERVE
+EVERY ITEM. When
 changing one line, re-read the whole block and carry the rest forward; several
 rounds of fixes have been lost by editing one item in isolation.
 
@@ -471,13 +502,21 @@ signature is the LAST content block:
 
 1. Greeting: `Hi {First Name},` when a first name exists, otherwise exactly
    `Hello,`.
-2. Project and unit paragraph. **NEVER ASSERT OWNERSHIP.** The body must not say
-   "You own Unit X at Y" or any equivalent, in any wording. Our data links the
-   contact to the unit; it does not prove they own it today, and telling someone
-   they own something they may have sold is the fastest way to lose them. Use
-   exactly this shape:
+2. WARM OPENING, then the unit line. Two separate blocks. The email opens like
+   a note from a person, not a data feed, then gets to the numbers.
 
-   `{Project} is tracked on Storage Condo King, the Florida garage and car condo market platform, and Unit {Unit} carries a current market value there along with the closed sales behind it.`
+   Warm opening, exactly:
+
+   `I hope your summer is going well. I run Storage Condo King, the market platform that tracks every garage and car condo project in Florida, and I wanted to make sure the numbers on {Project} were in front of you.`
+
+   Then the unit line, exactly:
+
+   `{Project} is tracked on the platform, and Unit {Unit} carries a current market value there along with the closed sales behind it.`
+
+   **NEVER ASSERT OWNERSHIP.** Neither block, nor any other, may say "You own
+   Unit X at Y" or any equivalent in any wording. Our data links the contact to
+   the unit; it does not prove they own it today, and telling someone they own
+   something they may have sold is the fastest way to lose them.
 
    Use the owner's LOWEST unit number per Step 3.
 3. Unit link: `View Your Unit's Market Value` linking to
@@ -490,17 +529,24 @@ signature is the LAST content block:
    ready to sell.
 5. Report link: `Download the Q2 2026 Florida Market Report` linking to the
    report URL above.
-6. Bonita paragraph. This section SELLS: lead with the opportunity, carry the
-   live scarcity numbers from Step 2, and end with the call to action. Will's
-   voice, no hype words such as "incredible" or "unmatched", no em-dashes or
-   en-dashes. Target shape, adapted to whatever the live numbers say:
+6. Bonita section, PRICING LED, in TWO blocks. The math is the pitch: lead with
+   the spread between what the developer is asking and what the unit is worth,
+   then the product and scarcity detail. Will's voice, no hype words such as
+   "incredible" or "unmatched", no em dashes or en dashes.
 
-   `We are also representing Bonita Motor Vault in Bonita Springs, and it is worth a look before it prices up. Buildings 1 and 2 released 21 of the 58 deeded units, with introductory pricing from the $500s and 20 to 21 foot ceilings, mezzanines, and Category 5 concrete construction in Flood Zone X. The Founding Owner Program is capped at 10 positions and 5 are left. Founding pricing ends when those fill, and groundbreaking is Q3 2026 with 2027 delivery.`
+   First block, the pricing math:
 
-   The counts, the cap, the positions remaining, the pricing band and the
-   groundbreaking quarter are all live values from Step 2; the shape above is a
-   model, not a script. Per the Step 2 NULL RULE, drop the Founding Owner
-   Program sentence entirely when either scarcity field is null.
+   `We are also representing Bonita Motor Vault in Bonita Springs, and the pre-construction math is the part worth your attention. The developer is asking $540,000, or $480 per square foot, on a 1,125 square foot unit. Our valuation puts that same unit at $671,000, or $597 per square foot. That is $131,000 of day one equity and a 19.6 percent discount to market, earned at contract before a shovel moves. The submarket has compounded at 10 percent a year, with 35 sales in the trailing year at a $560 median.`
+
+   Second block, the product and scarcity detail:
+
+   `Buildings 1 and 2 released 21 of the 58 deeded units, 20 to 21 foot ceilings, mezzanines, Category 5 concrete in Flood Zone X. The Founding Owner Program is capped at 10 positions and 5 are left. Founding pricing ends when those fill. Groundbreaking is Q3 2026 with 2027 delivery.`
+
+   EVERY dollar, PSF, percent and count above is a live value from Step 2. The
+   shapes are models, not scripts, and the numbers shown are what the data
+   happened to say on 2026-08-15. Never carry them forward. Per the Step 2 NULL
+   RULE, drop any sentence whose figure comes back null and note it in the run
+   report.
 7. Call to action, exactly:
    `Take a look at the listing and reply if you want me to hold a unit for you.`
    followed by the listing link `See the Bonita Motor Vault listing` pointing to
@@ -548,7 +594,7 @@ behind them. Never substitute an ownership claim for the missing unit.
 Skeleton, with the greeting flush at the start and no leading whitespace:
 
 ```html
-<div>Hi {First Name},</div><div><br></div><div>{unit paragraph}</div><div><br></div><div><a href="{unit url}">View Your Unit's Market Value</a></div><div><br></div><div>{comps paragraph}</div><div><br></div><div><a href="{report url}">Download the Q2 2026 Florida Market Report</a></div><div><br></div><div>{bonita paragraph}</div><div><br></div><div>Take a look at the listing and reply if you want me to hold a unit for you.</div><div><br></div><div><a href="{listing url}">See the Bonita Motor Vault listing</a></div><div><br></div><div>Happy to answer anything about unit values or about Bonita. Just reply.</div><div><br></div><div><b>Storage Condo King Unit Benefits</b></div><ul><li><b>Live Market Values</b>: ...</li></ul><div><br></div><div>Will Butler<br>Calusa Capital Partners<br>C: 239-898-5840<br>E: will.butler@calusainvestments.com</div>
+<div>Hi {First Name},</div><div><br></div><div>{warm opening}</div><div><br></div><div>{unit line}</div><div><br></div><div><a href="{unit url}">View Your Unit's Market Value</a></div><div><br></div><div>{comps paragraph}</div><div><br></div><div><a href="{report url}">Download the Q2 2026 Florida Market Report</a></div><div><br></div><div>{bonita pricing math}</div><div><br></div><div>{bonita product and scarcity}</div><div><br></div><div>Take a look at the listing and reply if you want me to hold a unit for you.</div><div><br></div><div><a href="{listing url}">See the Bonita Motor Vault listing</a></div><div><br></div><div>Happy to answer anything about unit values or about Bonita. Just reply.</div><div><br></div><div><b>Storage Condo King Unit Benefits</b></div><ul><li><b>Live Market Values</b>: ...</li></ul><div><br></div><div>Will Butler<br>Calusa Capital Partners<br>C: 239-898-5840<br>E: will.butler@calusainvestments.com</div>
 ```
 
 ### Step 5. Log each draft
