@@ -274,29 +274,27 @@ skill.
 
 ### Step 1. Asset reachability gate (BEFORE the first draft of any run)
 
-Fetch BOTH linked assets with a HEAD or ranged GET before building a single
-draft:
+The body links exactly TWO destinations: the recipient's project page and the
+Bonita listing page. Both are pages on the same site. Gate the Bonita listing
+URL with a HEAD or ranged GET before building a single draft:
 
-- Report (PDF): https://llwyvgkqhendgzsgngqh.supabase.co/storage/v1/object/public/Quarterly%20Market%20Reports/florida-car-condo-market-report-q2-2026.pdf
 - Listing (page): https://storagecondoking.com/projects/Bonita%20Motor%20Vault?utm_source=drip&utm_campaign=bmv-owner-1
 
-The report URL passes only on a 2xx or 206 response whose content type is
-application/pdf. Supabase storage returns a JSON body with
-`{"error":"not_found","code":"NoSuchKey"}` for a missing object, so a JSON
-content type is a FAILURE even when the status line looks survivable.
-
 The listing URL passes on any 2xx. It is a web page, not a PDF, so do not
-apply the content type test to it; a redirect that lands on a 2xx is fine, a
+apply a content type test to it; a redirect that lands on a 2xx is fine, a
 404 or 5xx is not.
 
-If EITHER asset fails, draft NOTHING for this campaign. Insert no ledger rows,
+If the listing fails, draft NOTHING for this campaign. Insert no ledger rows,
 log the failure as a learning, and state plainly in the run summary which URL
 failed and with what status. Fifty emails carrying a dead link is worse than a
 day's delay, and the campaign simply resumes the next morning once the asset is
 in place. This gate is never bypassed or worked around.
 
-The brochure is no longer linked in the campaign body and is NOT gated. The
-"Marketing Materials" bucket state no longer blocks this campaign.
+The quarterly market report PDF is NO LONGER LINKED in the campaign body and is
+NO LONGER GATED. The report now appears only as a phrase inside the Verified
+Sale Comps bullet. Do not fetch it, do not gate on it, and do not let a bad
+report URL block the campaign. The brochure is likewise not linked and not
+gated; the "Marketing Materials" bucket state does not block this campaign.
 
 ### Step 2. Pull the live BMV pricing data
 
@@ -305,14 +303,16 @@ Bonita section comes from the RPC or the live table on the run that drafts it,
 so the email can never contradict the listing page. The example numbers in the
 target shape below are illustration only, never values to copy.
 
-Run this once per run. It returns every figure the Bonita section needs:
+Run this once per run. It returns every figure the Bonita paragraph and the
+P.S. need:
 
 ```sql
 with p as (
   select "Unit Size"::numeric as sf, "Asking $ PSF"::numeric as ask_psf,
          "Appraised $ / SF"::numeric as val_psf, "# of Units" as units,
          "Founding Cap" as cap, "Units Committed" as committed,
-         "Ground Breaking" as gb, "Developer Listing Comments" as listing_comments
+         "Ground Breaking" as gb, "Deposit Refundable" as deposit_refundable,
+         "Developer Listing Comments" as listing_comments
   from "06 - Pre-Sales" where "Project" = 'Bonita Motor Vault'
 ), r as (
   select (get_presale_appraisal_data('Bonita Motor Vault') -> 'project_context') as pc
@@ -322,11 +322,10 @@ select p.sf, p.ask_psf, p.val_psf,
        floor(p.val_psf * p.sf / 1000) * 1000 as market_value,
        floor((p.val_psf - p.ask_psf) * p.sf / 1000) * 1000 as discount_dollars,
        round((p.val_psf - p.ask_psf) / p.val_psf * 100, 1) as discount_pct,
+       p.gb, p.deposit_refundable,
        p.units, p.cap, p.committed, (p.cap - p.committed) as positions_left,
-       p.gb, p.listing_comments,
-       (r.pc ->> 'annual_appreciation_pct') as annual_growth_pct,
-       (r.pc -> 'region_kpis' ->> 'unit_sales_ttm') as sales_ttm,
-       (r.pc -> 'region_kpis' ->> 'median_psf_ttm') as median_psf_ttm
+       p.listing_comments,
+       (r.pc ->> 'annual_appreciation_pct') as annual_growth_pct
 from p, r;
 ```
 
@@ -335,11 +334,18 @@ Field sourcing, exactly:
 - Asking PSF, valuation PSF and average unit size come from "06 - Pre-Sales"
   ("Asking $ PSF", "Appraised $ / SF", "Unit Size").
 - Asking price, market value and dollar discount are DERIVED as PSF times unit
-  size. Submarket annual growth, trailing twelve month sales count and median
-  PSF come from the get_presale_appraisal_data RPC under "project_context",
-  the last two nested in "region_kpis".
-- Founding fields ("Founding Cap", "Units Committed", "# of Units",
-  "Ground Breaking", "Developer Listing Comments") come from "06 - Pre-Sales".
+  size.
+- "Ground Breaking" and "Deposit Refundable" come from "06 - Pre-Sales" and
+  drive the two conditional clauses in the P.S. per Step 4 Block 4.
+
+**REPORT ONLY, NEVER COPY.** `units`, `cap`, `committed`, `positions_left`,
+`listing_comments` and `annual_growth_pct` are pulled for the run report and
+for cross-checking against "01 - Projects". NONE of them may appear in a
+campaign body. The buildings-released and ceilings specs, the founding position
+counts, the submarket growth and the trailing sales figures were all cut from
+the Bonita copy on 2026-08-16: the listing page carries the specs, and the
+scarcity counts are barred outright by the no-characterizing-sales rule in
+Block 4.
 
 **ROUNDING, follow exactly or the email will disagree with the listing page.**
 FLOOR every dollar figure to the nearest $1,000. Compute the discount percent
@@ -351,15 +357,88 @@ Verified on 2026-08-15: $480 and $597 PSF on 1,125 SF floor to $540,000 asking
 and $671,000 value, a $131,000 discount at 19.6 percent, which matches the
 published appraisal.
 
-- Scarcity. Positions remaining is "Founding Cap" minus "Units Committed".
 - NULL RULE. If ANY figure comes back null, OMIT the sentence that carries it
   rather than inventing a value, and note the omission in the run report. The
-  rest of the Bonita section still sends. This applies to every figure, not
-  only the scarcity fields.
-- Release detail. Which buildings are released, and how many units that covers,
-  come from "Developer Listing Comments".
+  rest of the Bonita paragraph still sends. This applies to every figure.
 - Cross-check unit count, delivery year and flood zone against "01 - Projects".
   Report any mismatch rather than silently rewriting the copy.
+
+### Step 2b. Pull the per-recipient unit value data
+
+Block 1 of the body carries ONE personalized sentence about the recipient's own
+unit. Run this ONCE for the whole batch after Step 3 has chosen the recipients,
+feeding the chosen (project, unit) pairs into `picks`:
+
+```sql
+with picks as (
+  select * from (values
+    ('The Motor Enclave','117'), ('The Motor Enclave','1117')  -- one row per recipient
+  ) as t(project, unit)
+), u as (
+  select p.project, p.unit,
+         un."Suite Size (SF)"::numeric as sf,
+         un."Appraised $ / SF"::numeric as psf,
+         un."Suite Size (SF)"::numeric * un."Appraised $ / SF"::numeric as value_raw
+  from picks p
+  join "02 - Units" un
+    on un."Project" = p.project and btrim(un."Unit #") = btrim(p.unit)
+), s as (
+  select distinct on (project_name, unit) project_name, unit, sale_date, sale_price
+  from (
+    select distinct "Project Name" as project_name, btrim("Unit") as unit,
+      case
+        when "Sale Date" ~ '^\d{1,2}/\d{1,2}/\d{4}$' then to_date("Sale Date",'MM/DD/YYYY')
+        when "Sale Date" ~ '^\d{1,2}/\d{1,2}/\d{2}$'  then to_date("Sale Date",'MM/DD/YY')
+        when "Sale Date" ~ '^\d{4}-\d{2}-\d{2}$'      then to_date("Sale Date",'YYYY-MM-DD')
+      end as sale_date,
+      "Sale Price"::numeric as sale_price
+    from "03 - Sales" where "Project Name" in (select project from picks)
+  ) d
+  where sale_date is not null
+  order by project_name, unit, sale_date desc, sale_price desc
+)
+select u.project, u.unit,
+       round(u.value_raw / 1000) * 1000 as unit_value,
+       round(u.psf)                     as unit_psf,
+       to_char(s.sale_date, 'FMMonth YYYY') as sale_label,
+       s.sale_price,
+       round((u.value_raw - s.sale_price) / 1000) * 1000 as increase,
+       split_part(pr."Submarket", ';', 1)   as submarket_label,
+       rd.psf_growth_5yr_ann_pct            as submarket_growth_pct
+from u
+left join s  on s.project_name = u.project and s.unit = btrim(u.unit)
+left join "01 - Projects" pr on pr."Project Name" = u.project
+left join "Region Definition" rd on rd.submarket = pr."Submarket"
+order by u.project, u.unit;
+```
+
+Sourcing and mechanics, exactly:
+
+- Unit value is "Suite Size (SF)" times "Appraised $ / SF" from "02 - Units",
+  matched on "Project" plus "Unit #". PSF is that same "Appraised $ / SF".
+- The prior sale comes from "03 - Sales", matched on "Project Name" plus
+  "Unit", taking the MOST RECENT sale by parsed date.
+- "Sale Date" is TEXT in mixed formats, so parse with the three branch CASE
+  above. As of 2026-08-16 the table holds 1,525 rows as M/D/YY and 186 as
+  M/D/YYYY; the ISO branch is carried because the ingest skills can write it.
+  Anything the CASE cannot parse yields null and is dropped, never guessed.
+- Some units carry DUPLICATE sale rows. The inner `distinct` dedupes on date
+  and price before `distinct on` picks the latest, so a doubled row cannot
+  win by tiebreak.
+- ROUNDING here is round-to-nearest thousand for the value and the increase,
+  and round-to-nearest dollar for the PSF. This differs from the Bonita floor
+  rule in Step 2 on purpose: the Bonita figures must reconcile to a published
+  listing page, these do not.
+- Submarket label is the text BEFORE the first semicolon in
+  "01 - Projects"."Submarket". The stored value is a pair such as
+  `Tampa; Brandon`, which reads wrong in a sentence, so the label is `Tampa`.
+- Submarket growth is "Region Definition".psf_growth_5yr_ann_pct, the
+  annualized five year PSF growth, matched on the FULL stored submarket value.
+  **Never substitute psf_growth_1yr_pct for it.** The one year figure is
+  volatile and frequently NEGATIVE (Naples; Bonita Springs is -3.8 as of
+  2026-08-16), and Block 1 may never carry a decline. When
+  psf_growth_5yr_ann_pct is null, the submarket sentence is simply omitted;
+  most submarkets are null today, so omission is the normal case, not a fault.
 
 ### Step 3. Select the batch
 
@@ -489,86 +568,119 @@ client setting, not from this skill.
 
 **THIS IS THE COMPLETE COPY SPECIFICATION FOR CAMPAIGN MODE.** Everything from
 here to the end of Step 4 is the whole spec: the fixed subject and its guard, the
-CC, the no-ownership rule, the greeting fallback, the warm opening, the body
-blocks in order, the two-block pricing-led Bonita section sourced live per Step 2
-with no hardcoded figures, the bold-header bullets, the four line signature last,
-no unsubscribe footer, and no font styling ever. Any future edit must PRESERVE
-EVERY ITEM. When
-changing one line, re-read the whole block and carry the rest forward; several
-rounds of fixes have been lost by editing one item in isolation.
+CC, the no-ownership rule, the greeting fallback, the FOUR BLOCK body, the
+conditional unit value sentence, the one paragraph Bonita section sourced live
+per Step 2 with no hardcoded figures, the bold-header bullets, the four line
+signature, the conditional P.S., no unsubscribe footer, and no font styling ever.
+Any future edit must PRESERVE EVERY ITEM. When changing one line, re-read the
+whole block and carry the rest forward; several rounds of fixes have been lost by
+editing one item in isolation.
 
-Structure, in this order. The benefits block sits ABOVE the signature, and the
-signature is the LAST content block:
+The body is FOUR BLOCKS, in this order, and is deliberately SHORTER than the
+version it replaced on 2026-08-16. What was cut is cut on purpose: the standalone
+comps paragraph (redundant with the benefits list), the market report paragraph
+and its download link (now a phrase inside one bullet), the Bonita specs
+paragraph (the listing page carries it), the standalone "Take a look at the
+listing" line and the standalone closing line (both folded into the Bonita
+paragraph). Do not restore any of them.
+
+#### BLOCK 1. Intro and unit value
 
 1. Greeting: `Hi {First Name},` when a first name exists, otherwise exactly
    `Hello,`.
-2. WARM OPENING, then the unit line. Two separate blocks. The email opens like
-   a note from a person, not a data feed, then gets to the numbers.
+2. Warm opener, its own paragraph, exactly:
 
-   Warm opening, exactly:
+   `I hope your summer is going well.`
+3. Platform sentence, its own paragraph, exactly:
 
-   `I hope your summer is going well. I run Storage Condo King, the market platform that tracks every garage and car condo project in Florida, and I wanted to make sure the numbers on {Project} were in front of you.`
+   `I run Storage Condo King, the market platform that tracks every garage and car condo project in Florida, and I wanted to make sure the numbers on {Project} were in front of you.`
+4. ONE personalized sentence, from the Step 2b data, chosen by this priority.
+   Take the FIRST variant that resolves and omit the block ENTIRELY if none do:
 
-   Then the unit line, exactly:
+   a. Unit has an appraised value AND a most recent recorded sale AND the change
+      is POSITIVE and at least $25,000:
 
-   `{Project} is tracked on the platform, and Unit {Unit} carries a current market value there along with the closed sales behind it.`
+      `Unit {Unit} currently values at {$value}, or {$psf} per square foot, up about {$increase} from its {Month Year} sale.`
 
-   **NEVER ASSERT OWNERSHIP.** Neither block, nor any other, may say "You own
-   Unit X at Y" or any equivalent in any wording. Our data links the contact to
-   the unit; it does not prove they own it today, and telling someone they own
-   something they may have sold is the fastest way to lose them.
+   b. Else, unit has an appraised value:
 
-   Use the owner's LOWEST unit number per Step 3.
-3. Unit link: `View Your Unit's Market Value` linking to
+      `Unit {Unit} currently values at {$value}, or {$psf} per square foot.`
+
+      Follow it, in the SAME paragraph, with the submarket sentence when
+      `submarket_growth_pct` is not null:
+
+      `Values in the {Submarket} submarket have compounded at {x} percent a year.`
+
+   c. Else the submarket sentence alone, and only when growth is available.
+
+   **HARD RULE, NEVER STATE A DECLINE.** Never state a decrease, never state a
+   change of zero, and never compare to a prior sale unless the change is
+   POSITIVE and at least $25,000. Roughly half of these owners are currently
+   below their last recorded sale price; every one of them receives variant b,
+   with no comparison of any kind. A near-flat change is also barred, which is
+   what the $25,000 floor is for: "up about $3,000 from its 2024 sale" reads as
+   a bad investment even though the sign is positive. When in doubt, drop to b.
+
+   Value and increase round to the nearest thousand, PSF to the nearest dollar,
+   per Step 2b. `{Month Year}` is the `sale_label`, e.g. `December 2023`.
+   `{Submarket}` is the `submarket_label`, the text before the first semicolon.
+
+   **NEVER ASSERT OWNERSHIP.** No block may say "You own Unit X at Y" or any
+   equivalent in any wording. Our data links the contact to the unit; it does
+   not prove they own it today, and telling someone they own something they may
+   have sold is the fastest way to lose them. "Unit {Unit} currently values at"
+   is a statement about the unit, not about the reader, and that is the line.
+
+   Use the owner's LOWEST unit number per Step 3. If "Unit #" is null or blank,
+   variants a and b cannot resolve; fall to c, and omit the block if growth is
+   null too. Never substitute an ownership claim for a missing unit.
+5. Unit link: `View Your Unit's Market Value` linking to
    `https://storagecondoking.com/projects/{URL-encoded Project}?tab=market-value&utm_source=drip&utm_campaign=bmv-owner-1`
    URL-encode the project name exactly as it appears in "01 - Projects",
    normalizing en dashes and em dashes to hyphens first per the repo join
-   convention.
-4. Comps paragraph: live comps from their project and submarket, unit value
-   tracking, quarterly market reports, and a listing platform when they are
-   ready to sell.
-5. Report link: `Download the Q2 2026 Florida Market Report` linking to the
-   report URL above.
-6. Bonita section, PRICING LED, in TWO blocks. The math is the pitch: lead with
-   the spread between what the developer is asking and what the unit is worth,
-   then the product and scarcity detail. Will's voice, no hype words such as
-   "incredible" or "unmatched", no em dashes or en dashes.
+   convention. The link ships even when the personalized sentence was omitted.
 
-   First block, the pricing math:
+#### BLOCK 2. Bonita, ONE paragraph
 
-   `We are also representing Bonita Motor Vault in Bonita Springs, and the pre-construction math is the part worth your attention. The developer is asking $540,000, or $480 per square foot, on a 1,125 square foot unit. Our valuation puts that same unit at $671,000, or $597 per square foot. That is $131,000 of day one equity and a 19.6 percent discount to market, earned at contract before a shovel moves. The submarket has compounded at 10 percent a year, with 35 sales in the trailing year at a $560 median.`
+One paragraph, then the listing link. Every dollar and percent is a live value
+from Step 2, never hardcoded. The numbers below are what the data happened to
+say on 2026-08-16 and are illustration only:
 
-   Second block, the product and scarcity detail:
+`We are also representing Bonita Motor Vault in Bonita Springs, where the developer is asking $540,000 or $480 per square foot against our $671,000 valuation, which is $131,000 of day one equity at a 19.6 percent discount to market, earned at contract before a shovel moves. Happy to answer anything about unit values or about Bonita. Just reply.`
 
-   `Buildings 1 and 2 released 21 of the 58 deeded units, 20 to 21 foot ceilings, mezzanines, Category 5 concrete in Flood Zone X. The Founding Owner Program is capped at 10 positions and 5 are left. Founding pricing ends when those fill. Groundbreaking is Q3 2026 with 2027 delivery.`
+Then the listing link, exactly `See the Bonita Motor Vault listing`, pointing to
+`https://storagecondoking.com/projects/Bonita%20Motor%20Vault?utm_source=drip&utm_campaign=bmv-owner-1`
 
-   EVERY dollar, PSF, percent and count above is a live value from Step 2. The
-   shapes are models, not scripts, and the numbers shown are what the data
-   happened to say on 2026-08-15. Never carry them forward. Per the Step 2 NULL
-   RULE, drop any sentence whose figure comes back null and note it in the run
-   report.
-7. Call to action, exactly:
-   `Take a look at the listing and reply if you want me to hold a unit for you.`
-   followed by the listing link `See the Bonita Motor Vault listing` pointing to
-   `https://storagecondoking.com/projects/Bonita%20Motor%20Vault?utm_source=drip&utm_campaign=bmv-owner-1`
-   This link REPLACES the brochure link. The brochure is no longer linked in the
-   campaign body.
-8. Closing line, exactly:
-   `Happy to answer anything about unit values or about Bonita. Just reply.`
-9. Benefits block: a bold heading `Storage Condo King Unit Benefits` followed
-   by a `<ul>` of exactly these five items. Each bullet carries a BOLD lead-in
-   header, then a colon, then the description, worded exactly as below:
-   - `<b>Live Market Values</b>: current valuations on your unit, covering both
-     pre-sale and re-sale, refreshed as new sales record.`
-   - `<b>Verified Sale Comps</b>: recorded closed sales across every Florida
-     garage and car condo project, not asking prices.`
-   - `<b>Listing Platform</b>: live listings and a marketing distribution
-     network when you are ready to sell.`
-   - `<b>Investment Tools</b>: cash flow models and market research built for
-     owners and investors.`
-   - `<b>Project Intelligence</b>: demographics, amenities, and the new supply
-     pipeline for every project we track.`
-10. Signature block, LAST, exactly these four lines:
+Will's voice, no hype words such as "incredible" or "unmatched", no em dashes or
+en dashes. Per the Step 2 NULL RULE, drop any clause whose figure comes back
+null and note it in the run report; the reply ask in the second sentence always
+ships.
+
+#### BLOCK 3. Benefits
+
+A bold heading `Storage Condo King Unit Benefits` followed by a `<ul>` of
+exactly these five items. Each bullet carries a BOLD lead-in header, then a
+colon, then the description, worded exactly as below:
+
+- `<b>Live Market Values</b>: current valuations on your unit, covering both
+  pre-sale and re-sale, refreshed as new sales record.`
+- `<b>Verified Sale Comps</b>: recorded closed sales across every Florida
+  garage and car condo project, not asking prices, plus quarterly Florida
+  market reports.`
+- `<b>Listing Platform</b>: live listings and a marketing distribution
+  network when you are ready to sell.`
+- `<b>Investment Tools</b>: cash flow models and market research built for
+  owners and investors.`
+- `<b>Project Intelligence</b>: demographics, amenities, and the new supply
+  pipeline for every project we track.`
+
+The `plus quarterly Florida market reports` tail on the second bullet is the
+ONLY place the market report appears now. Its paragraph and download link are
+gone from the body and the report URL is out of the Step 1 gate.
+
+#### BLOCK 4. Signature, then P.S.
+
+Signature block, exactly these four lines:
 
 ```
 Will Butler
@@ -577,24 +689,51 @@ C: 239-898-5840
 E: will.butler@calusainvestments.com
 ```
 
-The campaign signature is the four line Calusa block, matching DRAFT mode, and
-it is the LAST thing in the body. There is NO unsubscribe footer: Will has
-instructed this directly and it is not an oversight, so never add one back.
-These read as personal correspondence from a named person, not as a bulk
-marketing send. Opt-outs are still honored in full through Step 6: a recipient
-who replies asking out goes into "04a - Email Suppression" as 'Opt-Out' and the
-Step 3 cross-check excludes them from this and every future campaign
-permanently.
+Then the P.S., which is now the LAST content block, after the signature:
 
-If "First Name" is null or blank, open with exactly `Hello,` instead of a name.
-If "Unit #" is null or blank, drop the unit clause and say only that {Project}
-is tracked on Storage Condo King with current market values and the closed sales
-behind them. Never substitute an ownership claim for the missing unit.
+`P.S. Bonita Motor Vault breaks ground shortly and founding pricing closes with it, so the window on this one is measured in weeks. Founding owners lock the current ask, pick their building and unit before the rest of the release opens, and hold it with a fully refundable deposit, so there is no cost to reserving while you look at the numbers. The listing link above is the fastest way to do it.`
+
+THREE CONDITIONS, checked from live data on EVERY run, never assumed:
+
+1. **Refundable deposit clause.** The `and hold it with a fully refundable
+   deposit, so there is no cost to reserving while you look at the numbers`
+   clause ships ONLY when "06 - Pre-Sales"."Deposit Refundable" CONFIRMS it
+   (a 'Yes' or equivalent affirmative). If that field is null or does not
+   confirm, DROP the clause and the no-cost phrase, ending that sentence after
+   `before the rest of the release opens.` As of 2026-08-16 Bonita Motor Vault's
+   "Deposit Refundable" is NULL, so the clause is currently DROPPED. Do not ship
+   it back on a guess; it is a contractual claim.
+2. **Groundbreaking urgency.** `breaks ground shortly` and `so the window on
+   this one is measured in weeks` ship ONLY when "Ground Breaking" resolves to a
+   date within 90 days of the run date. The value is TEXT: resolve a quarter
+   string such as `Q3 2026` to the END of that quarter (Q1 Mar 31, Q2 Jun 30,
+   Q3 Sep 30, Q4 Dec 31), and use a parseable date as given. If it resolves
+   further out than 90 days, replace the whole first sentence with:
+
+   `P.S. Bonita Motor Vault breaks ground {Ground Breaking value} and founding pricing closes with it.`
+
+   If it is null, `Delivered`, or does not resolve to a date at all, OMIT the
+   first sentence entirely and open the P.S. at `Founding owners lock the
+   current ask`. As of 2026-08-16 the value is `Q3 2026`, resolving to
+   2026-09-30, which is inside 90 days, so the urgency wording ships.
+3. **Never characterize how much has sold.** No "majority sold", "nearly gone",
+   "most positions taken", "filling fast", or any equivalent, and no position or
+   unit counts at all. The live record shows half the founding positions still
+   open (cap 10, committed 5 as of 2026-08-16), so any stronger claim would be
+   FALSE. Urgency comes ONLY from the groundbreaking deadline and the founding
+   pricing close, both of which are dated facts.
+
+There is NO unsubscribe footer: Will has instructed this directly and it is not
+an oversight, so never add one back. These read as personal correspondence from
+a named person, not as a bulk marketing send. Opt-outs are still honored in full
+through Step 6: a recipient who replies asking out goes into "04a - Email
+Suppression" as 'Opt-Out' and the Step 3 cross-check excludes them from this and
+every future campaign permanently.
 
 Skeleton, with the greeting flush at the start and no leading whitespace:
 
 ```html
-<div>Hi {First Name},</div><div><br></div><div>{warm opening}</div><div><br></div><div>{unit line}</div><div><br></div><div><a href="{unit url}">View Your Unit's Market Value</a></div><div><br></div><div>{comps paragraph}</div><div><br></div><div><a href="{report url}">Download the Q2 2026 Florida Market Report</a></div><div><br></div><div>{bonita pricing math}</div><div><br></div><div>{bonita product and scarcity}</div><div><br></div><div>Take a look at the listing and reply if you want me to hold a unit for you.</div><div><br></div><div><a href="{listing url}">See the Bonita Motor Vault listing</a></div><div><br></div><div>Happy to answer anything about unit values or about Bonita. Just reply.</div><div><br></div><div><b>Storage Condo King Unit Benefits</b></div><ul><li><b>Live Market Values</b>: ...</li></ul><div><br></div><div>Will Butler<br>Calusa Capital Partners<br>C: 239-898-5840<br>E: will.butler@calusainvestments.com</div>
+<div>Hi {First Name},</div><div><br></div><div>I hope your summer is going well.</div><div><br></div><div>{platform sentence}</div><div><br></div><div>{unit value sentence}</div><div><br></div><div><a href="{unit url}">View Your Unit's Market Value</a></div><div><br></div><div>{bonita paragraph}</div><div><br></div><div><a href="{listing url}">See the Bonita Motor Vault listing</a></div><div><br></div><div><b>Storage Condo King Unit Benefits</b></div><ul><li><b>Live Market Values</b>: ...</li></ul><div><br></div><div>Will Butler<br>Calusa Capital Partners<br>C: 239-898-5840<br>E: will.butler@calusainvestments.com</div><div><br></div><div>{p.s.}</div>
 ```
 
 ### Step 5. Log each draft
@@ -630,8 +769,10 @@ remove an Opt-Out row to re-reach someone.
 
 ### Step 7. Report
 
-Report: gate result for both assets, any BMV fact that differed from the stock
-copy, unique recipients drafted this morning, region worked, unique recipients
+Report: gate result for the listing URL, the live Bonita figures used, which
+unit value variant each recipient received (a, b, c, or omitted) as counts, any
+sentence dropped by the NULL RULE, which P.S. conditions resolved on and off,
+any BMV fact that differed from "01 - Projects", unique recipients drafted this morning, region worked, unique recipients
 sent so far against that region's unique owner total, campaign total against
 the eligible unique recipient population (658 as of 2026-08-12), drafts failed,
 and unique recipients remaining. Count PEOPLE, not CRM rows, everywhere in this
@@ -645,7 +786,10 @@ report.
 - EVERY draft in EVERY mode CCs chance.friedman@calusainvestments.com. No exceptions. The old no-CC campaign exception is removed; CAMPAIGN drafts are CC'd exactly like DRAFT drafts.
 - CAMPAIGN mode uses ONE fixed subject, `Your unit at {Project} and a first look at Bonita Motor Vault`. Never apply the DRAFT-mode three-subject rotation to a campaign draft.
 - Campaign bodies NEVER assert ownership. No "You own Unit X at Y" or any equivalent phrasing. The unit is described as carrying a market value on the platform, never as the recipient's property.
-- CAMPAIGN mode never runs while the verification queue still has something to draft, and never before the asset reachability gate passes on BOTH the brochure and the report URL. A failed gate means zero drafts and zero ledger rows that morning.
+- CAMPAIGN mode never runs while the verification queue still has something to draft, and never before the asset reachability gate passes on the Bonita listing URL. That URL is the only gated asset: the report PDF and the brochure are no longer linked in the body, so neither is fetched or gated. A failed gate means zero drafts and zero ledger rows that morning.
+- Campaign bodies NEVER state a decline, a flat change, or a below-purchase value. The unit value sentence compares to a prior sale ONLY when the change is positive and at least $25,000; otherwise it states the current value alone. About half of these owners sit below their last recorded sale, and a mass email that tells them so is unrecoverable.
+- The campaign P.S. never characterizes how much of Bonita has sold. No "majority sold", "nearly gone", "filling fast", and no position counts. Half the founding positions are open, so any such claim would be false. Urgency comes only from the groundbreaking date and the founding pricing close.
+- The refundable deposit clause in the P.S. ships only when "06 - Pre-Sales"."Deposit Refundable" confirms it. It is a contractual claim and is currently DROPPED, because that field is null for Bonita Motor Vault.
 - 50 UNIQUE RECIPIENTS per morning maximum, deduplicated on lower(btrim("Email 1")) BEFORE the limit is applied, never 50 CRM rows. Owners hold multiple units, so a row limit silently under-delivers. One draft and one campaign row per address per campaign, enforced by the unique index on lower("Email") plus "Campaign" in "04e - Campaign Sends". Log the ledger row only after the draft actually exists.
 - Never put a font declaration in a campaign body. Inline `style=` and the legacy `<font>` tag are both outside the connector allowlist and are REJECTED, not stripped, which hard-fails the draft call and aborts the batch. Bodies use `<div>` blocks with `<div><br></div>` spacers and start flush at the greeting.
 - Run NO migrations from this skill. "04e - Campaign Sends" and the public "Marketing Materials" bucket already exist.

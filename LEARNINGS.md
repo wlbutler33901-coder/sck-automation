@@ -489,3 +489,48 @@ NEVER put credentials, API keys, or personal contact details in this file.
   data: greeting, then a summer-pleasantry and one line on what Storage Condo King is and why Will
   is writing, then the unit line. The no-ownership rule covers the new blocks too; nothing in the
   body may say the recipient owns anything.
+- 2026-08-16 | outlook-outreach-drip | change | BMV campaign body restructured to FOUR BLOCKS and
+  cut materially shorter. Block 1 intro and unit value: greeting, the summer warm opener and the
+  platform sentence as two separate paragraphs, ONE personalized unit value sentence, then the unit
+  link. Block 2 Bonita: the whole two-paragraph section collapsed to ONE paragraph carrying ask,
+  ask PSF, valuation, day one equity and discount percent, ending with the reply ask, then the
+  listing link. Block 3 benefits unchanged except the Verified Sale Comps bullet now ends "plus
+  quarterly Florida market reports". Block 4 signature, then the P.S. AFTER it. Deleted outright:
+  the standalone comps paragraph (redundant with the benefits list), the market report paragraph
+  and its download link, the Bonita specs paragraph (buildings released, ceilings, construction,
+  flood zone; the listing page carries it), the standalone "Take a look at the listing" line and the
+  standalone closing line. The report PDF also came OUT of the Step 1 reachability gate; the Bonita
+  listing URL is now the only gated asset, so a bad report URL can no longer block a morning.
+- 2026-08-16 | outlook-outreach-drip | rule | POSITIVE CHANGE ONLY in the unit value sentence.
+  Priority: (a) value plus a comparison to the most recent recorded sale, but ONLY when the change
+  is positive AND at least $25,000; (b) value alone, followed by the submarket compounding sentence
+  when growth is available; (c) the submarket sentence alone; omit the sentence entirely if none
+  resolve. Never state a decline, never state a change of zero, never compare when the gain is
+  under $25,000. Rationale: roughly half these owners currently sit BELOW their last recorded sale
+  price, and a mass email telling an owner their unit is worth less than they paid is unrecoverable;
+  the $25,000 floor also kills near-flat comparisons, which read as a bad investment even when the
+  sign is positive. Sourcing: unit value is "Suite Size (SF)" times "Appraised $ / SF" from
+  "02 - Units"; the prior sale is the most recent row in "03 - Sales" matched on "Project Name" plus
+  "Unit". "Sale Date" is TEXT in mixed formats (1,525 rows M/D/YY, 186 M/D/YYYY as of this date), so
+  parse with a three branch CASE and drop anything unparseable. Some units carry DUPLICATE sale
+  rows, so dedupe on date and price before selecting the latest. Value and increase round to the
+  nearest thousand (NOT the Bonita floor rule, which exists only to reconcile to a published listing
+  page). Submarket growth is "Region Definition".psf_growth_5yr_ann_pct matched on the FULL stored
+  submarket value; NEVER substitute psf_growth_1yr_pct, which is volatile and frequently negative
+  (Naples; Bonita Springs is -3.8 today). Most submarkets are null there, including Tampa; Brandon,
+  so omitting the submarket sentence is the normal case. Label the submarket with the text before
+  the first semicolon: the stored value is a pair like "Tampa; Brandon" and reads wrong in a
+  sentence.
+- 2026-08-16 | outlook-outreach-drip | rule | The campaign P.S. carries THREE conditions checked
+  from live data every run, never assumed. (1) The "fully refundable deposit" clause ships only when
+  "06 - Pre-Sales"."Deposit Refundable" confirms it; that field is NULL for Bonita Motor Vault
+  today, so the clause and the "no cost to reserving" phrase are currently DROPPED and the sentence
+  ends after "before the rest of the release opens." It is a contractual claim and is never shipped
+  on a guess. (2) "breaks ground shortly" and "measured in weeks" ship only when "Ground Breaking"
+  resolves to within 90 days of the run date; the value is TEXT, so resolve a quarter string to the
+  END of that quarter (Q3 2026 to 2026-09-30, which is inside 90 days today, so the urgency wording
+  ships). Further out, state the groundbreaking value plainly instead; null, "Delivered" or
+  unparseable, omit the first sentence entirely. (3) NEVER characterize how much has sold: no
+  "majority sold", "nearly gone", "filling fast", and no position counts, because the live record
+  shows the founding program at cap 10 with 5 committed, so any stronger claim would be false.
+  Urgency comes only from the groundbreaking deadline and the founding pricing close.
