@@ -570,3 +570,14 @@ NEVER put credentials, API keys, or personal contact details in this file.
   Vault so the clause stays absent; never characterize how much has sold. The deeded unit counts in
   the new Block 2 specs sentence describe the RELEASE, not sell-through, and are the only counts
   permitted anywhere in the body.
+- 2026-08-17 | outlook-outreach-drip | data | "02 - Units" "Unit #" is NOT unique per project. Hideout
+  Storage Park (Phase I) holds 38 unit rows collapsing to only 10 distinct "Unit #" values: units 1
+  through 7 each carry FIVE rows with genuinely different sizes (501 to 1,555 SF) and different
+  appraised PSF, so a join on Project plus Unit # fans out and no row can be defended as "their"
+  unit. Every other project in this batch is clean (Bonita Breeze 25/25, Car Collective 10/10,
+  Classic Ultra Tamiami Trail 24/24, The Motor Enclave 238/238). HANDLING: when the (Project,
+  Unit #) join returns more than one row, do NOT pick one. Treat the unit value as unavailable, fall
+  to the submarket variant, and report it. The 5:15 run independently reached the same outcome for
+  these 8 recipients, which is the rule working. FIX BELONGS UPSTREAM: Hideout needs a building or
+  phase qualifier on "Unit #", or a deduplication pass, before its owners can receive unit level
+  numbers. Until then any campaign touching Hideout ships submarket color only.
