@@ -534,3 +534,39 @@ NEVER put credentials, API keys, or personal contact details in this file.
   "majority sold", "nearly gone", "filling fast", and no position counts, because the live record
   shows the founding program at cap 10 with 5 committed, so any stronger claim would be false.
   Urgency comes only from the groundbreaking deadline and the founding pricing close.
+- 2026-08-17 | outlook-outreach-drip | change | BMV campaign body refined again. NEW SUBJECT:
+  "Your {Project} unit value, plus founding pricing at Bonita Motor Vault", with a leading "The "
+  stripped from the project name in the SUBJECT ONLY so the possessive reads naturally ("Your Motor
+  Enclave unit value"); in-body references keep the full stored name. OPENING MERGED: the greeting
+  stays its own block, and the warm opener, the platform sentence and the personalized unit value
+  sentence now run together as ONE paragraph instead of four stacked short ones, which read as a
+  form letter. LINK ARROWS: both anchors end with a space and the unicode right arrow, ordinary text
+  inside the anchor, which survives the connector allowlist; never "->" and never an entity or
+  styling. BONITA gained ONE sentence between the pricing sentence and the reply ask, carrying
+  release counts from "Developer Listing Comments" plus clear height, mezzanine, construction and
+  flood zone from "01 - Projects"."Key Amenities", "Construction Materials" and "Flood Zone". Those
+  stored values are CATALOG LABELS for the platform UI, so render them as plain prose ("18'+ Clear
+  Heights" to "clear heights over 18 feet", "Mezzanine Capabilities" to "mezzanines", "Block" to
+  "block construction") and never paste a canonical label into copy. This is one sentence, not the
+  deleted specs paragraph returning. P.S. cut to two sentences.
+- 2026-08-17 | outlook-outreach-drip | rule | Trailing-year market color extends the submarket
+  sentence only: "with {n} units trading in the trailing year at a {$median} per square foot
+  median." SOURCE IS "Region Definition" (unit_sales_ttm, median_psf_ttm), the same row that
+  supplies psf_growth_5yr_ann_pct, so growth, count and median are internally consistent.
+  get_market_segmentation_v2 was evaluated and REJECTED for this clause: it exposes avg_psf only,
+  with no median at all, and its rolling window returns a different count (42 versus 44 for
+  Tampa; Brandon), so mixing sources would print a count and a median that disagree. The clause is
+  additive and hangs off the compounding sentence, so a null growth figure drops the color with it.
+  CONSEQUENCE worth knowing: psf_growth_5yr_ann_pct is null for most submarkets including
+  Tampa; Brandon, so the entire submarket sentence, color included, does not ship for The Motor
+  Enclave owners even though the count and median exist. The median is a PSF median, not a price,
+  and the copy says "per square foot median" so it can never be read as a median sale price.
+- 2026-08-17 | outlook-outreach-drip | rule | Shorter P.S., two sentences: "Founding pricing closes
+  when Bonita breaks ground, which is {weeks away | on {Ground Breaking}}. The listing link above is
+  the fastest way to lock the current ask and pick your unit." Conditions carry forward unchanged:
+  "weeks away" only when "Ground Breaking" resolves to within 90 days (Q3 2026 resolves to
+  2026-09-30, inside the window today), otherwise state the value; the refundable deposit claim
+  returns only if "Deposit Refundable" confirms it, and that field is still NULL for Bonita Motor
+  Vault so the clause stays absent; never characterize how much has sold. The deeded unit counts in
+  the new Block 2 specs sentence describe the RELEASE, not sell-through, and are the only counts
+  permitted anywhere in the body.

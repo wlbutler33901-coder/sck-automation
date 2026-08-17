@@ -314,6 +314,10 @@ with p as (
          "Ground Breaking" as gb, "Deposit Refundable" as deposit_refundable,
          "Developer Listing Comments" as listing_comments
   from "06 - Pre-Sales" where "Project" = 'Bonita Motor Vault'
+), j as (
+  select "Key Amenities" as amenities, "Construction Materials" as materials,
+         "Flood Zone" as flood_zone, "Units" as project_units
+  from "01 - Projects" where "Project Name" = 'Bonita Motor Vault'
 ), r as (
   select (get_presale_appraisal_data('Bonita Motor Vault') -> 'project_context') as pc
 )
@@ -325,8 +329,9 @@ select p.sf, p.ask_psf, p.val_psf,
        p.gb, p.deposit_refundable,
        p.units, p.cap, p.committed, (p.cap - p.committed) as positions_left,
        p.listing_comments,
+       j.amenities, j.materials, j.flood_zone, j.project_units,
        (r.pc ->> 'annual_appreciation_pct') as annual_growth_pct
-from p, r;
+from p, j, r;
 ```
 
 Field sourcing, exactly:
@@ -338,14 +343,15 @@ Field sourcing, exactly:
 - "Ground Breaking" and "Deposit Refundable" come from "06 - Pre-Sales" and
   drive the two conditional clauses in the P.S. per Step 4 Block 4.
 
-**REPORT ONLY, NEVER COPY.** `units`, `cap`, `committed`, `positions_left`,
-`listing_comments` and `annual_growth_pct` are pulled for the run report and
-for cross-checking against "01 - Projects". NONE of them may appear in a
-campaign body. The buildings-released and ceilings specs, the founding position
-counts, the submarket growth and the trailing sales figures were all cut from
-the Bonita copy on 2026-08-16: the listing page carries the specs, and the
-scarcity counts are barred outright by the no-characterizing-sales rule in
-Block 4.
+- `amenities`, `materials`, `flood_zone` and `project_units` come from
+  "01 - Projects" and feed the Block 2 specs sentence. `listing_comments`
+  supplies the release counts in that same sentence.
+
+**REPORT ONLY, NEVER COPY.** `cap`, `committed`, `positions_left` and
+`annual_growth_pct` are pulled for the run report and for cross-checking. NONE
+of them may appear in a campaign body. The founding position counts are barred
+outright by the no-characterizing-sales rule in Block 4, and the Bonita
+submarket growth belongs to the listing page, not to this email.
 
 **ROUNDING, follow exactly or the email will disagree with the listing page.**
 FLOOR every dollar figure to the nearest $1,000. Compute the discount percent
@@ -404,7 +410,9 @@ select u.project, u.unit,
        s.sale_price,
        round((u.value_raw - s.sale_price) / 1000) * 1000 as increase,
        split_part(pr."Submarket", ';', 1)   as submarket_label,
-       rd.psf_growth_5yr_ann_pct            as submarket_growth_pct
+       rd.psf_growth_5yr_ann_pct            as submarket_growth_pct,
+       rd.unit_sales_ttm                    as submarket_sales_ttm,
+       rd.median_psf_ttm                    as submarket_median_psf_ttm
 from u
 left join s  on s.project_name = u.project and s.unit = btrim(u.unit)
 left join "01 - Projects" pr on pr."Project Name" = u.project
@@ -439,6 +447,15 @@ Sourcing and mechanics, exactly:
   2026-08-16), and Block 1 may never carry a decline. When
   psf_growth_5yr_ann_pct is null, the submarket sentence is simply omitted;
   most submarkets are null today, so omission is the normal case, not a fault.
+- Trailing-year color (`unit_sales_ttm`, `median_psf_ttm`) comes from the SAME
+  "Region Definition" row, which is the segmentation KPI table the Market
+  Research pages read. Taking all three figures from one row keeps growth,
+  count and median internally consistent. `get_market_segmentation_v2` was
+  evaluated on 2026-08-17 and rejected as the source for this clause: it
+  exposes `avg_psf` only, with no median at all, and its rolling window returns
+  a slightly different count (42 versus 44 for Tampa; Brandon), so mixing the
+  two would print a count and a median that disagree. Use it only to
+  cross-check, never to compose.
 
 ### Step 3. Select the batch
 
@@ -517,7 +534,14 @@ he is on the verification drip, so he sees the outreach and can pick up replies.
 
 **SUBJECT, always exactly:**
 
-`Your unit at {Project} and a first look at Bonita Motor Vault`
+`Your {Project} unit value, plus founding pricing at Bonita Motor Vault`
+
+**SUBJECT ONLY: strip a leading `The `.** In the subject line, and NOWHERE else,
+drop a leading `The ` from the project name so the possessive reads naturally.
+`The Motor Enclave` becomes `Your Motor Enclave unit value, plus founding pricing
+at Bonita Motor Vault`. Strip only a leading `The ` followed by a space; leave
+the name otherwise untouched, and leave every in-body reference to the project at
+its full stored name.
 
 **SUBJECT GUARD.** CAMPAIGN mode uses this ONE fixed subject for every draft and
 NEVER the DRAFT-mode three-subject rotation. Do not vary it, do not alternate it,
@@ -567,11 +591,13 @@ through this connector. If Will needs Aptos, it has to come from a mailbox or
 client setting, not from this skill.
 
 **THIS IS THE COMPLETE COPY SPECIFICATION FOR CAMPAIGN MODE.** Everything from
-here to the end of Step 4 is the whole spec: the fixed subject and its guard, the
-CC, the no-ownership rule, the greeting fallback, the FOUR BLOCK body, the
-conditional unit value sentence, the one paragraph Bonita section sourced live
-per Step 2 with no hardcoded figures, the bold-header bullets, the four line
-signature, the conditional P.S., no unsubscribe footer, and no font styling ever.
+here to the end of Step 4 is the whole spec: the fixed subject with its leading
+`The ` strip and its guard, the CC, the no-ownership rule, the greeting fallback,
+the FOUR BLOCK body, the merged single-paragraph opening, the conditional unit
+value sentence with its trailing-year market color, the arrow on both link
+anchors, the one paragraph three sentence Bonita section sourced live per Step 2
+with no hardcoded figures, the bold-header bullets, the four line signature, the
+conditional two sentence P.S., no unsubscribe footer, and no font styling ever.
 Any future edit must PRESERVE EVERY ITEM. When changing one line, re-read the
 whole block and carry the rest forward; several rounds of fixes have been lost by
 editing one item in isolation.
@@ -586,16 +612,20 @@ paragraph). Do not restore any of them.
 
 #### BLOCK 1. Intro and unit value
 
-1. Greeting: `Hi {First Name},` when a first name exists, otherwise exactly
-   `Hello,`.
-2. Warm opener, its own paragraph, exactly:
+**ONE PARAGRAPH, NOT FOUR.** The greeting is its own block, and EVERYTHING else
+in Block 1 before the link is a SINGLE paragraph: the warm opener, the platform
+sentence and the personalized closing sentence run together in one `<div>`. The
+four short stacked paragraphs this replaced on 2026-08-17 read as a form letter;
+one paragraph reads as a note. Never split them apart again.
 
-   `I hope your summer is going well.`
-3. Platform sentence, its own paragraph, exactly:
+1. Greeting, its own block: `Hi {First Name},` when a first name exists,
+   otherwise exactly `Hello,`.
+2. ONE paragraph, opening exactly:
 
-   `I run Storage Condo King, the market platform that tracks every garage and car condo project in Florida, and I wanted to make sure the numbers on {Project} were in front of you.`
-4. ONE personalized sentence, from the Step 2b data, chosen by this priority.
-   Take the FIRST variant that resolves and omit the block ENTIRELY if none do:
+   `I hope your summer is going well. I run Storage Condo King, the market platform that tracks every garage and car condo project in Florida, and I wanted to put the numbers on {Project} in front of you.`
+3. Then the personalized closing sentence, APPENDED TO THAT SAME PARAGRAPH after
+   a single space, never as a new block. Chosen by this priority; take the FIRST
+   variant that resolves and append nothing at all if none do:
 
    a. Unit has an appraised value AND a most recent recorded sale AND the change
       is POSITIVE and at least $25,000:
@@ -606,12 +636,24 @@ paragraph). Do not restore any of them.
 
       `Unit {Unit} currently values at {$value}, or {$psf} per square foot.`
 
-      Follow it, in the SAME paragraph, with the submarket sentence when
-      `submarket_growth_pct` is not null:
-
-      `Values in the {Submarket} submarket have compounded at {x} percent a year.`
+      Follow it, in the same paragraph, with the submarket sentence when
+      `submarket_growth_pct` is not null.
 
    c. Else the submarket sentence alone, and only when growth is available.
+
+   **THE SUBMARKET SENTENCE**, with trailing-year color when available:
+
+   `Values in the {Submarket} submarket have compounded at {x} percent a year, with {n} units trading in the trailing year at a {$median} per square foot median.`
+
+   The stored median is a PSF median, not a price, so the copy says `per square
+   foot median` and never implies a median sale price.
+
+   The trailing-year clause is OPTIONAL and additive. Ship it only when BOTH
+   `submarket_sales_ttm` and `submarket_median_psf_ttm` come back non-null; if
+   either is null, end the sentence after `a year.` and note the omission in the
+   run report. The clause never ships on its own: it hangs off the compounding
+   sentence, so a null growth figure drops the whole sentence including the
+   color.
 
    **HARD RULE, NEVER STATE A DECLINE.** Never state a decrease, never state a
    change of zero, and never compare to a prior sale unless the change is
@@ -634,21 +676,51 @@ paragraph). Do not restore any of them.
    Use the owner's LOWEST unit number per Step 3. If "Unit #" is null or blank,
    variants a and b cannot resolve; fall to c, and omit the block if growth is
    null too. Never substitute an ownership claim for a missing unit.
-5. Unit link: `View Your Unit's Market Value` linking to
+4. Unit link, anchor text exactly `View Your Unit's Market Value →`, linking to
    `https://storagecondoking.com/projects/{URL-encoded Project}?tab=market-value&utm_source=drip&utm_campaign=bmv-owner-1`
    URL-encode the project name exactly as it appears in "01 - Projects",
    normalizing en dashes and em dashes to hyphens first per the repo join
    convention. The link ships even when the personalized sentence was omitted.
 
+**LINK ARROWS.** Both anchors in the body end with a space and the UNICODE RIGHT
+ARROW `→` (U+2192). Not `->`, not `&gt;`, not `&rarr;` as an entity, not an
+image, and not a styled pseudo-element. It is ordinary text inside the anchor,
+so it survives the connector allowlist exactly as the label does. Verified
+against the connector on 2026-08-17 by reading a draft back.
+
 #### BLOCK 2. Bonita, ONE paragraph
 
-One paragraph, then the listing link. Every dollar and percent is a live value
-from Step 2, never hardcoded. The numbers below are what the data happened to
-say on 2026-08-16 and are illustration only:
+One paragraph of THREE sentences, then the listing link. Every dollar, percent
+and count is a live value from Step 2, never hardcoded. The numbers below are
+what the data happened to say on 2026-08-17 and are illustration only:
 
-`We are also representing Bonita Motor Vault in Bonita Springs, where the developer is asking $540,000 or $480 per square foot against our $671,000 valuation, which is $131,000 of day one equity at a 19.6 percent discount to market, earned at contract before a shovel moves. Happy to answer anything about unit values or about Bonita. Just reply.`
+`We are also representing Bonita Motor Vault in Bonita Springs, where the developer is asking $540,000 or $480 per square foot against our $671,000 valuation, which is $131,000 of day one equity at a 19.6 percent discount to market, earned at contract before a shovel moves. Buildings 1 and 2 released 21 of the 58 deeded units, with clear heights over 18 feet, mezzanines, and block construction in Flood Zone X. Happy to answer anything about unit values or about Bonita. Just reply.`
 
-Then the listing link, exactly `See the Bonita Motor Vault listing`, pointing to
+The MIDDLE sentence is the property and market intel, added 2026-08-17. It sits
+between the pricing sentence and the reply ask, and it is ONE sentence: this is
+NOT the deleted specs paragraph coming back, and it never grows into a second
+block. Source it live:
+
+- Release counts (`{n} of the {total} deeded units`) come from
+  "06 - Pre-Sales"."Developer Listing Comments", which states the initial
+  release, cross-checked against "# of Units" and "01 - Projects"."Units" for
+  the total. As of 2026-08-17 that reads "Initial release is Buildings 1 and 2,
+  21 of the 58 units."
+- Clear height, mezzanine and any other spec come from
+  "01 - Projects"."Key Amenities", construction from
+  "01 - Projects"."Construction Materials", and the zone from
+  "01 - Projects"."Flood Zone".
+- **Render the amenities as PLAIN PROSE, never the canonical strings.** The
+  stored values are catalog labels for the platform UI, not sentence fragments.
+  `18'+ Clear Heights` becomes `clear heights over 18 feet`,
+  `Mezzanine Capabilities` becomes `mezzanines`, and `Block` becomes
+  `block construction`. Never paste a canonical label straight into the copy.
+- OMIT any clause whose source is null, keeping the sentence grammatical, and
+  note the omission in the run report. If the release counts are unavailable,
+  drop the whole sentence rather than leading with the specs.
+
+Then the listing link, anchor text exactly `See the Bonita Motor Vault listing →`,
+pointing to
 `https://storagecondoking.com/projects/Bonita%20Motor%20Vault?utm_source=drip&utm_campaign=bmv-owner-1`
 
 Will's voice, no hype words such as "incredible" or "unmatched", no em dashes or
@@ -689,39 +761,41 @@ C: 239-898-5840
 E: will.butler@calusainvestments.com
 ```
 
-Then the P.S., which is now the LAST content block, after the signature:
+Then the P.S., which is the LAST content block, after the signature. It was cut
+to roughly half its length on 2026-08-17; TWO sentences, not four:
 
-`P.S. Bonita Motor Vault breaks ground shortly and founding pricing closes with it, so the window on this one is measured in weeks. Founding owners lock the current ask, pick their building and unit before the rest of the release opens, and hold it with a fully refundable deposit, so there is no cost to reserving while you look at the numbers. The listing link above is the fastest way to do it.`
+`P.S. Founding pricing closes when Bonita breaks ground, which is weeks away. The listing link above is the fastest way to lock the current ask and pick your unit.`
 
 THREE CONDITIONS, checked from live data on EVERY run, never assumed:
 
-1. **Refundable deposit clause.** The `and hold it with a fully refundable
-   deposit, so there is no cost to reserving while you look at the numbers`
-   clause ships ONLY when "06 - Pre-Sales"."Deposit Refundable" CONFIRMS it
-   (a 'Yes' or equivalent affirmative). If that field is null or does not
-   confirm, DROP the clause and the no-cost phrase, ending that sentence after
-   `before the rest of the release opens.` As of 2026-08-16 Bonita Motor Vault's
-   "Deposit Refundable" is NULL, so the clause is currently DROPPED. Do not ship
-   it back on a guess; it is a contractual claim.
-2. **Groundbreaking urgency.** `breaks ground shortly` and `so the window on
-   this one is measured in weeks` ship ONLY when "Ground Breaking" resolves to a
-   date within 90 days of the run date. The value is TEXT: resolve a quarter
-   string such as `Q3 2026` to the END of that quarter (Q1 Mar 31, Q2 Jun 30,
-   Q3 Sep 30, Q4 Dec 31), and use a parseable date as given. If it resolves
-   further out than 90 days, replace the whole first sentence with:
+1. **Groundbreaking timing.** `which is weeks away` ships ONLY when
+   "Ground Breaking" resolves to a date within 90 days of the run date. The
+   value is TEXT: resolve a quarter string such as `Q3 2026` to the END of that
+   quarter (Q1 Mar 31, Q2 Jun 30, Q3 Sep 30, Q4 Dec 31), and use a parseable
+   date as given. If it resolves further out than 90 days, state the date
+   instead:
 
-   `P.S. Bonita Motor Vault breaks ground {Ground Breaking value} and founding pricing closes with it.`
+   `P.S. Founding pricing closes when Bonita breaks ground, which is {Ground Breaking value}. The listing link above is the fastest way to lock the current ask and pick your unit.`
 
-   If it is null, `Delivered`, or does not resolve to a date at all, OMIT the
-   first sentence entirely and open the P.S. at `Founding owners lock the
-   current ask`. As of 2026-08-16 the value is `Q3 2026`, resolving to
-   2026-09-30, which is inside 90 days, so the urgency wording ships.
+   If it is null, `Delivered`, or does not resolve to a date at all, drop the
+   `, which is ...` clause and end the first sentence at `breaks ground.`
+   As of 2026-08-17 the value is `Q3 2026`, resolving to 2026-09-30, which is
+   inside 90 days, so `weeks away` ships.
+2. **Refundable deposit clause.** A refundable-deposit claim ships ONLY when
+   "06 - Pre-Sales"."Deposit Refundable" CONFIRMS it (a 'Yes' or equivalent
+   affirmative), appended to the second sentence as
+   `, and the deposit is fully refundable`. If that field is null or does not
+   confirm, it does not appear at all. As of 2026-08-17 Bonita Motor Vault's
+   "Deposit Refundable" is NULL, so the clause is ABSENT. Do not ship it back on
+   a guess; it is a contractual claim.
 3. **Never characterize how much has sold.** No "majority sold", "nearly gone",
-   "most positions taken", "filling fast", or any equivalent, and no position or
-   unit counts at all. The live record shows half the founding positions still
-   open (cap 10, committed 5 as of 2026-08-16), so any stronger claim would be
-   FALSE. Urgency comes ONLY from the groundbreaking deadline and the founding
-   pricing close, both of which are dated facts.
+   "most positions taken", "filling fast", or any equivalent, and no founding
+   position counts at all. The live record shows half the founding positions
+   still open (cap 10, committed 5 as of 2026-08-17), so any stronger claim
+   would be FALSE. Urgency comes ONLY from the groundbreaking date and the
+   founding pricing close, both of which are dated facts. The deeded unit counts
+   in the Block 2 specs sentence are a description of the release, not a
+   sell-through claim, and are the only counts permitted anywhere in the body.
 
 There is NO unsubscribe footer: Will has instructed this directly and it is not
 an oversight, so never add one back. These read as personal correspondence from
@@ -733,7 +807,7 @@ every future campaign permanently.
 Skeleton, with the greeting flush at the start and no leading whitespace:
 
 ```html
-<div>Hi {First Name},</div><div><br></div><div>I hope your summer is going well.</div><div><br></div><div>{platform sentence}</div><div><br></div><div>{unit value sentence}</div><div><br></div><div><a href="{unit url}">View Your Unit's Market Value</a></div><div><br></div><div>{bonita paragraph}</div><div><br></div><div><a href="{listing url}">See the Bonita Motor Vault listing</a></div><div><br></div><div><b>Storage Condo King Unit Benefits</b></div><ul><li><b>Live Market Values</b>: ...</li></ul><div><br></div><div>Will Butler<br>Calusa Capital Partners<br>C: 239-898-5840<br>E: will.butler@calusainvestments.com</div><div><br></div><div>{p.s.}</div>
+<div>Hi {First Name},</div><div><br></div><div>I hope your summer is going well. I run Storage Condo King, the market platform that tracks every garage and car condo project in Florida, and I wanted to put the numbers on {Project} in front of you. {unit value sentence}</div><div><br></div><div><a href="{unit url}">View Your Unit's Market Value →</a></div><div><br></div><div>{bonita paragraph}</div><div><br></div><div><a href="{listing url}">See the Bonita Motor Vault listing →</a></div><div><br></div><div><b>Storage Condo King Unit Benefits</b></div><ul><li><b>Live Market Values</b>: ...</li></ul><div><br></div><div>Will Butler<br>Calusa Capital Partners<br>C: 239-898-5840<br>E: will.butler@calusainvestments.com</div><div><br></div><div>{p.s.}</div>
 ```
 
 ### Step 5. Log each draft
@@ -784,7 +858,8 @@ report.
 
 - Never send email directly. Create drafts only. Will presses send.
 - EVERY draft in EVERY mode CCs chance.friedman@calusainvestments.com. No exceptions. The old no-CC campaign exception is removed; CAMPAIGN drafts are CC'd exactly like DRAFT drafts.
-- CAMPAIGN mode uses ONE fixed subject, `Your unit at {Project} and a first look at Bonita Motor Vault`. Never apply the DRAFT-mode three-subject rotation to a campaign draft.
+- CAMPAIGN mode uses ONE fixed subject, `Your {Project} unit value, plus founding pricing at Bonita Motor Vault`, with a leading `The ` stripped from the project name in the SUBJECT ONLY. Never apply the DRAFT-mode three-subject rotation to a campaign draft.
+- Both body link anchors end with a space and the unicode right arrow `→`. Never `->`, never an entity, never styling.
 - Campaign bodies NEVER assert ownership. No "You own Unit X at Y" or any equivalent phrasing. The unit is described as carrying a market value on the platform, never as the recipient's property.
 - CAMPAIGN mode never runs while the verification queue still has something to draft, and never before the asset reachability gate passes on the Bonita listing URL. That URL is the only gated asset: the report PDF and the brochure are no longer linked in the body, so neither is fetched or gated. A failed gate means zero drafts and zero ledger rows that morning.
 - Campaign bodies NEVER state a decline, a flat change, or a below-purchase value. The unit value sentence compares to a prior sale ONLY when the change is positive and at least $25,000; otherwise it states the current value alone. About half of these owners sit below their last recorded sale, and a mass email that tells them so is unrecoverable.
