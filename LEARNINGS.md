@@ -581,3 +581,51 @@ NEVER put credentials, API keys, or personal contact details in this file.
   these 8 recipients, which is the rule working. FIX BELONGS UPSTREAM: Hideout needs a building or
   phase qualifier on "Unit #", or a deduplication pass, before its owners can receive unit level
   numbers. Until then any campaign touching Hideout ships submarket color only.
+- 2026-08-18 | sck-morning-digest | fixed | The fold conflict logged 2026-08-17 (skill Step 5 says fold
+  learning rows into LEARNINGS.md and push, the LEARNINGS contract forbids unattended cloud runs from
+  pushing) was resolved in the opposite direction: the scheduled task carries an explicitly designated
+  feature branch, which is an authorized push target and never touches main, so the ban is not engaged.
+  RULE FOR FUTURE RUNS: a digest that folds MUST name the branch in the brief WARNINGS section, because
+  the fold reaches nobody until that branch is merged; digested_at does not destroy the rows, which stay
+  recoverable by querying change_type = 'learning'.
+- 2026-08-18 | sck-project-enrichment | blocker | The Step 5b outreach queue selected a BROKER for a
+  developer intro and Will deleted the draft: staged id 80 Coral International Realty (Robert Zinzell)
+  was built to the broker-fallback rung of the Step 1 source ladder, which completes a contact card but
+  does NOT make the row a developer. Outreach selection must check HOW the card was sourced, not just
+  that Email is non-null: skip any row whose Contact or Comments label the person a broker, agent or
+  brokerage, unless that person is also an owner-principal of the project. Seven staged rows match, and
+  one (id 65 Jessica Russo, BROKER/OWNER) had already been sent an intro on 2026-08-16.
+- 2026-08-19 | sck-project-enrichment | blocker | "05 - Developers" holds a clean 52 row duplicate block,
+  rows #148-#199 byte-identical to #96-#147 including Comments, from a promotion or import job that ran
+  twice; 198 rows now cover 118 distinct names. Live tables are read-only to that routine, so it is
+  logged as a live_status_suggestion for Will to fix by deleting the higher numbered half. Until it is
+  fixed, treat any count of live developers as double counted and do NOT let Step 4d auto-retire staged
+  rows against it.
+- 2026-08-19 | sck-project-enrichment | note | Step 4d rule 3 retires a staged developer on an exact live
+  name match, which becomes destructive the moment the live table is polluted: 42 of 44 active staged
+  rows matched live purely because of the duplicate promotion block. Before bulk-retiring against live,
+  sanity check the live match set for duplication, and if it is corrupted log a merge_recommendation and
+  defer the retirement rather than executing it.
+- 2026-08-19 | sck-project-enrichment | note | "01 - Project - New" carries 37 active rows on Project
+  Status values that do not exist in "01 - Projects": 35 on "Planned" and 2 on "Stalled" against the live
+  vocabulary of Pre-Development, Developer Sale, Under Construction, Completed, Dead. These rows fall out
+  of any rollup grouped by the live vocabulary and the outreach priority ladder never matches them.
+  Planned most likely maps to Pre-Development; Stalled has no clean target. Not auto-remapped, this is a
+  vocabulary decision for Will.
+- 2026-08-19 | sck-project-enrichment | fixed | The geocoding path that works in this sandbox is the US
+  Census onelineaddress geocoder (geocoding.geo.census.gov, benchmark Public_AR_Current, no key); it
+  reproduced stored coordinates exactly on a known address. Nominatim returns zero results for every
+  query through the egress proxy, so do not use it. Census still misses new or private roads, which is
+  why 5705 Stables Way Alpharetta, 220 Mac Gray Rd Mooresville and 55 Cessna Way St Augustine remain
+  ungeocoded.
+- 2026-08-19 | sck-project-enrichment | note | Bot gating is now the dominant cause of broker card gaps,
+  not missing data: sarasotawarehouses.com and saulscre.com both answer automated requests with an HTTP
+  202 challenge stub under 200 bytes, showcase.com 403s, and islandbreezerealestate.com returns HTTP 200
+  with a 114 byte shell. Recover these contacts from the DEVELOPER project site instead, which is usually
+  open. Also pencocommercial.com now RESOLVES (403 bot gate) where it DNS-failed on 2026-08-03, so it is
+  worth one fresh browser attempt.
+- 2026-08-19 | sck-project-enrichment | note | The 14 day expiry on unsent legacy drafts is doing real
+  work and is not bookkeeping: an outreach selection existed only because the 2026-08-04 draft to 5th
+  Avenue Car Club expired unsent and returned that developer to the rotation. Expired rows are correctly
+  excluded from the Status in (queued,sent,draft) exclusion test, so a developer whose draft was never
+  sent gets a genuine second attempt rather than being retired from outreach forever.
