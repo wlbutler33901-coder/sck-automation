@@ -581,3 +581,61 @@ NEVER put credentials, API keys, or personal contact details in this file.
   these 8 recipients, which is the rule working. FIX BELONGS UPSTREAM: Hideout needs a building or
   phase qualifier on "Unit #", or a deduplication pass, before its owners can receive unit level
   numbers. Until then any campaign touching Hideout ships submarket color only.
+- 2026-08-20 | sck-project-scanner | note | "Scan Activity Log" timestamps live in a column named
+  ts, NOT created_at, and neither "01 - Projects" nor "01 - Project - New" exposes an id column, so
+  any SELECT, WHERE or RETURNING naming created_at on the log table or id on a project table dies
+  with Postgres 42703 and costs a retry; use ts for log-row windowing and identify project rows by
+  "Project Name" plus "County". The two Development Scanner tables DO have created_at, which is what
+  the Step 3b cross-feed queries correctly use, so the column name genuinely differs by table.
+- 2026-08-20 | sck-project-enrichment | blocker | Step 4c/4d applied literally would retire the
+  ENTIRE active staging queue: live "05 - Developers" is a promoted MIRROR of "05 - Developers -
+  New", not an independent directory of established firms, and all 42 active staged rows match a
+  live row on exact normalized name AND are byte-identical across Contact, Office, Cell, Email and
+  Website. Retired rows drop out of the contact card budget, the re-verification pool and outreach
+  selection, so one compliant pass would silently end developer enrichment. Withhold the retirement,
+  annotate the linkage in Comments, and escalate until either the promotion job stops mirroring or
+  Step 4c is rewritten to exempt a promoted-mirror match.
+- 2026-08-20 | all routines | note | Scan Activity Log change_type has drifted exactly as run_type
+  did before it was hard-coded: 59 distinct values now exist and 30 of them have been used exactly
+  once (audit_note vs audit_result vs audit_finding vs audit_summary vs audit_complete vs audit_flag
+  vs audit_clean, and six variants of the outreach and status families). Consuming digests group by
+  change_type, so singletons are invisible. Reuse the established values only: field_enriched,
+  enrichment_gap, contact_verified, contact_corrected, merge_recommendation, near_match_flag,
+  dedupe_merge, role_correction, broker_lead_flag, status_change, status_check,
+  live_status_suggestion, audit_result, outreach_queued, outreach_skipped, outreach_sent_confirmed,
+  outreach_expired, learning, run_started, run_summary, skill_out_of_date.
+- 2026-08-20 | sck-project-enrichment | note | The developer corporate site is not always the top
+  rung of the source ladder. AR Coleman (arcoleman.com) publishes no phone, email or named person on
+  its home or contact page, while the PROJECT site garageslakeoconee.com credits the developer by
+  name and publishes the dedicated agent plus both phone numbers, which re-verified the whole card.
+  Read the project site before logging an enrichment_gap against a developer whose corporate site is
+  thin.
+- 2026-08-20 | sck-project-enrichment | workaround | Two fetch traps confirmed. custombuildersfl.com
+  serves an INVALID self-signed certificate over https and returns HTTP 200 over plain http, so the
+  stored http:// Website URL is correct and must never be upgraded to https. toyvaultfortmyers.com
+  DNS-fails inside WebFetch (getaddrinfo ETIMEOUT) while a browser-UA curl returns HTTP 200. Fall
+  back to a raw fetch with a browser user agent, and pass the proxy CA bundle, before declaring any
+  site dead.
+- 2026-08-20 | sck-project-enrichment | note | Broker source status as of this date:
+  islandbreezerealestate.com is a PARKED domain (114 byte stub redirecting to /lander) even though
+  the rick@ mailbox on that domain is the live published project contact, so its Website gap is
+  structural, and islandbreezerealty.com is a different Florida Keys firm that must never be
+  attached to it. pencocommercial.com now resolves but serves a Cloudflare managed challenge (403)
+  to every method. saulscre.com still answers 202 with a CAPTCHA interstitial. scgov.net 403s to
+  WebFetch and to browser-UA curl alike, which is why the Lambert Place petition PLN-REZSE-26-000010
+  packet still cannot be opened.
+- 2026-08-20 | sck-project-enrichment | blocker | Evidence that an unmerged skill update deploys
+  nothing, again. The 2026-08-18 run queued a DEVELOPER intro draft to Robert Zinzell at
+  Rzinzell@gmail.com for Auto Vault Fort Lauderdale, but Zinzell is a BROKER already in live
+  "08 - Brokers" #52 (Coral International Realty). The Step 4e known-contact cross-reference and the
+  Step 5b drafter guard that would have caught it existed only on an unmerged branch that night. The
+  draft expired unsent, so nothing reached him, but the guard must be treated as load-bearing: run it
+  on every recipient before composing, and verify every skill change is on origin/main before relying
+  on it.
+- 2026-08-20 | sck-morning-digest | workaround | Step 1's literal `SELECT * FROM "Scan Activity Log"
+  WHERE digested_at IS NULL` now returns ~350KB and blows the tool output limit outright, because the
+  undigested backlog includes swfl_permit_scan, swfl_news_scan, swfl_report and outreach rows that
+  this digest never consumes. Pull a GROUP BY run_type, change_type census first, then select only
+  the run_type values in the digest IN-list with left(detail, 1200) and fetch the tail of the handful
+  of long rows by id. Marking digested must keep using the IN-list, never a bare digested_at IS NULL,
+  or the digest would silently swallow the SWFL report's rows.
