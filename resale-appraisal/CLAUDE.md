@@ -70,6 +70,10 @@ unit) get flagged to Will before proceeding to the next phase. FAIL rows in
 the console and summary.json list per-unit errors; one failure never aborts
 the batch.
 
+The SCK Amenity Tier Standard v1.1 governs the "Amenity Tier" input the engine
+receives, and the runner surfaces any v_amenity_tier_audit violation in scope as
+a non-blocking WARN plus an amenity_tier_violations list in summary.json.
+
 ## Methodology v2.8 (August 2026): symmetric Track-Side exclusion
 
 Track-Side sales (The Motor Enclave, Circuit Florida) price track access and

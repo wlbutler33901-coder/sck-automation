@@ -42,6 +42,7 @@ REGIONS_T = "Market Coverage - Regions"
 STATES_T = "Market Coverage - States"
 DEMO_T = "Demographic Data - Project"
 STATE_DEMO_T = "Demographic Data - State Level"
+TIER_AUDIT_V = "v_amenity_tier_audit"          # SCK Amenity Tier Standard v1.1 audit
 FRESH_MARK = "prepared by Storage Condo King"  # renderer disclosure fingerprint
 
 
@@ -145,6 +146,21 @@ def extract_location_open(text, max_chars=520):
     if not out.endswith("."):
         out = out.rstrip(".,;") + "."
     return out
+
+
+def load_tier_audit(sb):
+    """SCK Amenity Tier Standard v1.1 compliance check (advisory only).
+
+    v_amenity_tier_audit lists any project whose stored "Amenity Tier" disagrees
+    with the tier computed from its amenities; an empty view means compliant.
+    This never blocks a batch and never changes a valuation: the stored tier is
+    still what the engine receives. It only tells Will the input is suspect."""
+    try:
+        rows = sb.select(TIER_AUDIT_V)
+    except Exception as e:
+        print("WARN: amenity tier audit view unavailable (%s); tier compliance not checked" % e)
+        return []
+    return rows or []
 
 
 def load_project_meta(sb):
@@ -369,6 +385,7 @@ def main():
                  % (os.path.getsize(ENGINE), ENGINE_BYTES))
 
     sb = SB()
+    tier_audit = load_tier_audit(sb)
     os.makedirs(args.out, exist_ok=True)
     today = datetime.date.today().isoformat()
 
@@ -379,6 +396,20 @@ def main():
     mode = "DRY RUN (no writes)" if args.dry_run else "LIVE (writing to '02 - Units')"
     print("Scope: %d units across %d projects | %s | %s"
           % (len(units), len(projects), mode, today))
+
+    scope_names = {norm(p) for p in projects}
+    tier_violations = [r for r in tier_audit if norm(r.get("project_name")) in scope_names]
+    if tier_violations:
+        bar = "!" * 74
+        print("\n" + bar)
+        print("WARN: %d project(s) in scope fail the SCK Amenity Tier Standard v1.1 audit."
+              % len(tier_violations))
+        print('      Stored "Amenity Tier" disagrees with the tier computed from amenities.')
+        print("      The STORED tier is what this run feeds the engine. Batch continues.")
+        for v in tier_violations:
+            print("      - %s: stored %r, computed %r"
+                  % (v.get("project_name"), v.get("stored_tier"), v.get("computed_tier")))
+        print(bar)
 
     reg_rates, state_rate, _ = load_rates(sb)
     wi_map, demo_map = load_wi(sb)
@@ -470,7 +501,10 @@ def main():
                "scope": {"region": args.region, "project": args.project,
                          "unit": args.unit, "all": args.all},
                "units_in_scope": len(units), "succeeded": len(results),
-               "failed": len(failures), "failures": failures}
+               "failed": len(failures), "failures": failures,
+               "amenity_tier_violations": [
+                   {"project": v.get("project_name"), "stored_tier": v.get("stored_tier"),
+                    "computed_tier": v.get("computed_tier")} for v in tier_violations]}
     json.dump(summary, open(os.path.join(args.out, "summary.json"), "w"), indent=2)
     if results:
         with open(os.path.join(args.out, "summary.csv"), "w", newline="") as f:
@@ -487,6 +521,10 @@ def main():
             print("  %s Unit %s: %s -> %s/SF (%+.2f)" % (r["Project"], r["Unit #"],
                   ("${:,.2f}".format(r["old_psf"]) if r["old_psf"] else "n/a"),
                   "${:,.2f}".format(r["new_psf"]), r["delta_psf"]))
+    if tier_violations:
+        print("Amenity Tier Standard v1.1: %d project(s) in scope failed the audit "
+              "(listed above and in summary.json); valuations were NOT blocked."
+              % len(tier_violations))
     noted = [r for r in results if r.get("notes")]
     if noted:
         print("%d unit(s) carry Appraisal Valuation Comments (NOT applied in batch mode; run those through the Cowork skill):" % len(noted))
