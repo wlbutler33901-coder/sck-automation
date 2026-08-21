@@ -70,6 +70,17 @@ unit) get flagged to Will before proceeding to the next phase. FAIL rows in
 the console and summary.json list per-unit errors; one failure never aborts
 the batch.
 
+## Amenity Tier Standard v1.1 (August 2026)
+
+Amenity Tier is a valuation INPUT (it drives the amenity adjustment and Class C
+eligibility), and under the SCK Amenity Tier Standard v1.1 it is computed, never
+judgment. The Supabase view v_amenity_tier_audit lists any project whose stored tier
+disagrees with the computed tier; empty means compliant. run_appraisals.py reads that
+view once at run start and prints a prominent WARN for any violating project IN SCOPE,
+also recording them in summary.json as tier_violations_in_scope. It is advisory: the
+runner never blocks on it and never writes an Amenity Tier. A violation means the run
+may be pricing off a stale tier, so resolve it and re-run if the tier moves.
+
 ## Methodology v2.8 (August 2026): symmetric Track-Side exclusion
 
 Track-Side sales (The Motor Enclave, Circuit Florida) price track access and

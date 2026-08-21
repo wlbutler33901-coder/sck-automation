@@ -202,6 +202,41 @@ def compute_ttm(sales, submarket):
     return {"count": n, "med_psf": round(med)}
 
 
+TIER_AUDIT_V = "v_amenity_tier_audit"
+
+
+def check_tier_audit(sb, projects):
+    """Amenity Tier Standard v1.1 compliance surface. Reads v_amenity_tier_audit once
+    (a row = stored tier disagrees with the computed tier) and WARNS for any project in
+    this run's scope. Advisory only: tier feeds the valuation, so a violation means the
+    run may be pricing off a stale tier, but it NEVER blocks and NEVER writes a tier."""
+    try:
+        rows = sb.select(TIER_AUDIT_V)
+    except Exception as e:
+        print("WARN: could not read %s (%s); tier compliance unverified this run" % (TIER_AUDIT_V, e))
+        return []
+    if not rows:
+        return []
+    want = {norm(p) for p in projects}
+    hits = [r for r in rows if norm(r.get("project_name")) in want]
+    if hits:
+        print("")
+        print("!" * 78)
+        print("WARN: %d project(s) IN SCOPE violate the SCK Amenity Tier Standard v1.1." % len(hits))
+        print("      Amenity Tier feeds the valuation, so these units may price off a stale tier.")
+        print("      Not blocking. Resolve via the audit view and re-run if the tier moves.")
+        for r in hits:
+            print("      - %-38s stored %-14s computed %-14s %s"
+                  % (str(r.get("project_name"))[:38], r.get("stored_tier"),
+                     r.get("computed_tier"), r.get("social_evidence") or ""))
+        print("!" * 78)
+        print("")
+    out_of_scope = len(rows) - len(hits)
+    if out_of_scope:
+        print("Tier audit: %d further violation(s) outside this run's scope." % out_of_scope)
+    return hits
+
+
 def load_rates(sb):
     regions = sb.select(REGIONS_T)
     states = sb.select(STATES_T)
@@ -379,6 +414,7 @@ def main():
     mode = "DRY RUN (no writes)" if args.dry_run else "LIVE (writing to '02 - Units')"
     print("Scope: %d units across %d projects | %s | %s"
           % (len(units), len(projects), mode, today))
+    tier_violations = check_tier_audit(sb, projects)
 
     reg_rates, state_rate, _ = load_rates(sb)
     wi_map, demo_map = load_wi(sb)
@@ -470,7 +506,8 @@ def main():
                "scope": {"region": args.region, "project": args.project,
                          "unit": args.unit, "all": args.all},
                "units_in_scope": len(units), "succeeded": len(results),
-               "failed": len(failures), "failures": failures}
+               "failed": len(failures), "failures": failures,
+               "tier_violations_in_scope": tier_violations}
     json.dump(summary, open(os.path.join(args.out, "summary.json"), "w"), indent=2)
     if results:
         with open(os.path.join(args.out, "summary.csv"), "w", newline="") as f:

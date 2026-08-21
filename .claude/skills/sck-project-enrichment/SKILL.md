@@ -44,7 +44,7 @@ WHERE review_status IN ('pending','approved')
        OR "Proj. Delivery" IS NULL OR latitude IS NULL OR "Sales Broker" IS NULL)
 ORDER BY (confidence='high') DESC, discovered_at ASC;
 ```
-Up to 25 rows per run. Field priority: Address + County, Developer, Sales Broker, Units + Avg Unit Size (SF), Website, Key Amenities, Amenity Tier (per "11 - Property - Amenity Tier Definition"), latitude/longitude (geocode only a verified street address), Proj. Delivery.
+Up to 25 rows per run. Field priority: Address + County, Developer, Sales Broker, Units + Avg Unit Size (SF), Website, Key Amenities, Amenity Tier (STAGED rows only, computed under the SCK Amenity Tier Standard v1.1 below, never judgment), latitude/longitude (geocode only a verified street address), Proj. Delivery.
 Each fill: UPDATE, append 'Enriched {field} from {source} {date}' to scan_notes, log change_type='field_enriched'.
 AMENITY STANDARDIZATION. For every staged row touched, rewrite "Key Amenities" into canonical vocabulary from "11 - Property - Amenity Definition" using the Amenity and Aliases columns, move non-amenity fragments into scan_notes, and repair rows whose amenity strings were broken by embedded commas (fragments like numbers, parenthetical halves, or SF figures are never amenities). New amenity types follow the same proposed-row rule: INSERT into "11 - Property - Amenity Definition" with Status 'proposed', a one line Definition, and the observed phrasing in Aliases, then use the canonical value. Also nightly, sweep any remaining staged rows whose Key Amenities contain tokens not in the table, up to 15 rows per night oldest first, so the existing backlog standardizes within a week.
 PROPERTY DIMENSIONS. Two more dimensions have their own definition tables: "Construction Materials" (canonical values Tilt Wall, Block, Metal, Wood-Frame from "11 - Property - Construction Materials", comma separated when mixed) and "Common Area Finish Level" (one of Luxury, High-Quality, Basic, Utility from "11 - Property - Common Area Finish Level"). When source material states construction type or finish grade, write these columns instead of putting construction or finish words into Key Amenities; construction and finish terms are no longer amenities. The nightly standardization sweep also populates these two columns on staged rows from scan_notes and source text where stated, never guessed, otherwise left null for Will.
@@ -104,3 +104,11 @@ This skill version's marker section is "Step 5b". If the routine instructions re
 
 ## Scheduling
 4:15 AM daily: claude -p "Run the SCK project enrichment daily routine per the sck-project-enrichment skill: developer contacts first, then brokers, project fields, audit, status watch, and FL outreach drafts" --permission-mode acceptEdits
+
+## SCK AMENITY TIER STANDARD v1.1 (ratified 2026-08-21)
+Tier is deterministic from amenities and finish; enforced portfolio-wide by the Supabase view v_amenity_tier_audit (a row = stored tier disagrees with computed; empty = compliant).
+1. Track-Side: Key Amenities include Track Access or Paddock Access. Automatic.
+2. Flex-Tier: DECLARED product type, never inferred from amenities.
+3. Premium-Tier: Common Area Finish Level High-Quality or Luxury AND at least one of Owners' Clubhouse/Lounge, Concierge Services, or Social Programming PLUS one other Premium-signal amenity. Social Programming ALONE never qualifies (free to announce; Premium keys on capital or staffing).
+4. Standard-Tier: everything else. The default.
+ENRICHMENT RULES. Record an amenity only on concrete evidence (site plans, renderings, named facilities). Social Programming has a higher bar: an actual named program, events calendar, or membership program, never marketing community language; when in doubt, omit. STAGED rows ("01 - Project - New"): fill Amenity Tier only as computed under this standard from the amenities recorded. LIVE rows ("01 - Projects"): NEVER write Amenity Tier; after updating Key Amenities on a live project, check v_amenity_tier_audit, and if the project appears there, report the implied tier change in the digest as a recommendation for Will (tier changes move valuations).
