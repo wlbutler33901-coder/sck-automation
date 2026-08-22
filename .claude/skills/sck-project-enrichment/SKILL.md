@@ -1,6 +1,6 @@
 ---
 name: sck-project-enrichment
-description: Daily (post-scan) enrichment agent for the Storage Condo King pipeline. TOP PRIORITY: complete developer contact cards in "05 - Developers - New" and broker contact cards in "08 - Brokers - New" (these feed Will's outreach CRM), then complete staged project fields, run a duplicate and error audit, watch status transitions, and draft Florida developer outreach emails into "Developer Outreach - Drafts". Use whenever asked to run the SCK enrichment routine, enrich developers or brokers, fill missing contact info, dedupe staged rows, check status updates, or draft developer outreach.
+description: Daily (post-scan) enrichment agent for the Storage Condo King pipeline. TOP PRIORITY: complete developer contact cards in "05 - Developers - New" and broker contact cards in "08 - Brokers - New" (these feed Will's outreach CRM), then complete staged project fields, run a duplicate and error audit, and watch status transitions. Developer outreach drafting MOVED OUT on 2026-08-22 to the outlook-developer-drip skill; this routine feeds that queue with contact cards and dedup but never drafts. Use whenever asked to run the SCK enrichment routine, enrich developers or brokers, fill missing contact info, dedupe staged rows, or check status updates.
 ---
 
 # SCK Project Enrichment Agent (v3 - daily)
@@ -14,6 +14,28 @@ Priority order is deliberate and NON-NEGOTIABLE: (1) developer contacts, (2) bro
 4. Never overwrite a non-null field with lower-confidence data. Fill nulls; correct non-nulls only with a primary source, appending the old value to a notes field.
 5. Never fabricate contact details. A field stays null with a logged reason before it ever holds a guess; every fill carries its source.
 6. Normalize dashes in name joins; no em-dashes in stored text.
+
+## SOURCE TRUST (shared with sck-project-scanner; keep both copies identical)
+
+**onlygaragecondos.com is largely AI-GENERATED and is NEVER a primary source or a source of
+truth.** Treat it as a discovery signal and nothing more.
+
+- It MAY contribute a discovery signal: a project name or a city worth going and checking.
+- It MAY NEVER be the basis of a stored FACT. Status, delivery date, pricing, unit counts,
+  developer, address, amenities: every one of these requires INDEPENDENT CORROBORATION from a
+  real source (developer site, county permit or property record, state registry, named press)
+  before it enters any field. It sits BELOW every rung of the Step 1 source ladder and can never
+  satisfy the "every fill carries its source" rule on its own.
+- A field it alone supports stays NULL and logs change_type='enrichment_gap'. Never fill from it,
+  never use it to correct a non-null value, and never cite it as the source on a fill.
+- **CORROBORATED-NEGATIVE CLAIMS MAY NOT REST ON IT EITHER.** "This site says the project is
+  dead / not built / not selling" is not evidence of absence any more than its positive claims
+  are evidence of presence. Do not mark a project Dead, retire a candidate, or raise a
+  live_status_suggestion on its say-so.
+
+KNOWN FAILURE, on the record: it reported **Motocave in pre-sales when the project actually
+delivered in 2014**. That is a twelve year error on the single most basic fact about a property,
+and it is the reason this rule exists. Any run tempted to trust it should re-read that sentence.
 
 ## Step 1 - DEVELOPER CONTACTS (first, always)
 ```sql
@@ -46,6 +68,26 @@ ORDER BY (confidence='high') DESC, discovered_at ASC;
 ```
 Up to 25 rows per run. Field priority: Address + County, Developer, Sales Broker, Units + Avg Unit Size (SF), Website, Key Amenities, Amenity Tier (per "11 - Property - Amenity Tier Definition"), latitude/longitude (geocode only a verified street address), Proj. Delivery.
 Each fill: UPDATE, append 'Enriched {field} from {source} {date}' to scan_notes, log change_type='field_enriched'.
+GEOCODING. Geocode only a verified street address, never a bare city or a project name.
+PREFER NOMINATIM (OpenStreetMap) over the Census oneline geocoder. From the cloud sandbox the
+Census oneline endpoint returns no match on addresses Nominatim resolves exactly, so Census-first
+produces false "ungeocodable" rows and leaves latitude null on addresses that were fine. Order:
+Nominatim first; fall back to Census only when Nominatim returns nothing; log which service
+answered in scan_notes. Nominatim REQUIRES a descriptive User-Agent and one request per second;
+without the User-Agent it returns empty arrays that look exactly like "no such address".
+BE AWARE THE RECORD IS MIXED and check reality rather than trusting either service blindly: a
+2026-08-19 run recorded the OPPOSITE result (Census matching, Nominatim empty through the egress
+proxy), a 2026-08-21 run recorded BOTH failing at street level, and 2026-08-22 recorded Census
+failing where Nominatim resolved an exact house number. That is why the order is a preference and
+not a certainty, why the fallback exists in both directions, and why every run logs which service
+answered: the next run needs to know what actually worked, not what was expected to.
+The existing precision rules are UNCHANGED and still bind: when the result is a STREET CENTROID
+rather than a rooftop or parcel point, write the coordinates and label it in scan_notes (for
+example 'geocode: street centroid, Nominatim, 2026-08-22'), so downstream radius work knows the
+precision it is standing on. NEVER write a CITY CENTROID into latitude/longitude. A city-level
+result is a failure: leave latitude and longitude null, log change_type='enrichment_gap' with the
+address tried, and let a human resolve it. A silently city-centroid-geocoded project poisons
+demographics and the wealth index for every radius that reads it.
 AMENITY STANDARDIZATION. For every staged row touched, rewrite "Key Amenities" into canonical vocabulary from "11 - Property - Amenity Definition" using the Amenity and Aliases columns, move non-amenity fragments into scan_notes, and repair rows whose amenity strings were broken by embedded commas (fragments like numbers, parenthetical halves, or SF figures are never amenities). New amenity types follow the same proposed-row rule: INSERT into "11 - Property - Amenity Definition" with Status 'proposed', a one line Definition, and the observed phrasing in Aliases, then use the canonical value. Also nightly, sweep any remaining staged rows whose Key Amenities contain tokens not in the table, up to 15 rows per night oldest first, so the existing backlog standardizes within a week.
 PROPERTY DIMENSIONS. Two more dimensions have their own definition tables: "Construction Materials" (canonical values Tilt Wall, Block, Metal, Wood-Frame from "11 - Property - Construction Materials", comma separated when mixed) and "Common Area Finish Level" (one of Luxury, High-Quality, Basic, Utility from "11 - Property - Common Area Finish Level"). When source material states construction type or finish grade, write these columns instead of putting construction or finish words into Key Amenities; construction and finish terms are no longer amenities. The nightly standardization sweep also populates these two columns on staged rows from scan_notes and source text where stated, never guessed, otherwise left null for Will.
 FINISH SCALE. Luxury, High-Quality and Basic are the CAR CONDO range; most projects land High-Quality. Basic means bare bones car condo product, flex-grade quality in the personal storage and condo bucket. Utility applies to FLEX product only and pairs with Flex-Tier; a car condo is never Utility and a flex building is never Basic. Assign Basic on strong evidence of bare-bones car condo product; assign Utility only to genuine business or industrial flex.
@@ -53,7 +95,8 @@ FINISH SCALE. Luxury, High-Quality and Basic are the CAR CONDO range; most proje
 ## Step 4 - Duplicate and error audit (every run)
 a. DEVELOPER dedupe: normalize names (dashes, case, punctuation, strip LLC/Inc). EXACT normalized duplicates: auto-merge (keep oldest, coalesce fields, delete the shell, log change_type='dedupe_merge'). VARIANT names sharing a stem: log change_type='merge_recommendation', never auto-merge.
 b. BROKER dedupe: same rules on "08 - Brokers - New".
-c. PROJECT dedupe, including vs LIVE: apply the scanner's DISTINCTIVE-TOKEN rule (strip generic product tokens: auto, motor, car, garage, vehicle, vault, condo, condos, suites, storage, club, luxury, premium, the, at, of; compare what remains within the same county) across "01 - Project - New" AND against "01 - Projects". The Bonita Auto Vault vs Bonita Motor Vault pattern must be caught HERE even if the scanner missed it. Address collisions too. Staged-vs-staged exact: auto-merge; anything involving a live row: merge_recommendation only.
+c. PROJECT dedupe, including vs LIVE: apply the scanner's DISTINCTIVE-TOKEN rule (strip generic product tokens: auto, motor, car, garage, vehicle, vault, condo, condos, suites, storage, club, luxury, premium, the, at, of; compare what remains within the same county) across "01 - Project - New" AND against "01 - Projects". The Bonita Auto Vault vs Bonita Motor Vault pattern must be caught HERE even if the scanner missed it. Address collisions too, using the STREET-TYPE NORMALIZATION below. Staged-vs-staged exact: auto-merge; anything involving a live row: merge_recommendation only.
+   STREET-TYPE NORMALIZATION, mandatory in every address comparison. Before comparing two addresses, lowercase, trim, strip punctuation and suite/unit numbers, collapse repeated whitespace, AND expand street-type abbreviations to one canonical form each: rd and road; st and street; dr and drive; ln and lane; blvd and boulevard; hwy and highway. Also normalize directionals (n/north, s/south, e/east, w/west). Without this, "1234 Fickling Hill Rd" and "1234 Fickling Hill Road" read as different addresses; that is exactly how the Fickling Hill duplicate slipped through. Apply the same normalization in the scanner's Step 4 address signal; the two checks must agree.
 d. Error checks on rows touched tonight: Region/Submarket exist in coverage tables; "Project Status" valid; City/County agree with the address; Website resolves; phone/email format sanity.
 
 ## Step 4c - Developer dedup and canonicalization
@@ -82,15 +125,57 @@ Every reclassification or flag is logged to "Scan Activity Log" as change_type='
 Use the scanner's rotation for tonight's regions. Staged rows: UPDATE "Project Status" with evidence, log change_type='status_change' (or 'dead_project'). Live rows: DO NOT TOUCH; log change_type='live_status_suggestion' with evidence URL.
 
 ## Step 5b - FL developer outreach queue
-OUTREACH DRAFTER GUARD: before queuing a row in "Developer Outreach - Drafts", run the Step 4e KNOWN-CONTACT CROSS-REFERENCE on the recipient. If the recipient matches "08 - Brokers", do NOT compose a developer pitch: log it to "Scan Activity Log" as a broker-lead flag (change_type='broker_lead_flag') for the morning digest and skip the draft. If the recipient matches an existing "05 - Developers" row, address the draft using that row's named contacts, not a scraped generic address.
-EVERY morning, run the outreach queue exactly per references/outreach-template.md, using the reworked selection priority in that file (newest staged developers with a usable email first, then the standing backlog): sent-check first against Outlook Sent Items, rotate only when the queue is clear, one Outlook draft per morning to Will's Drafts folder with chance.friedman@calusainvestments.com CCd, Supabase row with Status queued, log outreach_queued or outreach_skipped with the reason. The database columns "Recipient Email" and "Queued At" on "Developer Outreach - Drafts" and resolution / resolved_at on "Scan Activity Log" already exist.
-LANE FILTER: every read and write this step makes against "Developer Outreach - Drafts" filters "Lane" = 'car-condo', and every row it inserts carries "Lane" = 'car-condo'. Rows with any other Lane value, including the Monday 'calusa-cre' lane owned by cre-report-writer, are invisible to this queue and must never be counted, marked sent, or expired by it.
+MOVED 2026-08-22. Developer outreach is no longer drafted by this routine. It is owned end to end
+by the `outlook-developer-drip` skill, which runs both lanes on weekday mornings: Lane A, the
+new-development intro that used to live here (its template moved to
+`.claude/skills/outlook-developer-drip/references/outreach-template.md`), and Lane B, the
+capabilities rotation through live "05 - Developers".
 
-## Step 6 - FL DEVELOPER OUTREACH DRAFTS (new)
-Superseded 2026-08-08. All developer outreach, including newly discovered developers, flows through the every-morning queue in Step 5b; this step creates nothing.
+This routine CREATES NO OUTLOOK DRAFTS and INSERTS NO ROWS into "Developer Outreach - Drafts".
+Two routines drafting the same lane would double-contact developers, so resuming here is a
+regression, not a fallback: if the developer drip did not run, say so in the run summary and
+leave the queue alone.
+
+What this routine still owes the drip, and must keep doing:
+- Complete developer contact cards (Step 1), which is what feeds Lane A selection.
+- Run the Step 4d DUPLICATE GATE and Step 4c canonicalization so the drip never sees one firm
+  twice under variant records.
+- Run the Step 4e KNOWN-CONTACT CROSS-REFERENCE on every contact attached to a staged project,
+  so a broker is filed as a broker before the drip can ever pitch them as a developer. A
+  recipient matching "08 - Brokers" is logged change_type='broker_lead_flag' for the digest.
+
+## Step 6 - FL DEVELOPER OUTREACH DRAFTS
+Superseded 2026-08-08, then moved out entirely 2026-08-22. All developer outreach flows through the `outlook-developer-drip` skill. This step creates nothing and neither does Step 5b.
+
+## Step 6b - LIFECYCLE: promotion retires the staged row
+
+**PROMOTION RETIRES THE STAGED ROW. IMMEDIATELY, IN THE SAME PASS.** When a staged developer
+card's content has reached "05 - Developers", that staged row's job is finished. Set its
+review_status to 'retired - duplicate of live #<n>' using the live row number, append a dated
+Comments line naming the live row, and log change_type='dedupe_merge' for the digest. Do not wait
+for a later dedup sweep to notice; do not leave it 'pending' because the live copy is missing a
+field, and NEVER delete the row.
+
+Detect promotion the same way Step 4d detects a duplicate: split "05 - Developers"."Email" cells
+on ';' before comparing, then match on exact address, non-freemail domain, or exact normalized
+name. A staged row whose contact detail is now all present on a live row is promoted by
+definition, whether a human copied it across or a merge did.
+
+This is a STAGING table lifecycle rule, so it never touches the live row. Retiring is a write to
+"05 - Developers - New" only. Retired rows stay excluded from the 25-row contact card budget, the
+re-verification pool, and developer drip selection.
+
+CONTEXT, so this routine stops re-raising a solved alarm: the live table was MERGED on 2026-08-22,
+198 rows down to 143, with 55 byte-identical copies removed, and the staged queue was gated down
+to 7 pending. **The 40 percent duplication warning is retired. Do not raise it again.** Reporting
+a 40 percent staged duplication rate after this date is stale-skill behavior, not a finding.
+The remaining KNOWN issue, and the only one worth reporting, is 25 same-name LIVE rows with
+DIFFERING payloads awaiting a field-level merge. Those are a human decision: surface them as a
+merge_recommendation count, never auto-merge them, and never let their existence reopen the
+retired duplication warning.
 
 ## Step 7 - Run summary
-Log run_type='enrichment', change_type='run_summary': developer rows completed and completeness % (count of rows with Contact AND Email), broker rows completed and completeness %, review-pass corrections, project fields filled, merges applied, merge recommendations, status changes, drafts created. If Step 1 processed zero rows while NULLs remain, the summary begins FAILED-DEV-CONTACTS.
+Log run_type='enrichment', change_type='run_summary': developer rows completed and completeness % (count of rows with Contact AND Email), broker rows completed and completeness %, review-pass corrections, project fields filled, merges applied, merge recommendations, status changes, and staged rows retired by promotion per Step 6b. Outreach drafts are NOT reported here; they belong to `outlook-developer-drip`. If Step 1 processed zero rows while NULLs remain, the summary begins FAILED-DEV-CONTACTS.
 
 
 ## Learnings file (read first, append on lessons)

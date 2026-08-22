@@ -1,8 +1,16 @@
-# FL Developer Outreach - Fallback Queue Template
+# FL Developer Outreach - Lane A Template (new developments)
 
-Used by the enrichment routine on mornings when the overnight scan surfaced no new developers.
-One email per morning, one developer at a time, queued as an Outlook draft for Will to review,
-attach the current Florida Market Report PDF, and send. The system never sends; it only drafts.
+Owned by the `outlook-developer-drip` skill as LANE A. Moved here from
+`sck-project-enrichment/references/` on 2026-08-22 when developer outreach split out of the
+enrichment routine; the enrichment skill no longer drafts and must never resume drafting.
+
+One email per weekday morning, one developer at a time, queued as an Outlook draft for Will to
+review and send. The system never sends; it only drafts.
+
+**The Lane A additions in the parent skill apply on top of this file and outrank it where they
+overlap:** the outbound correspondence gate (all folders, address and domain, 90 days) runs
+BEFORE the sent-check in rule 2 below, and the deleted-draft branch replaces silent requeueing.
+Lane value on every read and write is 'car-condo'.
 
 ## Copy rules
 

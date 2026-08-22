@@ -43,10 +43,32 @@ Per active submarket, work the FULL checklist; log any blocked source in run_sum
 3. Listing platforms: LoopNet, Crexi, CommercialSearch, CityFeet with "garage condo" / "car condo" / "motor condo" filters for tonight's metros. MLS-syndicated portals showing new flex/garage-condo product are strong early signals.
 4. News and journals: local business journals (Bisnow, BizJournals metro editions, urbanize sites), PR wires, "{metro} garage condo" news-tab queries restricted to the last 60 days.
 5. Government: county planning commission and zoning board agendas plus permit portals for the region's anchor counties. These surface projects 6 to 18 months before marketing does.
-6. Aggregators: onlygaragecondos.com state pages (low confidence, rumored unless corroborated).
+6. Aggregators: onlygaragecondos.com state pages. DISCOVERY SIGNAL ONLY, see SOURCE TRUST below.
 7. Track-anchored: known circuits in region for trackside real estate announcements.
 8. Public social pages (no login): developer Facebook/Instagram business pages found via search.
 Use a mobile user agent when a site serves mobile-only layouts. Never bypass logins or CAPTCHAs.
+
+### SOURCE TRUST (shared with sck-project-enrichment; keep both copies identical)
+
+**onlygaragecondos.com is largely AI-GENERATED and is NEVER a primary source or a source of
+truth.** Treat it as a discovery signal and nothing more.
+
+- It MAY contribute a discovery signal: a project name or a city worth going and checking.
+- It MAY NEVER be the basis of a stored FACT. Status, delivery date, pricing, unit counts,
+  developer, address, amenities: every one of these requires INDEPENDENT CORROBORATION from a
+  real source (developer site, county permit or property record, state registry, named press)
+  before it enters any field.
+- A candidate whose only support is this site stages at confidence 'low' with the fact fields it
+  suggested left NULL, and scan_notes saying exactly which claims are uncorroborated. It never
+  stages with its numbers copied in.
+- **CORROBORATED-NEGATIVE CLAIMS MAY NOT REST ON IT EITHER.** "This site says the project is
+  dead / not built / not selling" is not evidence of absence any more than its positive claims
+  are evidence of presence. Do not mark a project Dead, retire a candidate, or close a status
+  suggestion on its say-so.
+
+KNOWN FAILURE, on the record: it reported **Motocave in pre-sales when the project actually
+delivered in 2014**. That is a twelve year error on the single most basic fact about a property,
+and it is the reason this rule exists. Any run tempted to trust it should re-read that sentence.
 
 SUNDAY DEEP SWEEP (in addition to the night's rotation): once a week, sweep EVERY operator brand site (item 2) across the entire FL/GA/NC/SC footprint. One pass per brand; stage anything new through the same dedup gate.
 
@@ -81,10 +103,29 @@ Every staged hit: source_url = the permit look-up value or article URL, note "vi
 A candidate is a DUPLICATE if ANY of these signals fires against EITHER "01 - Projects" (live) or "01 - Project - New" (staged), matched within the same COUNTY (not just the same city - the Bonita Auto Vault / Bonita Motor Vault miss happened because the check was city-scoped and name-threshold only):
 1. Exact dash-normalized name match.
 2. DISTINCTIVE-TOKEN match: strip the GENERIC PRODUCT TOKENS from both names (auto, motor, car, garage, vehicle, vault, condo, condos, suites, storage, club, luxury, premium, the, at, of), then compare what remains. "Bonita Auto Vault" and "Bonita Motor Vault" both reduce to "Bonita": same county + same distinctive tokens = DUPLICATE. Remaining-token similarity above 0.7 also counts as a match.
-3. Same normalized street address (strip suite numbers, punctuation, case).
+3. Same normalized street address. Normalize BOTH sides first: lowercase, trim, strip
+   punctuation and suite/unit numbers, collapse repeated whitespace, expand STREET-TYPE
+   ABBREVIATIONS to one canonical form each (rd and road; st and street; dr and drive; ln and
+   lane; blvd and boulevard; hwy and highway), and normalize directionals (n/north, s/south,
+   e/east, w/west). "1234 Fickling Hill Rd" and "1234 Fickling Hill Road" are the SAME address;
+   without this expansion they read as different and the Fickling Hill duplicate slipped
+   through. The enrichment Step 4c address check uses the identical normalization; the two must
+   agree.
 4. Same parcel / folio number.
-5. Same Developer (dash-normalized) in the same county.
-On ANY signal: DO NOT INSERT. Log change_type='near_match_flag' naming the signal that fired and both project names. When the match is against a LIVE project, say so explicitly (that is usually press using a naming variant for an existing asset).
+On ANY of signals 1 to 4: DO NOT INSERT. Log change_type='near_match_flag' naming the signal that fired and both project names. When the match is against a LIVE project, say so explicitly (that is usually press using a naming variant for an existing asset).
+
+**5. Same Developer in the same county is a FLAG, NEVER A BLOCK.** A known developer opening a
+second location is a legitimate new project, and blocking on this signal alone loses real
+pipeline. When the developer (dash-normalized) matches within the county but the ADDRESS and the
+DISTINCTIVE NAME TOKENS both differ, STAGE THE CANDIDATE NORMALLY and log
+change_type='near_match_flag' noting the shared developer so the digest surfaces it for a human
+eye. Require an ADDRESS COLLISION (signal 3), a PARCEL COLLISION (signal 4), or a DISTINCTIVE-NAME
+COLLISION (signal 1 or 2) before refusing the insert.
+
+Storage Caves Concord is the case that forced this: 2350 versus 2400 Derita Rd, 140 versus 56
+units, same developer, same county, plainly two different buildings, and it was wrongly BLOCKED.
+It must stage cleanly on the next pass. When a shared-developer flag fires, put both addresses and
+both unit counts in the flag detail so the difference is visible without opening the rows.
 When land size is available on both sides, a matching acreage within 10 percent strengthens a borderline call; note it in the flag.
 
 ## Step 5 - Insert candidate

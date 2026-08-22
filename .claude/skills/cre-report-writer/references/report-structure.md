@@ -32,7 +32,6 @@ Compose exactly these, in this order. An empty section says so explicitly in one
 
 | # | Section | Include when | Supabase column |
 |---|---|---|---|
-| 0 | WARNINGS | ONLY if a cluster did not run, a track is pending, or a portal is blocked. Omit the section header entirely on a clean night. | folded into "Data Quality Notes" |
 | 1 | EXECUTIVE SUMMARY | Always | "Executive Summary" |
 | 1c | WEEKLY ROLLUP | MONDAYS ONLY. Omit entirely on other days. | "Weekly Rollup" (null on non-Mondays) |
 | 2 | NEW PROJECTS | Always. First appearance only, see below. | "New Projects" |
@@ -42,11 +41,21 @@ Compose exactly these, in this order. An empty section says so explicitly in one
 | 6 | FINANCING LENS | Always, compact | "Top Opportunities" |
 | 7 | ROTATION AND COVERAGE AUDIT | Always | "Rotation Audit" |
 | 8 | DATA QUALITY NOTES | Always | "Data Quality Notes" |
+| 9 | WARNINGS | ONLY if a cluster did not run, a track is pending, or a portal is blocked. Omit the section header entirely on a clean night. | folded into "Data Quality Notes" |
+
+WARNINGS MOVED TO THE BOTTOM on 2026-08-22, matching the sck-morning-digest change made the same
+day. It used to be section 0, a banner at the top. It is now section 9, the LAST section, after
+Data Quality Notes, on every day the report runs INCLUDING the Monday rollup edition. Nothing
+about its content changes: it is still mandatory whenever a cluster did not run, a track is
+pending, or a portal is blocked, still omitted entirely on a clean night, and still folded into
+the "Data Quality Notes" column in Supabase. Only its position moved. Any section elsewhere that
+says a line is promoted into WARNINGS still promotes it; that section now sits at the end.
 
 Rationale for the order: sections 2 to 5 are the ones that can change what Will does today, in
 descending order of how likely that is. Section 6 stays secondary until the financing phase
-turns on. Sections 7 and 8 are operational health and belong at the bottom, with the single
-exception of section 0, which is a banner and never longer than three lines.
+turns on. Sections 7, 8 and 9 are operational health and belong at the bottom. The report leads
+with what was FOUND, not with what broke: a clean night should read as a clean night, and a bad
+night still ends with the full warning list rather than opening with it.
 
 ## Section 2 sort order - entitlements first
 
@@ -70,7 +79,7 @@ Every item inside every section carries a numeric index restarting at 1 within i
 - Markdown: `1.` `2.` `3.` ordered lists. Never `- ` bullets for report items.
 - Email HTML: `<ol>` and `<li>`. Never `<ul>`.
 - A multi field project entry is ONE numbered item, pipe separated on one line.
-- Section 0 WARNINGS is also numbered.
+- Section 9 WARNINGS is also numbered.
 
 The one exception is a sub detail hanging off a numbered item, which may use an indented
 `- ` line. Every such line ends with a period.
@@ -190,7 +199,7 @@ Built from the queries in the permit scanner's references/run-logging.md. Report
    never reached. These are different findings and must never be merged into one line.
 4. Tracks currently PENDING and therefore uncovered.
 
-If the permit scanner wrote no `run_started` row for last night, section 0 WARNINGS leads with
+If the permit scanner wrote no `run_started` row for last night, section 9 WARNINGS leads with
 that fact and the Executive Summary repeats it in its first sentence.
 
 ## Section 8 additions

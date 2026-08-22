@@ -581,3 +581,195 @@ NEVER put credentials, API keys, or personal contact details in this file.
   these 8 recipients, which is the rule working. FIX BELONGS UPSTREAM: Hideout needs a building or
   phase qualifier on "Unit #", or a deduplication pass, before its owners can receive unit level
   numbers. Until then any campaign touching Hideout ships submarket color only.
+
+## Fold of 2026-08-16 to 2026-08-22 Scan Activity Log learning rows (interactive session 2026-08-22)
+
+Folded 57 rows: the 14 still pending plus the 43 dated 2026-08-16 to 2026-08-20 that earlier
+digest runs marked digested without ever writing them here, because an unattended cloud run
+cannot push. See the 2026-08-21 digest blocker below, which is the entry that caught it.
+
+- 2026-08-22 | repo | SKILL RENAME | outlook-outreach-drip is now outlook-unit-owner-drip, and
+  developer outreach split out into the new outlook-developer-drip skill. Every LEARNINGS entry
+  tagged outlook-outreach-drip predates the split, is the unit owner skill's history, and still
+  binds; the developer skill also reads them where they touch developer outreach. Historical
+  entries are NOT rewritten, because this file is an append-only record of what was true when it
+  was written.
+- 2026-08-16 | sck-project-scanner | Cape Fear deeded boat slip false positive recurs | New Hanover
+  County has genuine DEEDED dry-stack boat slip inventory (Inlet Watch, Wrightsville Yacht Club,
+  Bradley Creek Boatominium) that surfaces on any deeded plus storage query and is NOT garage
+  condo product. Pre-empt it rather than re-screening it every pass.
+- 2026-08-16 | sck-project-scanner | onlygaragecondos.com state indexes fetch, detail pages do not |
+  Narrowed the 2026-08-08 dead-source line. SUPERSEDED 2026-08-22: the site is now barred as a
+  source of truth entirely, see the SOURCE TRUST rule. It may still contribute discovery signals.
+- 2026-08-16 | sck-project-scanner | Source health | vaultmotorcondos.com/pages/our-locations 404s,
+  so The Vault pipeline cannot be enumerated there; the real page is whythevault.com/locations/.
+  DNS ENOTFOUND on lakesidestoragesuites.com and alicoitec.com.
+- 2026-08-16 | sck-project-scanner | Dedup signal 5 contradicts the search playbook | Same
+  developer in the same county blocked a genuine second location. RESOLVED 2026-08-22: signal 5 is
+  now a FLAG, never a BLOCK, unless an address, parcel or distinctive-name collision also fires.
+- 2026-08-16 | all routines | Supabase MCP reported 23505 on an INSERT that had already committed |
+  All three rows existed with identical created_at. NEVER treat a duplicate-key error from this
+  tool as proof the write failed. Re-read before retrying.
+- 2026-08-16 | sck-project-scanner | Motor Vault removed both Georgia project pages | Deliberate
+  removal, not link rot: gone from a sitemap regenerated 2026-07-09. Shelved or hidden is not
+  determinable from the site.
+- 2026-08-16 | sck-project-scanner | Brand-name collisions are the top dedup risk | Five unrelated
+  firms share near-identical names (Motor Vault Phoenix, The Vault, Naples Auto Vault, Bonita
+  Motor Vault, AUTO VAULT Fort Lauderdale). The token rule cannot resolve them alone.
+- 2026-08-16 | sck-project-scanner | Sunday brand sweep source map corrections | CollectionSuites
+  is collection-suites.com WITH the hyphen; the unhyphenated domain 301s to a Hilton page.
+- 2026-08-16 | sck-project-enrichment | Distinctive-token rule strips product words but not the
+  city | In metros that name projects after the city, every staged row reduces to the bare city
+  token and collides. Collier produced a 3-way false positive.
+- 2026-08-17 | sck-project-scanner | therealdeal.com 403s on direct WebFetch | Recoverable via
+  search snippets, Commercial Observer or GlobeNewswire mirrors. Add to the standing blocked list.
+- 2026-08-17 | sck-project-scanner | Step 2 region context hides cross-filed projects | Filtering
+  on the scheduled region label hid three Atlanta MSA candidates filed under North Georgia and
+  cost a full region pass. Load neighbouring regions too.
+- 2026-08-17 | sck-project-scanner | Trigger trg_auto_stage_developer auto-creates the developer
+  row | The Step 5 instruction to also insert one produces a near-duplicate pair whenever the
+  manual string differs at all. Confirmed again 2026-08-22: never insert the developer row.
+- 2026-08-17 | sck-project-scanner | Planning agendas are PDF-only and not full-text indexed |
+  Keyword sweeps return nothing and read falsely as an empty market. Confirmed across eight SC and
+  NC counties. Crawl the PDFs directly or stop counting the sweep as coverage.
+- 2026-08-17 | sck-project-scanner | Raleigh-Durham is genuine white space, not a coverage gap |
+  Zero for-sale garage condo product across 10 counties, corroborated two ways.
+- 2026-08-17 | sck-project-enrichment | Writing "Developer" auto-creates the card from that exact
+  string | Any qualifier embedded in the value becomes the card NAME, and the table carries a
+  unique index on the normalized name. Keep "Developer" to the clean entity name; caveats go to
+  scan_notes.
+- 2026-08-17 | sck-project-enrichment | Sales Broker never-null rule conflicts with hard rule 5 on
+  entitlement-stage rows | Lambert Place has no published applicant or marketing, so
+  Developer-Direct would assert a sales channel nobody established. Leave null and log the gap.
+- 2026-08-17 | sck-project-enrichment | Sent-check must search by RECIPIENT, not by date paging |
+  A folder plus date search returned 61 messages and the confirming one was not in the newest 25,
+  so a first-page check would have wrongly declared the queue occupied.
+- 2026-08-17 | sck-morning-digest | Fold-versus-push conflict | Skill said fold and push, the
+  contract forbids unattended pushes. See the 2026-08-21 blocker for the consequence and the
+  2026-08-22 resolution.
+- 2026-08-18 | sck-project-scanner | Melbourne; Space Coast holds zero live and zero staged rows |
+  Real market gap on current evidence, not a search failure. Drop to a lighter pass if it repeats.
+- 2026-08-18 | sck-project-scanner | Myrtle Beach Speedway closed in August 2020 | Dead lead for
+  the track-anchored sweep. Darlington is the live anchor but publishes no trackside real estate
+  program. Stop spending repeat queries on either.
+- 2026-08-18 | sck-project-scanner | A wrong stored address silently disables a dedup signal |
+  Indian River MotorHaus 3.0 stores 7443 US Hwy 1 while press gives 7420 U.S. 1; the token signal
+  caught the rediscovery the address signal missed. Never rely on address alone.
+- 2026-08-18 | sck-project-enrichment | change_type has drifted to 58 distinct values | Any
+  change_type grouping in the digest is unreliable. Confirmed worse 2026-08-20 at 59 values, 30 of
+  them used exactly once. Hard-code the vocabulary the way run_type was hard-coded.
+- 2026-08-18 | sck-project-enrichment | WebFetch silently mistranscribed a mailto address |
+  Reported Richard@re-invest.net where the raw markup says Richard@re-vest.net, and both domains
+  resolve. NEVER overwrite a stored email or website on a WebFetch summary alone; confirm against
+  raw markup first.
+- 2026-08-18 | sck-project-enrichment | Census geocoder NO MATCH on new or private industrial
+  streets | Five addresses failed under both benchmarks while a control matched. A NO MATCH there
+  is TIGER coverage, not a bad address. See the 2026-08-22 geocoding rule.
+- 2026-08-18 | sck-morning-digest | Fold conflict resolved toward pushing | The scheduled task
+  carried a designated feature branch, an authorized push target. SUPERSEDED: the 2026-08-21
+  blocker shows the fold still did not land.
+- 2026-08-18 | sck-project-enrichment | Outreach queue selected a BROKER for a developer intro and
+  Will deleted the draft | Staged id 80 Coral International Realty (Robert Zinzell) was built to
+  the broker-fallback rung of the source ladder, which completes a card but does not make the row
+  a developer. Selection must check HOW the card was sourced.
+- 2026-08-19 | sck-project-enrichment | "05 - Developers" held a 52 row byte-identical duplicate
+  block | Rows #148-#199 duplicated #96-#147 from a promotion job that ran twice. RESOLVED
+  2026-08-22: live merged 198 rows to 143, 55 identical copies removed.
+- 2026-08-19 | sck-project-enrichment | The 14 day expiry on unsent legacy drafts does real work |
+  A morning's only selection existed because a 2026-08-04 draft expired and returned that
+  developer to the rotation. Keep it.
+- 2026-08-19 | sck-project-enrichment | Bulk-retiring against a polluted live table is destructive |
+  42 of 44 active staged rows matched live purely because of the duplicate block. Sanity check the
+  live match set for duplication BEFORE bulk-retiring.
+- 2026-08-19 | sck-project-enrichment | Staged rows carry statuses the live vocabulary lacks | 37
+  active rows on "Planned" or "Stalled" against a live vocabulary of Pre-Development, Developer
+  Sale, Under Construction, Completed, Dead. They fall out of every rollup that groups by it.
+- 2026-08-19 | sck-project-enrichment | Census worked, Nominatim returned zero through the proxy |
+  CONTRADICTED on 2026-08-21 (both failing) and 2026-08-22 (Census failing, Nominatim exact). The
+  services are not stably ranked from this sandbox; log which one answered, every run.
+- 2026-08-19 | sck-project-enrichment | Bot gating is now the dominant cause of broker card gaps |
+  sarasotawarehouses.com and saulscre.com answer with an HTTP 202 challenge stub, showcase.com
+  403s, islandbreezerealestate.com returns a 114 byte shell. Recover from the developer project
+  site instead.
+- 2026-08-20 | all routines | "Scan Activity Log" timestamps live in ts, NOT created_at | Neither
+  project table exposes an id column. Naming created_at on the log or id on a project table dies
+  with 42703 and costs a retry. Confirmed again 2026-08-21 and 2026-08-22.
+- 2026-08-20 | sck-project-enrichment | islandbreezerealestate.com is a PARKED domain | The rick@
+  mailbox on it is the live published project contact, so its Website gap is structural.
+  islandbreezerealty.com is a DIFFERENT firm and must never be attached to it.
+- 2026-08-20 | sck-project-enrichment | The developer corporate site is not always the top rung |
+  AR Coleman publishes no contact detail while the PROJECT site garageslakeoconee.com credits the
+  developer and publishes the agent and both phone numbers. Read the project site too.
+- 2026-08-20 | sck-project-enrichment | Two fetch traps | custombuildersfl.com serves an invalid
+  self-signed cert over https and 200s over plain http, so the stored http:// URL is correct and
+  must never be upgraded. toyvaultfortmyers.com DNS-fails in WebFetch but 200s to a browser-UA
+  curl.
+- 2026-08-20 | sck-project-enrichment | Live "05 - Developers" is a promoted MIRROR of the staging
+  table, not an independent directory | Applied literally, Step 4c/4d would retire the entire
+  active queue. RESOLVED 2026-08-22 by the live merge plus the Step 6b promotion lifecycle rule.
+- 2026-08-20 | sck-project-enrichment | An unmerged skill update deploys nothing | A developer
+  intro was queued to Robert Zinzell, a BROKER already in live "08 - Brokers" #52, because the
+  known-contact cross-reference existed only in an unmerged edit. Merge before relying on a rule.
+- 2026-08-21 | sck-project-scanner | jaxdailyrecord.com is paywalled past the headline | Search
+  snippets still carry name, address, square footage and job cost. Snippet-recoverable, not
+  blocked; do not burn fetch budget.
+- 2026-08-21 | sck-project-enrichment | Backlog outreach selection needs a RECIPIENT-QUALITY gate |
+  The Pre-Development and Under Construction Florida tier is fully contacted, so selection falls
+  to tiers where the blocker is address quality rather than project status.
+- 2026-08-21 | sck-project-enrichment | WebFetch returns an EMPTY DOCUMENT, not an error, on
+  JS-rendered sites | Reads like "no contact published" and silently costs fills. Retry with curl
+  plus a mailto and tel regex before recording a gap.
+- 2026-08-21 | sck-project-enrichment | The broker guard can fire on a live-table DATA ERROR |
+  Florida Garage Condos of Englewood was blocked because its own developer-domain address appears
+  on a live "08 - Brokers" row for a DIFFERENT firm. Verify the match before trusting the guard.
+- 2026-08-21 | sck-project-enrichment | Street-level geocoding unavailable from the sandbox |
+  Both services returned nothing at street level this date. See the 2026-08-22 rule; this is why
+  the preference is a preference and the run logs which service answered.
+- 2026-08-21 | sck-morning-digest | THE FOLD HAS BEEN SILENTLY DROPPING ROWS | 42 rows dated
+  2026-08-16 to 2026-08-20 were marked digested by prior runs while the repo file's newest entry
+  was still 2026-08-17, because "fold then mark digested" writes the mark even when the push is
+  forbidden. RESOLVED 2026-08-22: this session re-folded them. RULE: never set digested_at unless
+  the fold actually landed in the committed file.
+- 2026-08-22 | sck-project-scanner | The scanner must NEVER insert the developer row | The trigger
+  auto-stages it; the manual insert collides with developers_new_name_uidx and hard-fails even
+  when the developer is genuinely new.
+- 2026-08-22 | sck-project-scanner | Storage Caves Concord II wrongly blocked | 2350 versus 2400
+  Derita Rd, 140 versus 56 units, plainly two buildings. RESOLVED this session: same developer in
+  the same county is a FLAG, never a BLOCK, absent an address, parcel or distinctive-name
+  collision. It should stage cleanly on the next pass.
+- 2026-08-22 | sck-project-scanner | "01 - Project - New" has NO id column | INSERT ... RETURNING
+  id fails with 42703 and aborts the whole statement before anything is written. Return a natural
+  key instead.
+- 2026-08-22 | sck-project-enrichment | NC Secretary of State search now 403s behind Cloudflare |
+  Same failure mode already on file for FL Sunbiz. Use press, mirrors and license lookups instead.
+- 2026-08-22 | sck-project-enrichment | The sent-check had no branch for a DELETED draft | A draft
+  Will deletes is absent from Sent Items forever, so the queued row never clears and the rotation
+  stalls silently. Found with row id 28 (Ultimate Garages Naples). RESOLVED this session: a queued
+  draft found in Deleted Items is marked 'declined - draft deleted in Outlook' and frees the
+  rotation. A deletion is a decision, not an error state.
+- 2026-08-22 | sck-project-enrichment | Census unusable from the container, Nominatim exact |
+  Census returned NO MATCH for every address tried, including one Nominatim resolved to an exact
+  house number. Nominatim needs a descriptive User-Agent. Record whether the hit was a house
+  number or a street centroid: a centroid silently feeding radius work is the real hazard.
+- 2026-08-22 | sck-project-enrichment | Address-collision check missed a real duplicate | It
+  normalizes punctuation and case but NOT street-type abbreviations, so "3100 Fickling Hill Rd"
+  and "3100 Fickling Hill Road" did not join and the Charleston Toy Box versus Motor District
+  Johns Island pair was caught by hand. RESOLVED this session: Rd/Road, St/Street, Dr/Drive,
+  Ln/Lane, Blvd/Boulevard, Hwy/Highway and directionals are expanded in both the scanner and
+  enrichment address checks, which must stay identical.
+- 2026-08-22 | onlygaragecondos.com | NEVER A SOURCE OF TRUTH | Largely AI-generated. Discovery
+  signals only; every fact it suggests (status, delivery, pricing, unit counts) needs independent
+  corroboration before entering any field, and corroborated-NEGATIVE claims may not rest on it
+  either. Known failure: it reported Motocave in pre-sales when the project delivered in 2014.
+- 2026-08-22 | sck-project-enrichment | Duplication warning retired | Live merged 198 rows to 143,
+  55 byte-identical copies removed; staged queue gated to 7 pending. STOP re-raising the 40
+  percent duplication warning. The only remaining known issue is 25 same-name live rows with
+  differing payloads awaiting a field-level merge, which is a human decision and never an
+  auto-merge.
+- 2026-08-22 | repo | LEARNINGS FOLD SCOPE GAP, unresolved | The digest folds and marks digested
+  only run_type IN ('scan','enrichment','digest','nightly_scan','project_scan'). Learning rows
+  written under swfl_news_scan, swfl_permit_scan, swfl_report and outreach are therefore NEVER
+  folded and never marked: 126 such rows were pending as of this session, the oldest from
+  2026-08-05. Those routines' lessons are not reaching this file. Either widen the digest's
+  run_type list or give those routines their own fold step. Flagged, not fixed, because widening
+  that list also changes what the digest marks digested for non-learning rows.

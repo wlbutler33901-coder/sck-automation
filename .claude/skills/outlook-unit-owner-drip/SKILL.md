@@ -1,9 +1,19 @@
 ---
-name: outlook-outreach-drip
-description: Draft 1:1 Outlook outreach emails to quarantined (unverified) SCK unit owner emails, process NDR kickbacks, and run the BMV owner marketing campaign. Three modes. DRAFT mode (default, nightly) pulls the next batch of quarantined emails from "04d - Email Verification", personalizes a short plain text outreach sent from Will Butler's Calusa Investments mailbox with Chance Friedman CCd, saves them to Outlook Drafts so Will can press send in the morning, and stamps "Drafted At". KICKBACK mode scans the mailbox for bounce and NDR messages, marks bounced addresses in 04d, suppresses them in "04a - Email Suppression", clears them from the CRM, and promotes drafts with no kickback after 4 days to clean. CAMPAIGN mode runs only after the verification queue is empty and drafts up to 50 UNIQUE Bonita Motor Vault owner recipients per morning from "04 - Unit Owner CRM" in region order, deduplicated by email so multi-unit owners are contacted once, logging each to "04e - Campaign Sends". Use whenever asked to run the outreach drip, draft the outreach batch, prep tomorrow's outreach emails, scan for kickbacks, process NDRs, check outreach bounces, or run the BMV owner campaign. Requires the "Supabase - Storage Condo King" and Microsoft 365 connectors.
+name: outlook-unit-owner-drip
+description: Draft 1:1 Outlook outreach emails to quarantined (unverified) SCK UNIT OWNER emails, process NDR kickbacks, and run the BMV owner marketing campaign. This skill owns the UNIT OWNER side only; developer outreach lives in the separate outlook-developer-drip skill and the two never share a queue. Three modes. DRAFT mode (default, nightly) pulls the next batch of quarantined emails from "04d - Email Verification", personalizes a short plain text outreach sent from Will Butler's Calusa Investments mailbox with Chance Friedman CCd, saves them to Outlook Drafts so Will can press send in the morning, and stamps "Drafted At". KICKBACK mode scans the mailbox for bounce and NDR messages, marks bounced addresses in 04d, suppresses them in "04a - Email Suppression", clears them from the CRM, and promotes drafts with no kickback after 4 days to clean. CAMPAIGN mode runs only after the verification queue is empty and drafts up to 50 UNIQUE Bonita Motor Vault owner recipients per morning from "04 - Unit Owner CRM" in region order, deduplicated by email so multi-unit owners are contacted once, logging each to "04e - Campaign Sends". Use whenever asked to run the outreach drip, draft the outreach batch, prep tomorrow's outreach emails, scan for kickbacks, process NDRs, check outreach bounces, or run the BMV owner campaign. Requires the "Supabase - Storage Condo King" and Microsoft 365 connectors.
 ---
 
-# SCK Outlook Outreach Drip
+# SCK Outlook Unit Owner Drip
+
+**SCOPE.** This skill owns UNIT OWNER correspondence only: the verification drip
+against "04d - Email Verification" and the BMV owner campaign against
+"04 - Unit Owner CRM". DEVELOPER outreach is a separate skill,
+`outlook-developer-drip`, with its own queue, its own rotation and its own
+correspondence gate. The two never share a queue, a ledger or a rotation, and
+neither one may draft into the other's audience. Renamed from
+`outlook-outreach-drip` on 2026-08-22 when the split happened; behavior is
+unchanged, and LEARNINGS.md entries tagged `outlook-outreach-drip` are this
+skill's history and still bind.
 
 ## Purpose
 
