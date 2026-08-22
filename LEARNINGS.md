@@ -42,7 +42,14 @@ NEVER put credentials, API keys, or personal contact details in this file.
   parked, catch it through Manatee County. Estero serves a broken TLS chain, catch it through
   Lee County plus press. Never attempt to defeat a login or a CAPTCHA.
 - 2026-08-03 | all routines | blocker | Scan Activity Log run_type has drifted repeatedly. The
-  ONLY permitted values are: scan, enrichment, digest, swfl_permit_scan, swfl_news_scan, swfl_report.
+  ONLY permitted values are: scan, enrichment, digest, swfl_permit_scan, swfl_news_scan,
+  swfl_report, outreach. AMENDED 2026-08-22: 'outreach' was missing from this list while the
+  Outlook drips had been writing it consistently since 2026-08-11 (15 rows), which three separate
+  runs flagged and none could fix, because an unattended run cannot edit this file. It is now
+  permitted and is the correct value for both outlook-unit-owner-drip and outlook-developer-drip.
+  Adding a value here does NOT add it to the digest's SEEN_SCOPE, which is a separate editorial
+  decision, and never needs to: the learnings FOLD_SCOPE is default-open and takes every run type
+  automatically.
   Values nightly_scan, project_scan, project_scanner and scanner have all appeared in
   production and are invisible to the consuming digests. Hard-code the literal, never compose
   it, never abbreviate it. The consuming digests keep a tolerant IN-list as a backstop, but
@@ -766,10 +773,275 @@ cannot push. See the 2026-08-21 digest blocker below, which is the entry that ca
   percent duplication warning. The only remaining known issue is 25 same-name live rows with
   differing payloads awaiting a field-level merge, which is a human decision and never an
   auto-merge.
-- 2026-08-22 | repo | LEARNINGS FOLD SCOPE GAP, unresolved | The digest folds and marks digested
+- 2026-08-22 | repo | LEARNINGS FOLD SCOPE GAP, RESOLVED later the same day by splitting the list
+  into FOLD_SCOPE (default-open, no run_type filter) and SEEN_SCOPE (unchanged, non-learning rows
+  only), and folding all 126 orphans. The original finding is kept below as written. | The digest folded and marked digested
   only run_type IN ('scan','enrichment','digest','nightly_scan','project_scan'). Learning rows
   written under swfl_news_scan, swfl_permit_scan, swfl_report and outreach are therefore NEVER
   folded and never marked: 126 such rows were pending as of this session, the oldest from
   2026-08-05. Those routines' lessons are not reaching this file. Either widen the digest's
   run_type list or give those routines their own fold step. Flagged, not fixed, because widening
   that list also changes what the digest marks digested for non-learning rows.
+
+## Fold of the 126 orphaned learning rows, 2026-08-05 to 2026-08-22 (interactive session 2026-08-22)
+
+These rows were written correctly by swfl_permit_scan (51), swfl_news_scan (36), swfl_report (24)
+and outreach (15), and were never folded because every one of those run types sat outside the
+digest's single shared run_type IN list. Oldest 2026-08-05. FOLD_SCOPE is now default-open so this
+cannot recur; see the regression note in sck-morning-digest.
+
+Rows that were superseded by a later row are folded as one entry ending in the resolution, rather
+than as a contradictory pair, and the supersession is named. Repeat observations of the same
+source outage are folded once with the confirming dates.
+
+### swfl-permit-scanner - portal recipes and platform behavior
+
+- 2026-08-22 | swfl-permit-scanner | TYLER ENERGOV, the settled recipe | Capture the verbatim
+  /search/search body ONCE from the SPA by network interception, then reuse it: the body is TENANT
+  AGNOSTIC and works unchanged against another tenant by swapping the host and tenant header
+  (proved Zephyrhills to New Port Richey). SearchModule 1 with FilterModule 2 is the correct pair
+  for every /apps/selfservice tenant INCLUDING Hernando, which supersedes the 2026-08-07 Hernando
+  note claiming SearchModule 2 / FilterModule 1. Paging and sorting are TOP LEVEL and PageNumber
+  is ONE BASED: PageNumber 0 returns HTTP 200 with Success false and a null Result, which reads
+  like zero rows but is a rejected request. SortBy and SortAscending must be set at top level as
+  well as inside PermitCriteria or the response is oldest-first junk. To trigger the capture,
+  loading /apps/selfservice/#/search and clicking the element reading Search does NOT fire the
+  XHR; drive the Angular form the way the 2026-08-21 run documents.
+- 2026-08-22 | swfl-permit-scanner | ACCELA, the settled recipe | The Pasco and Charlotte
+  RecordId-to-CapDetail pattern TRANSFERS across tenants: each grid row carries a hidden RecordId
+  input that decodes to an anonymous CapDetail.aspx with the tenant agencyCode. Confirmed for City
+  of Tampa, City of North Port (overturning two prior notes that it needed auth) and Manatee County
+  (overturning the playbook row saying CapDetail exposes no valuation, SF or parcel publicly).
+  Date filters need the PAIRED _ext_ClientState hidden input set, not just .value, which is why
+  the 2026-08-11 Pinellas run wrongly concluded server side date filtering was unavailable.
+  Search and pager CLICKS are intercepted by iframe.mask_iframe inside div#divGlobalLoadingMask;
+  dismiss or bypass the mask rather than retrying the click.
+- 2026-08-22 | swfl-permit-scanner | Charlotte County Accela caps EVERY result set at 101 rows |
+  Regardless of window width, so a documented 14 day pull silently covered ONE DAY: an 08/05 to
+  08/19 window returned exactly 101 rows all dated 08/18. Any portal that returns a suspiciously
+  round row count is capping, not reporting. Window narrowly and stitch.
+- 2026-08-22 | swfl-permit-scanner | Pasco Accela pages 10 rows at a time | A 5 page loop cap
+  silently truncated a 62 row Commercial New result to 50 and dropped the OLDEST four days of the
+  window. Caught only because the COMNEW number series was checked for continuity. Check number
+  series continuity, do not trust the page loop.
+- 2026-08-22 | swfl-permit-scanner | Pasco CapDetail exposes TWO Job Value figures that disagree |
+  Header Job Value versus a second inside Application Information (Lowes 14734414.08 vs 12000000).
+  Also, 26EST RecordIds on 26TMP DRAFT rows decode to anonymous CapDetail exactly like issued
+  rows, and drafts carry the RICHEST data in the feed. Do not skip drafts.
+- 2026-08-22 | swfl-permit-scanner | eTRAKiT (City of Venice) | No date search field exists; use
+  SearchBy=Permit Number with Operator=At Least and the first permit number of the target window.
+  The 300 row cap is SELF PROVING because At Least is a lexicographic compare, so a BLD26 pull runs
+  out of BLD26 rows and spills into legacy EBLD and ENG prefixes, which removes any need to bisect
+  the start point precisely. The RECORDID column is CSS display:none on its header but still
+  returns cell text via innerText, format ECON:YYMMDDHHMMSSmmm, a true creation timestamp.
+- 2026-08-22 | swfl-permit-scanner | SmartGov (Granicus) recipe is BROKEN on build v2026.13.1 |
+  /Public/PermitSearch still returns 200 but the hidden __submitFormValidator__ input the POST
+  requires is gone from the served HTML. Separately, its free-text box returns zero rows for every
+  broad token tried despite valid AJAX round trips, so a zero there is not evidence of an empty
+  market.
+- 2026-08-22 | swfl-permit-scanner | Periodic-report portals need a REPORT-SCOPED window, not 14
+  days | Collier publishes one monthly XLSX about a week into the following month and then it does
+  not change; a 14 day lookback silently discards most of it. collier.gov sits behind an Akamai
+  edge filter that 403s plain curl and WebFetch on both the index and the XLSX, and passes with a
+  Node fetch carrying a FULL browser header set.
+- 2026-08-22 | swfl-permit-scanner | Fort Myers report index moved to /2377/2026-Statistical-Reports
+  | About ten reports post roughly three days into the following month. The New Projects Report is
+  APPLICATIONS RECEIVED, not permits issued, and its PDF has a summary count table near the top
+  with no addresses plus a full itemized listing further down. Read the itemized section.
+- 2026-08-22 | swfl-permit-scanner | Lee County DCD CurrentMonth weekly feed served STALE content |
+  The slot that should have covered 8/9 to 8/15 served 7/12 to 7/18, confirmed by HTTP
+  Last-Modified. Check Last-Modified against the claimed fold, never trust the slot name.
+- 2026-08-22 | swfl-permit-scanner | Manatee weekly PDF feed stopped publishing after 2026-08-03 |
+  The mymanatee.org Weekly Project List certified as a new Tier 3 source on 2026-08-15 went dark
+  within a fortnight. Manatee is now covered through Accela CapDetail instead.
+- 2026-08-22 | swfl-permit-scanner | Sarasota County | Planning ddlGSPermitType is larger than the
+  five types on file; Community Development Amendment Request and Construction Submittal also carry
+  CRE. Three record types (General Plan Amendment, Development Agreement/CDD, Final Plat) fail on
+  every search submit and reset to blank. No working anonymous parcel lookup was found, so Sarasota
+  rows carry a null parcel: ags3.scgov.net returns Service not found and sc-pa.com 302s away.
+- 2026-08-22 | swfl-permit-scanner | City of Sarasota FastTrackGov is more capable than recorded |
+  The Development Applications microapp DOES have a working date filter via the ddReportedOn
+  dropdown, contrary to the note saying street name was the only reliable filter, and Inquiry.aspx
+  RENDERS FULLY in the Playwright Node fetch harness after about 12 seconds, contrary to the note
+  saying it was qna AJAX gated and uncracked. It exposes Project Name and Tracking ID.
+- 2026-08-22 | swfl-permit-scanner | Cape Coral EnerGov returns an EMPTY Description on every
+  search-index record | List level triage cannot see scope. Recover it from the permit detail page,
+  which is public and renders Square Feet, Valuation, Description, Project Name and Contacts.
+- 2026-08-22 | swfl-permit-scanner | City of Tampa Accela CapDetail hides Job Value and description
+  in anonymous HTML | Unlike Charlotte and Pasco: the ValuationCalculator grid returns No records
+  found and the Description block is a spellcheck placeholder. A Site Plan Review search returned
+  no grid and fell back to the form, which is indistinguishable from a genuine zero.
+- 2026-08-22 | swfl-permit-scanner | Bonita Springs EnerGov host returned HTTP 500 portal-wide |
+  Confirmed by plain curl outside any harness, so it was an outage and not a proxy or TLS problem.
+  Prove outages outside the harness before recording them as recipe failures.
+- 2026-08-22 | swfl-permit-scanner | SANDBOX: playwright version versus bundled chromium | The
+  sandbox ships chromium build 1194 at /opt/pw-browsers but npm i playwright installs a newer
+  playwright demanding build 1234, and the launch error is misleading. Pin to the bundled build.
+- 2026-08-22 | swfl-permit-scanner | SANDBOX: the Tier 2 bootstrap POLLUTES THE REPO TREE | npm i
+  playwright from the default working directory creates node_modules/, package.json and
+  package-lock.json in the repo root, leaving the tree dirty and tripping the session stop hook.
+  Install outside the repo. Same class of problem as the __pycache__ artifact below.
+- 2026-08-22 | swfl-permit-scanner | SANDBOX: no working PDF text extractor | pypdf panics with
+  the _cffi_backend Rust panic and poppler-utils will not install (404 from the security mirror).
+  The 2026-08-15 run documents the workaround that did work.
+- 2026-08-22 | swfl-permit-scanner | Hillsborough Accela pagination via injected __doPostBack fails
+  | Legacy MS AJAX ScriptResource.axd throws on strict mode functions and the failure is SILENT.
+- 2026-08-22 | swfl-permit-scanner | Manatee/Bradenton Accela: element.click() can silently no-op |
+  Even with force:true, under Playwright. Bradenton server side date filtering WORKS (Manatee has
+  no date fields at all) and its CapDetail is anonymous, exposing Cost of Construction, Area of
+  Work, Parcel Number, Owner and Licensed Professional email.
+- 2026-08-22 | swfl-permit-scanner | DATA QUALITY, two open items | Rows 29 and 30 of Municipality
+  Portals both describe parcel 77459000943 (Habitat for Humanity, Justin Lane) as Buildings 7 and
+  8. A cross-county name collision was found and deliberately NOT merged: Sarasota
+  LDS-DEVSUB-26-000045 and Pasco 26TMP-083734 are both Dutch Bros Coffee FL3501 at different
+  addresses. Deliberate exclusion with an audit trail: Manatee BLD2608-2156, a $47,281,120 county
+  wastewater equalization basin, is public infrastructure and out of scope.
+
+### swfl-news-scanner - source health
+
+- 2026-08-22 | swfl-news-scanner | HARD BLOCKS, search-snippet recovery only | yourobserver.com and
+  businessobserverfl.com refuse WebFetch AND browser-UA curl on landings and articles alike.
+  Confirmed repeatedly 08-17 through 08-20. They are the two strongest Sarasota and Manatee
+  sources, so a blocked run leaves those counties uncovered; say so rather than reporting a quiet
+  market.
+- 2026-08-22 | swfl-news-scanner | DEAD DOMAINS | lsicos.com failed DNS on every run day from
+  2026-08-05 through 2026-08-15 and beyond. Run one cheap getent check per run and skip without a
+  fetch attempt. suncoastsvn.com is UNREACHABLE rather than paywalled (60s WebFetch timeout, 45s
+  browser-UA curl timeout, zero bytes) and it is the gold standard Tier 3 feed for Manatee,
+  Sarasota and Charlotte.
+- 2026-08-22 | swfl-news-scanner | fox4now.com is SUPERSEDED, not broken | It 301s to
+  winknews.com. Mark the sources.md row SUPERSEDED rather than deleting it. The WINK section URLs
+  that actually resolve are winknews.com/news/lee, /news/collier and /news/charlotte; the
+  /category/news/local-news/ path on file 404s, and /news/business/ 404s too. nbc-2.com now
+  redirects to gulfcoastnewsnow.com, and nbc-2.com itself is refused at tool level.
+- 2026-08-22 | swfl-news-scanner | TownNews/BLOX titles rate limit on burst | gulfshorebusiness.com,
+  naplespress.com, yoursun.com and winknews.com all run BLOX. Space requests to the same domain
+  across the run rather than batching section landings. A single 429 is not a block: it clears on
+  retry later in the same run. Yoursun rate limits SECTION and search indexes while ARTICLE URLs
+  fetch normally, so reach Yoursun by search first then fetch the article; a 2026-08-21 run found
+  the section indexes serving cleanly again, confirming it is intermittent.
+- 2026-08-22 | swfl-news-scanner | Reliable BLOX extraction pattern | Split the listing HTML on
+  <article, then read the article_<uuid>.html href, the <time datetime> value and the aria-label
+  headline from each block.
+- 2026-08-22 | swfl-news-scanner | yoursun.com is NOT blocked | It fetched cleanly on every section
+  tried using curl -sSL with a desktop Chrome user agent and an Accept-Language header, superseding
+  the 2026-08-05 note. Its Venice section carries a weekly Planning Commission recap by Bob Mudge
+  bundling every approval from one hearing into a single article: the highest yield single item for
+  the Friday rotation.
+- 2026-08-22 | swfl-news-scanner | Working substitutes found for blocked sources |
+  sarasotamagazine.com covers Sarasota city and county development in full (it carried the Benderson
+  1660 Ringling approval with vote count, square footages and principal name). tbbwmag.com covers
+  Sarasota county CRE despite the Tampa name. pulseofmanatee.com is a working dated Manatee outlet
+  with a fetchable /archive index.
+- 2026-08-22 | swfl-news-scanner | MANATEE IS THE WEAKEST COVERED COUNTY | Worse than the Charlotte
+  gap logged 2026-08-05. On a dedicated Manatee deep dive every certified Manatee source failed or
+  was silent. Treat a quiet Manatee as a coverage failure until proven otherwise.
+- 2026-08-22 | swfl-news-scanner | Tier 3 broker press has gone dormant | Lee and Associates
+  Naples-Ft. Myers has published no monthly roundup since May 2026 (posted Jun 1), three cycles
+  missed. SVN Suncoast has posted only research since 2026-06-12. Ian Black is client-side rendered
+  with recoverable dates stopping at 2026-07-30. Downgrade the tier rather than re-querying it.
+- 2026-08-22 | swfl-news-scanner | The 48 hour region-wide skim LEAKS qualifying items | Two named
+  projects absent from the table were found outside the window and inserted as flagged gap fills.
+  The window is a floor, not a guarantee.
+- 2026-08-22 | swfl-news-scanner | A LAND PURCHASE PRICE IS NOT A PROJECT COST | The Fort Myers
+  Costco story states $55 million for 55 acres and nothing about construction value, so that figure
+  belongs in "Project Cost ($)" with "Est. Cost" left null. Do not promote an acquisition price
+  into an estimated construction cost.
+- 2026-08-22 | swfl-news-scanner | CAR CONDO CROSS FEED signal | Venice approved Suncoast Executive
+  Storage LLC, a 26 UNIT facility measured in UNITS rather than square feet. Unit-count framing is
+  the signature of deeded large-bay executive garage product rather than conventional self storage.
+- 2026-08-22 | swfl-news-scanner | Article URLs are stored inconsistently | Some historical rows keep
+  the www. prefix that scripts/url_normalize.py strips, so dedup on URL can miss. Rows written since
+  2026-08-17 are canonicalized.
+- 2026-08-22 | all routines | execute_sql returns ONLY the last statement's result | A dedup check
+  batched with a second query looked like zero matches and caused a real duplicate insert. Run every
+  verification as its own call. Also: importing scripts/url_normalize.py writes
+  scripts/__pycache__/*.pyc into the repo and dirties the tree.
+- 2026-08-22 | swfl-news-scanner | Mid-run cloud suspension pattern | The Friday 2026-08-14
+  SWFL-FRI-SARASOTA-S run wrote run_started at 06:33 UTC then produced zero portal_result rows, zero
+  run_summary and zero inserts. A run_started with no run_summary is a suspended run, not a clean
+  one, and the report must flag it rather than read the silence as no news.
+
+### cre-report-writer - report construction
+
+- 2026-08-22 | cre-report-writer | The first-appearance identity key CANNOT match across the two
+  source tables, and produced three false NEW readings in one run | The portal branch keys on parcel
+  when one exists while the news branch cannot. FIXED 2026-08-19: after the CTE, run one ILIKE sweep
+  against BOTH tables restricted to created_at <= window_start, matching on distinctive project
+  tokens. Keep that sweep.
+- 2026-08-22 | cre-report-writer | Name drift defeats the exact-match identity key repeatedly | Same
+  project under drifted names: Icemann / Premier Sports Campus North; One Particular Harbor rebranded
+  from Silver Sands Beach Resort Redevelopment; 1899 Fruitville as three differently worded rows.
+  Exact name plus city is not sufficient; the ILIKE token sweep above is what catches these.
+- 2026-08-22 | cre-report-writer | Section 3 PROJECT UPDATES is blind to in-place UPDATEs | The high
+  water mark filters on created_at, so a progression written onto an existing row (Midtown at Bonita
+  gained four Phase 2 permits) never moves that row into the window and is silently dropped. The
+  window needs an updated_at arm or an explicit progression sweep. STILL OPEN.
+- 2026-08-22 | cre-report-writer | The 7 day CONTEXT window is too short for the identity check |
+  Murdock Square, created 2026-07-30, fell outside the 7 day lookback from a 2026-08-12 report and
+  read as new. Restrict the identity sweep by created_at <= window_start with NO lower bound.
+- 2026-08-22 | cre-report-writer | Bare numeric ids are AMBIGUOUS across the two tables | Both start
+  at 1 and number independently, so a run log citing "existing row id X" nearly caused a
+  misattribution twice. Always qualify an id with its table.
+- 2026-08-22 | cre-report-writer | NEW PROJECTS counts go LUMPY after a scanner backfill | Charlotte
+  contributed 3 rows one morning only because the permit scanner discovered the Accela 101 row cap
+  and backfilled. A spike after a backfill is not market activity and must not be reported as one.
+- 2026-08-22 | cre-report-writer | Section 5 NEW DEVELOPERS is inflated by tenant pad shells | 6 of
+  19 first-appearance names in one run were single purpose owner LLCs behind national tenant pads.
+  Filter or label them; they are not developers in any useful sense.
+- 2026-08-22 | cre-report-writer | The Est. Cost ingest contract took nine days to actually land |
+  Declared 2026-08-08, ignored by every row created 08-09 through 08-16, prose-parsing transition
+  expired 08-15, and confirmed working 2026-08-17 (7 of 9 permit rows, 3 of 5 news rows). A contract
+  is not in force until the writing routines are verified to honor it.
+- 2026-08-22 | cre-report-writer | The Calusa Monday lane needs a recipient-quality tiebreak | Four
+  candidates tied at Medium relevance, and strict Est. Cost descending would have spent all three
+  drafts before reaching the only candidate with a verifiable published email. On the lane's first
+  run all six ranked candidates were skipped for lack of a verified email within the lookup budget.
+- 2026-08-22 | cre-report-writer | Report INSERT construction, three separate failures | A single
+  large INSERT with long text containing apostrophes failed with a syntax error near RETURNING; an
+  18 column INSERT with a 23 KB dollar quoted markdown literal was rejected with "INSERT has more
+  target columns than expressions" even though the counts matched; and splitting a base64 blob at a
+  raw character count broke decode() because the split was not a multiple of 4. WORKING METHOD: send
+  the canonical markdown ONCE in a dollar quoted CTE and derive every section column from it with
+  substring(md from '### N. TITLE(.*?)### N+1. TITLE'). Split base64 at len//2//4*4.
+- 2026-08-22 | cre-report-writer | A portal_result log line can disagree with the row it describes |
+  A log claiming three stage progressions did not match the Progression annotations embedded in
+  those records. Trust the row, not the log line about the row.
+- 2026-08-22 | cre-report-writer | Section 8 lists learning rows from the SWFL routines only | It
+  closes with a count of the car condo learnings belonging to the SCK morning digest. That division
+  is deliberate; do not merge the two.
+
+### outlook drips
+
+- 2026-08-22 | outlook-unit-owner-drip | CAMPAIGN Step 2 SQL referenced columns that do not exist |
+  "Ground Breaking" and "Proj. Delivery" live in "01 - Projects", not "06 - Pre-Sales". The query
+  now joins "01 - Projects" for groundbreaking, delivery, unit count and flood zone. A related note:
+  an illustrative product sentence in the skill ("20 to 21 foot ceilings, Category 5 concrete") did
+  not match live data (18 foot plus clear heights, Block construction), which is exactly why the
+  2026-08-17 spec forbids copying illustrative figures forward.
+- 2026-08-22 | outlook-unit-owner-drip | The campaign-bounce blind spot RECURRED and is still open |
+  KICKBACK Step 1 keeps only NDR addresses that exist in 04d with Send Status='drafted', so with 04d
+  empty a real BMV-Owner-1 hard bounce is silently discarded. First logged 2026-08-15, recurred
+  2026-08-17. STILL OPEN: campaign sends need their own bounce path independent of the 04d queue.
+- 2026-08-22 | outlook-unit-owner-drip | "02 - Units" duplicate "Unit #" defect, cost quantified |
+  Five rows per unit for Hideout Storage Park (Phase I) units 1 through 7, each with a different
+  size and PSF. On 2026-08-18 this hit 11 of 50 recipients, 22 percent of that morning's batch, who
+  therefore received no unit value at all. Fold of the 2026-08-17 entry already in this file; the
+  handling rule stands and the upstream fix is still owed.
+- 2026-08-22 | outlook-unit-owner-drip | A project name ending in a PERIOD breaks its platform URL |
+  "Naples Motor Condos - Naples Blvd." 404s at the host with a 9 byte body and the SPA never boots;
+  %2E is normalized back to the dot. Those owners cannot be sent a working unit link at all.
+  Related and important: CURL ALONE CANNOT VALIDATE a storagecondoking.com project link, because the
+  site is a client-rendered SPA that returns the same 200 shell for valid and invalid names and only
+  renders "Project Not Found" in the browser. A status code check proves nothing; render it.
+- 2026-08-22 | outlook-unit-owner-drip | Fortified Storage Center CRM rows carry NO "Unit #" at all |
+  All 7 recipients drafted had Unit # null, so Block 1 variants a and b cannot resolve, and its
+  submarket "Vero Beach; Sebastian" has a null psf_growth_5yr_ann_pct, so variant c cannot resolve
+  either. Those drafts ship with no personalized sentence, which the spec allows and the run report
+  must state.
+- 2026-08-22 | outlook drips | PROMPT VERSUS SKILL DIVERGENCE, twice in two days | The scheduled
+  prompt said to ALWAYS run CAMPAIGN mode while the skill says CAMPAIGN runs only when DRAFT drafted
+  nothing, and the prompt still demanded a gate on both PDF links after the report PDF had been
+  removed from the gate on 2026-08-16. THE SKILL OF RECORD ON MAIN WINS. When a scheduled prompt
+  contradicts it, follow the skill and say so in the run report; a stale prompt is not an
+  instruction.
