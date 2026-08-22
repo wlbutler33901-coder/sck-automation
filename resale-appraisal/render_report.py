@@ -2,8 +2,8 @@
 """Deterministic report renderer for the SCK unit re-sale appraisal engine.
 
 Implements references/report-template.md (mirror of the Cowork skill
-sck-unit-resale-valuation's spec of record; 18,552 bytes, md5
-62acef6c7e37a49c6c631f366830d77a as of the v2.9 Build Quality pass). The template
+sck-unit-resale-valuation's spec of record; 18,549 bytes, md5
+2407cfbaabf1bf783714ee5ac7d90249 as of the v2.9 Build Quality pass). The template
 is never read at runtime: the sentence builders below emit the prose, so the
 template and this file must always be edited together.
 Fills that spec from the engine's JSON output. No model in the loop: every number comes from the engine, every
@@ -765,7 +765,7 @@ def render(out):
     _ranked = rank_drivers(out["table3_avg"])
     d1 = _ranked[0]
     _fact = driver_fact(d1[0], growth)
-    adj_s1 = (b("Adjustments") + ": each comparable is translated to the subject through five "
+    adj_s1 = (b("Adjustments") + ": each comparable is translated to the subject through six "
               "standardized adjustments applied additively to its unadjusted $/SF; the dominant "
               "driver is " + DRIVER_NAME[d1[0]] + " at " + b(pct(d1[1])) +
               ((", " + _fact) if _fact else "") + ".")
