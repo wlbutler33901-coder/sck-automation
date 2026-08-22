@@ -26,8 +26,8 @@ any number or any report sentence.
    report-template.md is the spec of record; this repo's references/report-template.md
    is its MIRROR and must be updated in the same commit as any renderer change.
    Recorded mirror checksum (August 2026, v3.2 Unit Summary shape):
-   references/report-template.md = 18,682 bytes, md5
-   c0e14addb4ce46ad441a417c58127674. Update this line in the same commit whenever
+   references/report-template.md = 18,695 bytes, md5
+   d40b0b0bdbe3feb5a63448ca83a1b0ea. Update this line in the same commit whenever
    the template changes.
 4. Every live write is verified by re-query inside the runner. Never bypass
    run_appraisals.py with hand-written REST or SQL writes to "02 - Units".

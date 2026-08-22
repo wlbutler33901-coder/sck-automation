@@ -2,8 +2,8 @@
 """Deterministic report renderer for the SCK unit re-sale appraisal engine.
 
 Implements references/report-template.md (mirror of the Cowork skill
-sck-unit-resale-valuation's spec of record; 18,682 bytes, md5
-   c0e14addb4ce46ad441a417c58127674 as of the v3.2 Unit Summary pass). The template
+sck-unit-resale-valuation's spec of record; 18,695 bytes, md5
+   d40b0b0bdbe3feb5a63448ca83a1b0ea as of the v3.2 Unit Summary pass). The template
 is never read at runtime: the sentence builders below emit the prose, so the
 template and this file must always be edited together.
 Fills that spec from the engine's JSON output. No model in the loop: every number comes from the engine, every
@@ -108,7 +108,7 @@ DISCLOSURE = ("*This report is a market analysis prepared by Storage Condo King 
 METHODOLOGY = ("This valuation employs a comparable sales approach anchored on sales "
                "within the subject's own project, drawing on 1,600+ Florida garage "
                "condominium transactions. Comparables are scored on three weighted "
-               "factors (Recency 50%, Same-Project Class 35%, Size Match 15%) with a "
+               "factors (Recency 50%, Product Quality Index proximity 35%, Size Match 15%) with a "
                "same-project core of up to 12 sales and adjacent-project backfill; an "
                "asymmetric outlier guard removes data errors while preserving genuine "
                "finish-level dispersion. Seven standardized adjustments follow, and the "
