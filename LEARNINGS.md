@@ -1045,3 +1045,16 @@ source outage are folded once with the confirming dates.
   removed from the gate on 2026-08-16. THE SKILL OF RECORD ON MAIN WINS. When a scheduled prompt
   contradicts it, follow the skill and say so in the run report; a stale prompt is not an
   instruction.
+- 2026-08-22 | outlook-developer-drip | A capabilities email that describes the platform and links
+  nowhere | The Collection Suites Lane B email went out with the full service package, the market
+  data and the distribution ask, and not one link to the site. The reader had no way to go look at
+  any of it. Both lanes now carry a MINIMUM OF TWO LINKS: the site-hosted quarterly report at
+  storagecondoking.com/reports/{filename}, preferred over the raw Supabase bucket URL because it is
+  our own domain and does not expose a storage path, plus one site page chosen to fit what the email
+  is asking for. The Lane A template's single report link is superseded.
+- 2026-08-22 | outlook-developer-drip | NEVER INVENT A SITE PATH, and know why the usual checks fail
+  | The authoritative route list is storagecondoking.com/sitemap.xml. curl cannot validate an SPA
+  route, the app returns the same 200 shell either way, so confirm a path from the sitemap or from a
+  cross-link on one of the static .html pages, which are server rendered. A headless browser is not
+  a fallback here either: Chromium returns ERR_CONNECTION_RESET through the cloud sandbox egress
+  proxy, so browser rendering is unavailable and the sitemap is the check.

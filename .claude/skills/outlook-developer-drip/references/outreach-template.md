@@ -58,12 +58,21 @@ reading convenience ONLY, and if the two ever disagree the parent skill wins.
 Our latest Florida Garage and Car Condo Market Report is worth a skim for where pricing and
 inventory are trending in {their region}:
 [{Quarter} {Year} Florida Garage and Car Condo Market Report]({report URL})
-Render this as an HTML hyperlink in the Outlook draft body. Both the href and the label derive
-from the NEWEST object in the "Quarterly Market Reports" bucket, so a Q3 upload updates both
-with no edit here: take that object's public URL as the href, and parse {Quarter} and {Year}
-from its filename (florida-car-condo-market-report-q2-2026.pdf gives Q2 and 2026) to build the
-label "{Quarter} {Year} Florida Garage and Car Condo Market Report". Current newest object:
-https://llwyvgkqhendgzsgngqh.supabase.co/storage/v1/object/public/Quarterly%20Market%20Reports/florida-car-condo-market-report-q2-2026.pdf
+[{site page label}]({site page URL})
+
+TWO LINKS, NOT ONE. See the parent skill section "LINKS (both lanes, minimum two per draft)",
+which owns this and outranks anything here. The report link is the SITE-HOSTED copy,
+https://storagecondoking.com/reports/{filename}, not the raw Supabase storage URL; the second
+link is one site page chosen to fit what this particular email is asking for, taken from the
+table in that section. Render both as HTML hyperlinks in the Outlook draft body, stacked in
+their own divs, descriptive anchor text, never a naked URL.
+
+Both the report href and its label derive from the NEWEST object in the "Quarterly Market
+Reports" bucket, so a Q3 upload updates both with no edit here: parse {Quarter} and {Year} from
+its filename (florida-car-condo-market-report-q2-2026.pdf gives Q2 and 2026) to build the label
+"{Quarter} {Year} Florida Garage and Car Condo Market Report", and reuse that same filename in
+the site path. Current newest object:
+https://storagecondoking.com/reports/florida-car-condo-market-report-q2-2026.pdf
 
 Best,
 Will Butler

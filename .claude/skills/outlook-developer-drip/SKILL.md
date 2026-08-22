@@ -271,6 +271,53 @@ same menu twice, not two different accounts of what Storage Condo King does.
 The `references/outreach-template.md` copy of this list is superseded by this
 block; if the two ever disagree, THIS ONE WINS.
 
+## LINKS (both lanes, minimum two per draft)
+
+**Every draft in BOTH lanes carries at least two links: the current quarterly
+market report, and one site page that fits what the email is asking for.** Added
+2026-08-22 after a Lane B draft went out with no way for the recipient to go
+look at anything. An email that describes a platform and then gives the reader
+nowhere to see it is asking them to take it on faith.
+
+**1. The quarterly market report.** Prefer the SITE-HOSTED copy over the raw
+Supabase storage URL: `https://storagecondoking.com/reports/{filename}`. Same
+file, on our own domain, and it does not expose a storage bucket path. Verified
+2026-08-22: the site copy and the bucket object are byte identical at 1,975,130
+bytes. Derive `{filename}` and the label from the NEWEST object in the
+"Quarterly Market Reports" bucket, so a new upload updates both with no edit
+here. Label it `{Quarter} {Year} Florida Garage and Car Condo Market Report`.
+
+**2. One site page, chosen to fit the message.** Real public routes, confirmed
+from the site's own sitemap:
+
+| Page | Use it when |
+|---|---|
+| `/pre-sale-deals` | The distribution ask. This is what a developer pre-sale listing looks like on the platform, so it shows the product being offered. |
+| `/sale-comps` | Talking about verified closed sales or comp data. |
+| `/car-condo-values` and `/unit-appraisals` | Talking about the valuation engine. |
+| `/new-supply-pipeline` | Talking to a developer about competing supply. |
+| `/demographic-profile` and `/micro-market-analysis` | Site selection. |
+| `/market-coverage` | Talking about geographic expansion. |
+| `/florida-car-condo-market-statistics.html` | Backing up a liquidity or volume claim; static and crawlable. |
+| `/projects` and `/florida-car-condo-project-directory.html` | The tracked project universe. |
+
+**NEVER INVENT A PATH.** The authoritative list is
+`https://storagecondoking.com/sitemap.xml`. Two verification notes, both learned
+the hard way:
+
+- **curl CANNOT validate an SPA route.** The app returns the same HTTP 200 shell
+  for a valid and an invalid path and only renders "Not Found" in the browser, so
+  a status code proves nothing. Confirm an app route by its presence in
+  sitemap.xml, or by a cross-link from one of the static `.html` pages, which are
+  server-rendered and genuinely curl-checkable.
+- **A headless browser cannot reach the site from the cloud sandbox.** Chromium
+  returns ERR_CONNECTION_RESET through the egress proxy, so browser rendering is
+  not available as a fallback here. Use the sitemap and the static pages instead
+  of concluding a page is dead.
+
+Anchor text is descriptive and never a naked URL, and both links follow the
+allowlist: a plain `<a href>` inside a `<div>`, no styling.
+
 ---
 
 ## LANE A - New developments
