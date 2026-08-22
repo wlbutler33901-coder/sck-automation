@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-import json, sys, datetime
+import json, re, sys, datetime
 MIN_PSF       = 50
 STALE_MONTHS  = 60
 A_CORE_MAX    = 12
@@ -16,6 +16,27 @@ def tier_word(a):
  if not a: return None
  a=str(a).lower()
  return "Track-Side" if "track" in a else "Premium" if "prem" in a else "Standard" if "stand" in a else "Flex" if ("flex" in a or "basic" in a) else None
+# --- Build Quality (methodology v2.9, Design C). Mirrors the presale engine. ---
+# BQI = materials points + max(0, finish points - the row's OWN tier floor). The floor
+# de-duplicates quality already priced by the Amenity Tier adjustment, so a Premium
+# High-Quality subject vs a Premium High-Quality comp nets 0.0%.
+BQ_MATERIALS = {"Tilt Wall":3,"Block":3,"Block, Tilt Wall":3,"Metal, Block":2,"Metal":1,"Wood-Frame":0}
+BQ_FINISH    = {"Luxury":3,"High-Quality":2,"Basic":1,"Utility":0}
+BQ_FLOOR     = {"Premium":2,"Standard":1,"Flex":1,"Track-Side":1}
+BQ_RATE      = 2.0   # percent per BQI point
+BQ_CLIP      = 8.0   # +/- ceiling
+def norm_name(s):
+ if s is None: return ""
+ return re.sub(r"[\u2013\u2014]","-",str(s)).strip().lower()
+def bqi(materials,finish,tier_word_):
+ m=BQ_MATERIALS.get(str(materials).strip(),3) if materials not in (None,"") else 3
+ f=BQ_FINISH.get(str(finish).strip(),1) if finish not in (None,"") else 1
+ return m+max(0,f-BQ_FLOOR.get(tier_word_,1))
+def bq_adj(subj_bqi,comp_bqi):
+ """(BQI_subject - BQI_comp) * 2.0%, clipped to +/-8%. Returns (adj, capped)."""
+ raw=(subj_bqi-comp_bqi)*BQ_RATE
+ adj=max(-BQ_CLIP,min(BQ_CLIP,raw))
+ return round(adj,2), abs(raw)>BQ_CLIP+1e-9
 def size_cat(sf):
  if sf is None: return None
  return "Small" if sf<=900 else "Medium" if sf<=1400 else "Large"
@@ -148,6 +169,9 @@ def main():
  subj_parcel=norm_parcel(subj.get("parcel_id"))
  ssf=float(subj["unit_size_sf"])
  track_mode=(subj["amenity_word"]=="Track-Side")  # v2.8 symmetric Track-Side exclusion
+ # v2.9 Build Quality: subject BQI from its own attributes; comps resolve by project name.
+ proj_attrs={norm_name(k):v for k,v in (data.get("project_attributes") or {}).items()}
+ subj_bqi=bqi(subj.get("construction_materials"),subj.get("common_area_finish"),subj["amenity_word"])
  pool=[]
  for c in data["sales_comps"]:
   psf=num(c.get("$ / SF")); sf=num(c.get("Sq. Ft.")); price=num(c.get("Sale Price"))
@@ -235,9 +259,12 @@ def main():
   a_type=round(type_adj(c["raw"].get("Sale Type")),2)
   # v2.8 track_mode: inside a Track-Side-only pool the wealth-index spread reflects track
   # location, not buyer micro-location, so the WI adjustment is neutralized (presale parity).
+  _pa=proj_attrs.get(norm_name(c["raw"].get("Project Name"))) or {}
+  _cbqi=bqi(_pa.get("materials"),_pa.get("finish"),c["amen"])
+  a_bq,_bqcap=bq_adj(subj_bqi,_cbqi)
   a_size=round(size_adj(c["sf"],ssf),2)
   a_wi=0.0 if track_mode else round(wi_adj(swi,c["wi"]),2)
-  net=round(a_time+a_amen+a_type+a_size+a_wi,2)
+  net=round(a_time+a_amen+a_bq+a_type+a_size+a_wi,2)
   rows.append({"project":c["raw"].get("Project Name"),"unit":c["raw"].get("Unit"),
    "address":c["raw"].get("Address"),
    "class":c["cls"],"own_sale":c["own"],"mos":c["mos"],"wi":c["wi"],
@@ -245,6 +272,7 @@ def main():
    "amenity":c["raw"].get("Amenity"),"sale_type":c["raw"].get("Sale Type"),
    "year_built":c["raw"].get("Year Built"),"size":c["sf"],"psf":c["psf"],"score":c["score"],
    "wi_adj":a_wi,"time_adj":a_time,"amen_adj":a_amen,"size_adj":a_size,"type_adj":a_type,
+   "bq_adj":a_bq,"bq_capped":_bqcap,"comp_bqi":_cbqi,
    "net_adj":net,"adj_psf":round(c["psf"]*(1+net/100.0),2),"flagged":abs(net)>50})
  kept=[r for r in rows if not r["flagged"]]
  if kept and len(kept)!=len(rows):
@@ -262,7 +290,7 @@ def main():
  wi_vals=[r["wi"] for r in rows if r["wi"] is not None]
  avg_wi=round(sum(wi_vals)/len(wi_vals),1) if wi_vals else None
  avg_mos=round(sum((r["mos"] or 0) for r in rows)/n,1); avg_score=mean("score")
- adj_avgs={k:mean(k) for k in ("wi_adj","time_adj","amen_adj","size_adj","type_adj","net_adj")}
+ adj_avgs={k:mean(k) for k in ("wi_adj","time_adj","amen_adj","bq_adj","size_adj","type_adj","net_adj")}
  total_adj=adj_avgs["net_adj"]
  subj_psf=round(avg_psf*(1+total_adj/100.0),2)
  value=int(round(ssf*subj_psf/1000.0)*1000)
@@ -271,10 +299,11 @@ def main():
  out={"subject":subj,"appraisal_date":str(today),
   "table1":{"comp_avg_size":avg_size,"comp_avg_value":avg_value,"comp_avg_psf":avg_psf,
                   "wi_adj":adj_avgs["wi_adj"],"time_adj":adj_avgs["time_adj"],"amen_adj":adj_avgs["amen_adj"],
-                  "size_adj":adj_avgs["size_adj"],"type_adj":adj_avgs["type_adj"],"total_adj":total_adj,
+                  "size_adj":adj_avgs["size_adj"],"type_adj":adj_avgs["type_adj"],"bq_adj":adj_avgs["bq_adj"],"total_adj":total_adj,
                   "subject_psf":subj_psf,"subject_value":value},
   "table2_avg":{"mos":avg_mos,"wi":avg_wi,"size":avg_size,"psf":avg_psf,"score":avg_score},
   "table3_avg":adj_avgs,"comps":rows,"excluded_outliers":excluded,
+  "subject_bqi":subj_bqi,"bq_capped_count":sum(1 for r in rows if r.get("bq_capped")),
   "competitive_set":competitive_set(subj,comps,rows,
    lambda c:c["raw"],lambda c:c.get("amen"),lambda c:c.get("wi"),
    lambda c:c.get("mos"),lambda c:c["psf"],lambda c:c["sf"]),

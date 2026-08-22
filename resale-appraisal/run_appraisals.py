@@ -9,7 +9,7 @@ HARD SAFETY RULES (do not relax):
   * NEVER sets "Manual Update" = TRUE anywhere (that fires the legacy Make
     webhook). Completed units get "Manual Update" = NULL, which never fires.
   * Never touches region/project batch trigger tables or any Make webhook.
-  * appraise_unit.py is byte-locked (15,844 bytes); this script refuses to run
+  * appraise_unit.py is byte-locked (17,683 bytes); this script refuses to run
     if the engine file size differs.
 
 Usage examples:
@@ -32,7 +32,7 @@ except ImportError:
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ENGINE = os.path.join(HERE, "appraise_unit.py")
-ENGINE_BYTES = 15844
+ENGINE_BYTES = 17683
 sys.path.insert(0, HERE)
 from render_report import render, validate  # noqa: E402
 
@@ -419,6 +419,22 @@ def main():
     reg_rates, state_rate, _ = load_rates(sb)
     wi_map, demo_map = load_wi(sb)
     proj_meta = load_project_meta(sb)
+    # v2.9 Build Quality: one project-attribute map for the ENGINE to resolve subject and
+    # comp build quality by normalized project name. Comps can come from any project, so
+    # this covers the whole portfolio, not just the run's scope. Null materials/finish fall
+    # back to Block/Basic inside the engine; counted here for the run summary.
+    project_attributes = {}
+    bq_default_materials = bq_default_finish = 0
+    for _k, _v in proj_meta.items():
+        _mat = _v.get('construction_materials')
+        _fin = _v.get('common_area_finish')
+        if not _mat:
+            bq_default_materials += 1
+        if not _fin:
+            bq_default_finish += 1
+        project_attributes[_k] = {'materials': _mat or 'Block', 'finish': _fin or 'Basic'}
+    print('Build Quality: %d project attribute rows; %d defaulted materials to Block, '
+          '%d defaulted finish to Basic' % (len(project_attributes), bq_default_materials, bq_default_finish))
 
     results, failures = [], []
     rpc_cache = {}
@@ -456,7 +472,8 @@ def main():
                 if not subject["unit_size_sf"]:
                     raise RuntimeError("Suite Size (SF) missing or zero")
                 engine_in = {"subject": subject, "appraisal_date": today,
-                             "market_growth_pct": rate, "sales_comps": sales}
+                             "market_growth_pct": rate, "sales_comps": sales,
+                             "project_attributes": project_attributes}
                 out, warn = run_engine(engine_in)
                 report = render(out)
                 problems = validate(report, out)
@@ -507,7 +524,10 @@ def main():
                          "unit": args.unit, "all": args.all},
                "units_in_scope": len(units), "succeeded": len(results),
                "failed": len(failures), "failures": failures,
-               "tier_violations_in_scope": tier_violations}
+               "tier_violations_in_scope": tier_violations,
+               "build_quality": {"projects": len(project_attributes),
+                                 "defaulted_materials": bq_default_materials,
+                                 "defaulted_finish": bq_default_finish}}
     json.dump(summary, open(os.path.join(args.out, "summary.json"), "w"), indent=2)
     if results:
         with open(os.path.join(args.out, "summary.csv"), "w", newline="") as f:

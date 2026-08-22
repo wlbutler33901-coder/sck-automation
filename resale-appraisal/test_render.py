@@ -32,9 +32,10 @@ def tier_of(comp_row):
     return "Track-Side" if "track" in a else a
 
 
-def run(sales, label, subj=None):
+def run(sales, label, subj=None, project_attributes=None):
     data = {"subject": subj or subject(), "appraisal_date": TODAY.isoformat(),
-            "market_growth_pct": 10.0, "sales_comps": sales}
+            "market_growth_pct": 10.0, "sales_comps": sales,
+            "project_attributes": project_attributes or {}}
     with tempfile.NamedTemporaryFile("w", suffix=".json", delete=False) as f:
         json.dump(data, f); path = f.name
     r = subprocess.run([sys.executable, os.path.join(HERE, "appraise_unit.py"), path],
@@ -120,6 +121,60 @@ def main():
     print("PASS scenario 5 (Track-Side subject: track-only pool, WI neutralized): "
           "%d comps, all Track-Side, value %s"
           % (len(out5["comps"]), "${:,}".format(out5["estimated_market_value"])))
+
+    # ---- v2.9 Build Quality (Design C) ----
+    # (a) metal comp against a concrete subject. BQI subject Block/Basic/Standard = 3;
+    #     comp Metal/Basic/Standard = 1; (3-1)*2.0% = +4.00% applied TO THE COMP, matching
+    #     the engine's existing sign convention (a better subject yields a positive
+    #     adjustment, exactly as AMEN_ADJ[("Premium","Standard")] = +15 and wi_adj = (s-c)*4).
+    bq_subj = dict(subject(), construction_materials="Block", common_area_finish="Basic")
+    s6 = [sale("Test Motor Condos", 900 + i, 4 + i * 3, 300 + i * 4, 1200, "Standard-Tier", "Re-Sale")
+          for i in range(4)]
+    s6 += [sale("Metal Shed Storage", 950 + i, 5 + i * 2, 280 + i * 3, 1220, "Standard-Tier", "Re-Sale")
+           for i in range(4)]
+    attrs6 = {"test motor condos": {"materials": "Block", "finish": "Basic"},
+              "metal shed storage": {"materials": "Metal", "finish": "Basic"}}
+    out6, rpt6 = run(s6, "bq-metal", subj=bq_subj, project_attributes=attrs6)
+    metal = [c for c in out6["comps"] if c["project"] == "Metal Shed Storage"]
+    same = [c for c in out6["comps"] if c["project"] == "Test Motor Condos"]
+    assert metal and all(abs(c["bq_adj"] - 4.00) < 1e-6 for c in metal), \
+        "metal comp should carry +4.00%%, got %s" % [c["bq_adj"] for c in metal]
+    assert all(abs(c["bq_adj"]) < 1e-9 for c in same), "same-quality comps must be 0.00%"
+    assert "Build Quality Adj" in rpt6 and "**Build Quality**" in rpt6
+    print("PASS scenario 6 (build quality: metal comp vs concrete subject = %+.2f%%)"
+          % metal[0]["bq_adj"])
+
+    # (b) Premium de-dup: Premium High-Quality subject vs Premium High-Quality comp = 0.00%.
+    #     The tier floor removes the finish points the Amenity Tier adjustment already prices.
+    ded_subj = dict(subject(), amenity_tier="Premium-Tier",
+                    construction_materials="Block", common_area_finish="High-Quality")
+    s7 = [sale("Test Motor Condos", 700 + i, 4 + i * 3, 320 + i * 5, 1200, "Premium-Tier", "Re-Sale")
+          for i in range(4)]
+    s7 += [sale("Peer Premium Garages", 760 + i, 5 + i * 2, 330 + i * 4, 1210, "Premium-Tier", "Re-Sale")
+           for i in range(4)]
+    attrs7 = {"test motor condos": {"materials": "Block", "finish": "High-Quality"},
+              "peer premium garages": {"materials": "Block", "finish": "High-Quality"}}
+    out7, rpt7 = run(s7, "bq-dedup", subj=ded_subj, project_attributes=attrs7)
+    assert all(abs(c["bq_adj"]) < 1e-9 for c in out7["comps"]), \
+        "Premium HQ vs Premium HQ must net 0.00%%, got %s" % [c["bq_adj"] for c in out7["comps"]]
+    print("PASS scenario 7 (build quality de-dup: Premium High-Quality both sides = 0.00%)")
+
+    # (c) cap clipping: Tilt Wall/Luxury Standard subject (BQI 5) vs Wood-Frame/Utility comp
+    #     (BQI 0) measures +10%, clipped to the +8% ceiling and disclosed.
+    cap_subj = dict(subject(), construction_materials="Tilt Wall", common_area_finish="Luxury")
+    s8 = [sale("Test Motor Condos", 600 + i, 4 + i * 3, 320 + i * 5, 1200, "Standard-Tier", "Re-Sale")
+          for i in range(4)]
+    s8 += [sale("Wood Frame Barns", 660 + i, 5 + i * 2, 250 + i * 3, 1220, "Standard-Tier", "Re-Sale")
+           for i in range(4)]
+    attrs8 = {"test motor condos": {"materials": "Tilt Wall", "finish": "Luxury"},
+              "wood frame barns": {"materials": "Wood-Frame", "finish": "Utility"}}
+    out8, rpt8 = run(s8, "bq-cap", subj=cap_subj, project_attributes=attrs8)
+    wf = [c for c in out8["comps"] if c["project"] == "Wood Frame Barns"]
+    assert wf and all(abs(c["bq_adj"] - 8.00) < 1e-6 and c["bq_capped"] for c in wf), \
+        "wood-frame comp should clip at +8.00%% and flag capped, got %s" % [(c["bq_adj"], c["bq_capped"]) for c in wf]
+    assert "the category ceiling" in rpt8, "build-quality cap disclosure missing"
+    print("PASS scenario 8 (build quality cap: clipped at +8.00%% and disclosed)")
+
     print("PASS all render tests")
 
 

@@ -2,8 +2,8 @@
 
 This folder is the deterministic, Make-free batch path for SCK unit re-sale
 appraisals. Same engine as the Cowork skill (appraise_unit.py, byte-locked at
-15,844 bytes, md5 7b354ea08615b9e9dfaf7e2670303cf7 (v2.8, symmetric Track-Side
-exclusion; supersedes the retired 15,134 / v2.0 composite-dedupe lock)), plus a
+17,683 bytes, md5 6a3ad9c894ba6bf2878fa68fa30ef0ae (v2.9, Build Quality
+adjustment; supersedes the retired 15,844 / v2.8 and 15,134 / v2.0 locks)), plus a
 pure-Python renderer and a batch runner. No LLM touches
 any number or any report sentence.
 
@@ -25,9 +25,9 @@ any number or any report sentence.
    SPEC OF RECORD: the Cowork skill sck-unit-resale-valuation's own copy of
    report-template.md is the spec of record; this repo's references/report-template.md
    is its MIRROR and must be updated in the same commit as any renderer change.
-   Recorded mirror checksum (August 2026, v3.2 Unit Summary shape):
-   references/report-template.md = 17,874 bytes, md5
-   eaa848ed167508b8d0ccecd747ec7761. Update this line in the same commit whenever
+   Recorded mirror checksum (August 2026, v2.9 Build Quality shape):
+   references/report-template.md = 18,552 bytes, md5
+   62acef6c7e37a49c6c631f366830d77a. Update this line in the same commit whenever
    the template changes.
 4. Every live write is verified by re-query inside the runner. Never bypass
    run_appraisals.py with hand-written REST or SQL writes to "02 - Units".
@@ -80,6 +80,30 @@ view once at run start and prints a prominent WARN for any violating project IN 
 also recording them in summary.json as tier_violations_in_scope. It is advisory: the
 runner never blocks on it and never writes an Amenity Tier. A violation means the run
 may be pricing off a stale tier, so resolve it and re-run if the tier moves.
+
+## Methodology v2.9 (August 2026): Build Quality adjustment (Design C)
+
+A sixth standardized adjustment, identical to the presale engine's. Build Quality
+Index = construction-materials points plus the common-area finish points that sit
+ABOVE the row's own tier floor:
+
+    BQ_MATERIALS  Tilt Wall / Block / "Block, Tilt Wall" 3, "Metal, Block" 2,
+                  Metal 1, Wood-Frame 0            (default 3)
+    BQ_FINISH     Luxury 3, High-Quality 2, Basic 1, Utility 0   (default 1)
+    BQ_FLOOR      Premium 2, Standard 1, Flex 1, Track-Side 1
+
+Per-comp adjustment = (BQI subject - BQI comp) x 2.0%, clipped to +/-8% with a
+capped flag, applied additively into net AFTER Amenity Tier and BEFORE Unit Size.
+The tier floor is what de-duplicates quality the Amenity Tier adjustment already
+prices, so a Premium High-Quality subject against a Premium High-Quality comp nets
+0.00%. Comp selection scoring, class eligibility and the v2.8 Track-Side wall are
+UNCHANGED. Subject and comp attributes resolve by normalized project name from the
+project-attributes map the runner passes; null materials/finish default to
+Block/Basic and are counted in the run summary.
+
+Approved by Will (Design C). The engine lock moves to 17,683 bytes / md5 6a3ad9c894ba6bf2878fa68fa30ef0ae;
+the previous 15,844 / v2.8 lock is retired. Rule 2 above still stands for every
+FUTURE change.
 
 ## Methodology v2.8 (August 2026): symmetric Track-Side exclusion
 
