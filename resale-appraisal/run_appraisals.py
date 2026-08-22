@@ -9,7 +9,7 @@ HARD SAFETY RULES (do not relax):
   * NEVER sets "Manual Update" = TRUE anywhere (that fires the legacy Make
     webhook). Completed units get "Manual Update" = NULL, which never fires.
   * Never touches region/project batch trigger tables or any Make webhook.
-  * appraise_unit.py is byte-locked (17,683 bytes); this script refuses to run
+  * appraise_unit.py is byte-locked (18,689 bytes); this script refuses to run
     if the engine file size differs.
 
 Usage examples:
@@ -32,7 +32,7 @@ except ImportError:
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ENGINE = os.path.join(HERE, "appraise_unit.py")
-ENGINE_BYTES = 17683
+ENGINE_BYTES = 18689
 sys.path.insert(0, HERE)
 from render_report import render, validate  # noqa: E402
 

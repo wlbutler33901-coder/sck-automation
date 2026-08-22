@@ -2,8 +2,8 @@
 
 This folder is the deterministic, Make-free batch path for SCK unit re-sale
 appraisals. Same engine as the Cowork skill (appraise_unit.py, byte-locked at
-17,683 bytes, md5 6a3ad9c894ba6bf2878fa68fa30ef0ae (v2.9, Build Quality
-adjustment; supersedes the retired 15,844 / v2.8 and 15,134 / v2.0 locks)), plus a
+18,689 bytes, md5 51ce5f972e09498225d362273f40ab7a (v3.0 methodology;
+supersedes the retired 15,844 / v2.8 and 15,134 / v2.0 locks)), plus a
 pure-Python renderer and a batch runner. No LLM touches
 any number or any report sentence.
 
@@ -25,9 +25,9 @@ any number or any report sentence.
    SPEC OF RECORD: the Cowork skill sck-unit-resale-valuation's own copy of
    report-template.md is the spec of record; this repo's references/report-template.md
    is its MIRROR and must be updated in the same commit as any renderer change.
-   Recorded mirror checksum (August 2026, v2.9 Build Quality shape):
-   references/report-template.md = 18,549 bytes, md5
-   2407cfbaabf1bf783714ee5ac7d90249. Update this line in the same commit whenever
+   Recorded mirror checksum (August 2026, v3.2 Unit Summary shape):
+   references/report-template.md = 18,682 bytes, md5
+   c0e14addb4ce46ad441a417c58127674. Update this line in the same commit whenever
    the template changes.
 4. Every live write is verified by re-query inside the runner. Never bypass
    run_appraisals.py with hand-written REST or SQL writes to "02 - Units".
@@ -81,29 +81,39 @@ also recording them in summary.json as tier_violations_in_scope. It is advisory:
 runner never blocks on it and never writes an Amenity Tier. A violation means the run
 may be pricing off a stale tier, so resolve it and re-run if the tier moves.
 
-## Methodology v2.9 (August 2026): Build Quality adjustment (Design C)
+## Methodology v3.0 (August 2026): quality components, sale-type and WI recalibration
 
-A sixth standardized adjustment, identical to the presale engine's. Build Quality
-Index = construction-materials points plus the common-area finish points that sit
-ABOVE the row's own tier floor:
+Approved by Will. SUPERSEDES the v2.9 Build Quality design in full (that combined
+index with its tier floor is gone; finish and materials are now separate raw-point
+components). Seven standardized adjustments: Sale Timing, Wealth Index, Amenity
+Class, Unit Size, Sale Type, Finish Level, Construction Materials.
 
-    BQ_MATERIALS  Tilt Wall / Block / "Block, Tilt Wall" 3, "Metal, Block" 2,
-                  Metal 1, Wood-Frame 0            (default 3)
-    BQ_FINISH     Luxury 3, High-Quality 2, Basic 1, Utility 0   (default 1)
-    BQ_FLOOR      Premium 2, Standard 1, Flex 1, Track-Side 1
+(a) AMENITY CLASS prices SOCIAL INFRASTRUCTURE ONLY, repriced from the old 15/20/10
+    steps to Premium/Standard +/-8, Standard/Flex +/-5, Premium/Flex +/-13. Build
+    quality moved out into (b) and (c), so the categories no longer double-count.
+    The Track-Side wall and tier-step Class eligibility are UNCHANGED.
+(b) FINISH LEVEL: Luxury 3, High-Quality 2, Basic 1, Utility 0, RAW with no tier
+    floor; (subject points minus comp points) x 4.0 percent, capped +/-12.
+(c) CONSTRUCTION MATERIALS: Tilt Wall 4, Block+Tilt Wall 3, Block 3, Metal+Block 2,
+    Metal 2, Wood-Frame 1 (default 3); x 2.0 percent, capped +/-6.
+    NOTE: (b) and (c) reach their ceiling only by LANDING on it exactly (max spread
+    is 3 points either way), so cap disclosure tests value equality, not overflow.
+(d) SALE TYPE recalibrated 5 to 10: a New Construction comp against a re-sale
+    subject adjusts +10, per SCK's published 12 to 27 percent resale-over-new
+    premium. The subject is always a re-sale here, so the -10 inverse never arises.
+(e) WEALTH INDEX SCALE HARDENING. CHANGELOG: the data mixes 0-10 and 0-100 wealth
+    index scales, and historic runs carried a near-uniform -25 distortion on mixed
+    rows because only the subject was normalized. Both subject and comp are now
+    normalized to 0-10 (divide by 10 when the value exceeds 10) BEFORE applying 4.0
+    percent per point, cap +/-25. A 7.6 subject against a 76 comp now yields about
+    0.0 percent where it previously pinned at -25.
+(f) PQI = tier points (Track-Side 3, Premium 2, Standard 1, Flex 0) + materials
+    points + finish points. The CLASS component of comp-selection scoring is now
+    PQI proximity, max(0, 10 - 2.5 x |PQI subject - PQI comp|), at the same 0.35
+    weight. Eligibility gates and the wall stay as they are.
 
-Per-comp adjustment = (BQI subject - BQI comp) x 2.0%, clipped to +/-8% with a
-capped flag, applied additively into net AFTER Amenity Tier and BEFORE Unit Size.
-The tier floor is what de-duplicates quality the Amenity Tier adjustment already
-prices, so a Premium High-Quality subject against a Premium High-Quality comp nets
-0.00%. Comp selection scoring, class eligibility and the v2.8 Track-Side wall are
-UNCHANGED. Subject and comp attributes resolve by normalized project name from the
-project-attributes map the runner passes; null materials/finish default to
-Block/Basic and are counted in the run summary.
-
-Approved by Will (Design C). The engine lock moves to 17,683 bytes / md5 6a3ad9c894ba6bf2878fa68fa30ef0ae;
-the previous 15,844 / v2.8 lock is retired. Rule 2 above still stands for every
-FUTURE change.
+Engine lock moves to 18,689 bytes / md5 51ce5f972e09498225d362273f40ab7a; the 15,844 / v2.8 lock is
+retired. Rule 2 above still stands for every FUTURE change.
 
 ## Methodology v2.8 (August 2026): symmetric Track-Side exclusion
 

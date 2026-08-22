@@ -2,8 +2,8 @@
 """Deterministic report renderer for the SCK unit re-sale appraisal engine.
 
 Implements references/report-template.md (mirror of the Cowork skill
-sck-unit-resale-valuation's spec of record; 18,549 bytes, md5
-2407cfbaabf1bf783714ee5ac7d90249 as of the v2.9 Build Quality pass). The template
+sck-unit-resale-valuation's spec of record; 18,682 bytes, md5
+   c0e14addb4ce46ad441a417c58127674 as of the v3.2 Unit Summary pass). The template
 is never read at runtime: the sentence builders below emit the prose, so the
 template and this file must always be edited together.
 Fills that spec from the engine's JSON output. No model in the loop: every number comes from the engine, every
@@ -33,8 +33,9 @@ def row(*cells):
     return "| " + " | ".join("" if c is None else str(c) for c in cells) + " |"
 
 DRIVER_NAME = {"time_adj": "sale timing", "type_adj": "sale type",
-               "amen_adj": "amenity tier", "size_adj": "unit size",
-               "wi_adj": "wealth index", "bq_adj": "build quality"}
+               "amen_adj": "amenity class", "size_adj": "unit size",
+               "wi_adj": "wealth index", "fin_adj": "finish level",
+               "mat_adj": "construction materials"}
 
 def driver_clause(key, val, growth):
     v = pct(val)
@@ -60,7 +61,8 @@ def driver_fact(key, growth):
 
 # Hard caps the engine enforces per category. A category that lands exactly on its cap
 # is disclosed in the Adjustments prose; silent when nothing is capped.
-ADJ_CAPS = (("time_adj", 25.0), ("wi_adj", 25.0), ("size_adj", 20.0))
+ADJ_CAPS = (("time_adj", 25.0), ("wi_adj", 25.0), ("size_adj", 20.0),
+            ("fin_adj", 12.0), ("mat_adj", 6.0))
 
 
 def capped_categories(comps):
@@ -80,9 +82,9 @@ def capped_categories(comps):
 
 
 def rank_drivers(t3):
-    """All six average adjustments ranked by absolute size (v2.9 adds build quality). Same figures the engine
+    """All seven average adjustments ranked by absolute size (v3.0). Same figures the engine
     produced (out["table3_avg"]); ranking happens here, never in the engine."""
-    keys = ("time_adj", "wi_adj", "amen_adj", "bq_adj", "type_adj", "size_adj")
+    keys = ("time_adj", "wi_adj", "amen_adj", "fin_adj", "mat_adj", "type_adj", "size_adj")
     return sorted(((k, float(t3.get(k, 0) or 0)) for k in keys), key=lambda kv: -abs(kv[1]))
 
 
@@ -109,7 +111,7 @@ METHODOLOGY = ("This valuation employs a comparable sales approach anchored on s
                "factors (Recency 50%, Same-Project Class 35%, Size Match 15%) with a "
                "same-project core of up to 12 sales and adjacent-project backfill; an "
                "asymmetric outlier guard removes data errors while preserving genuine "
-               "finish-level dispersion. Six standardized adjustments follow, and the "
+               "finish-level dispersion. Seven standardized adjustments follow, and the "
                "final value is the comp average $/SF adjusted by the equal-weighted "
                "total adjustment, times subject square footage.")
 
@@ -765,7 +767,7 @@ def render(out):
     _ranked = rank_drivers(out["table3_avg"])
     d1 = _ranked[0]
     _fact = driver_fact(d1[0], growth)
-    adj_s1 = (b("Adjustments") + ": each comparable is translated to the subject through six "
+    adj_s1 = (b("Adjustments") + ": each comparable is translated to the subject through seven "
               "standardized adjustments applied additively to its unadjusted $/SF; the dominant "
               "driver is " + DRIVER_NAME[d1[0]] + " at " + b(pct(d1[1])) +
               ((", " + _fact) if _fact else "") + ".")
@@ -792,27 +794,20 @@ def render(out):
                   "rather than the full computed difference.")
     else:
         adj_s3 = ""
-    # v2.9: build quality clips at +/-8%. The engine flags the comp when the MEASURED
-    # difference exceeded the ceiling, which value-equality alone would not prove.
-    _bqcap = [c for c in comps if c.get("bq_capped")]
-    if _bqcap:
-        _v = float(_bqcap[0].get("bq_adj", 0) or 0)
-        adj_s3 += (" Build quality at " + b("{:+.1f}%".format(_v)) + ", the category ceiling, "
-                   "with the measured difference exceeding it and capped.")
     L.append((adj_s1 + " " + adj_s2 + adj_s3).strip())
     L.append("")
     L += ["- " + b("Sale Timing") + ": compounded at the blended regional/statewide repeat-sales appreciation rate. Capped at 25%.",
           "- " + b("Wealth Index") + ": 4.0% per index point of difference. Capped at 25%.",
-          "- " + b("Amenity Tier") + ": 5% to 20% depending on tier gap.",
-          "- " + b("Build Quality") + ": 2.0% per Build Quality Index point of difference "
-          "(construction materials plus common area finish above the tier floor). Capped at 8%.",
-          "- " + b("Sale Type") + ": 5.0% pre-construction incentive added to new-construction comps (the subject is a re-sale).",
+          "- " + b("Amenity Class") + ": social infrastructure only, 5% to 13% depending on class gap.",
+          "- " + b("Finish Level") + ": 4.0% per common-area finish point of difference. Capped at 12%.",
+          "- " + b("Construction Materials") + ": 2.0% per materials point of difference. Capped at 6%.",
+          "- " + b("Sale Type") + ": 10.0% pre-construction incentive added to new-construction comps (the subject is a re-sale).",
           "- " + b("Unit Size") + ": 2% per 100 SF of size difference. Capped at 20%."]
     L.append("")
     L.append(b("Table 3 - Comp Adjustments"))
     L.append("")
-    hdr3 = ["#", "Project", "Unit #", "Wealth Index", "Sale Timing", "Amenity Tier",
-            "Build Quality Adj", "Unit Size", "Sale Type", "Net Adj %", "$/SF", "Net Adj. $ PSF"]
+    hdr3 = ["#", "Project", "Unit #", "Wealth Index", "Sale Timing", "Amenity Tier", "Unit Size",
+            "Sale Type", "Net Adj %", "$/SF", "Net Adj. $ PSF"]
     L.append(row(*hdr3))
     L.append(row(*(["---"] * len(hdr3))))
     for i, c in enumerate(comps, 1):
@@ -820,22 +815,22 @@ def render(out):
         if c.get("own_sale"):
             u += " \u2020"
         L.append(row(i, c.get("project"), u, pct(c["wi_adj"]), pct(c["time_adj"]),
-                     pct(c["amen_adj"]), pct(c.get("bq_adj", 0)), pct(c["size_adj"]),
-                     pct(c["type_adj"]),
+                     pct(c["amen_adj"]), pct(c["size_adj"]), pct(c["type_adj"]),
                      pct(c["net_adj"]), psf(c["psf"]), psf(c["adj_psf"])))
     t3 = out["table3_avg"]
     avg_adj_psf = round(sum(c["adj_psf"] for c in comps) / len(comps), 2)
     L.append(row("Avg", "", "", pct(t3["wi_adj"]), pct(t3["time_adj"]), pct(t3["amen_adj"]),
-                 pct(t3.get("bq_adj", 0)), pct(t3["size_adj"]), pct(t3["type_adj"]),
-                 pct(t1["total_adj"]), psf(t1["comp_avg_psf"]), psf(avg_adj_psf)))
+                 pct(t3["size_adj"]), pct(t3["type_adj"]), pct(t1["total_adj"]),
+                 psf(t1["comp_avg_psf"]), psf(avg_adj_psf)))
     L.append("")
     L.append(b("Table 4 - Adjustment Component Averages"))
     L.append("")
     L.append(row("Component", "Avg Adj %"))
     L.append(row("---", "---"))
     for label, key in (("Sale Timing", "time_adj"), ("Wealth Index", "wi_adj"),
-                       ("Amenity Tier", "amen_adj"), ("Build Quality", "bq_adj"),
-                       ("Sale Type", "type_adj"), ("Unit Size", "size_adj")):
+                       ("Amenity Class", "amen_adj"), ("Unit Size", "size_adj"),
+                       ("Sale Type", "type_adj"), ("Finish Level", "fin_adj"),
+                       ("Construction Materials", "mat_adj")):
         L.append(row(label, pct(t3.get(key, 0))))
     L.append(row("Total", pct(t1["total_adj"])))
     L.append("")
@@ -878,13 +873,8 @@ def validate(report, out):
         need(h, h)
     need("| # | Project | Unit # | Address | Class | Mos Ago | Tier | Sale Type | SF | Score |",
          "exact Table 2 header")
-    # v2.9 adds a Build Quality Adj column. Legacy five-category reports still validate.
-    _t3_v29 = ("| # | Project | Unit # | Wealth Index | Sale Timing | Amenity Tier | "
-               "Build Quality Adj | Unit Size | Sale Type | Net Adj % | $/SF | Net Adj. $ PSF |")
-    _t3_v28 = ("| # | Project | Unit # | Wealth Index | Sale Timing | Amenity Tier | Unit Size | "
-               "Sale Type | Net Adj % | $/SF | Net Adj. $ PSF |")
-    if _t3_v29 not in report and _t3_v28 not in report:
-        p.append("missing: exact Table 3 header")
+    need("| # | Project | Unit # | Wealth Index | Sale Timing | Amenity Tier | Unit Size | "
+         "Sale Type | Net Adj % | $/SF | Net Adj. $ PSF |", "exact Table 3 header")
     need("**Table 4 - Adjustment Component Averages**", "Table 4 label")
     need("**Table 5 - Competitive Set**", "Table 5 label")
     need("**Finish-Level Range:**", "finish-level range line")

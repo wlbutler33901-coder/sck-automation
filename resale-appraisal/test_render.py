@@ -122,58 +122,75 @@ def main():
           "%d comps, all Track-Side, value %s"
           % (len(out5["comps"]), "${:,}".format(out5["estimated_market_value"])))
 
-    # ---- v2.9 Build Quality (Design C) ----
-    # (a) metal comp against a concrete subject. BQI subject Block/Basic/Standard = 3;
-    #     comp Metal/Basic/Standard = 1; (3-1)*2.0% = +4.00% applied TO THE COMP, matching
-    #     the engine's existing sign convention (a better subject yields a positive
-    #     adjustment, exactly as AMEN_ADJ[("Premium","Standard")] = +15 and wi_adj = (s-c)*4).
-    bq_subj = dict(subject(), construction_materials="Block", common_area_finish="Basic")
-    s6 = [sale("Test Motor Condos", 900 + i, 4 + i * 3, 300 + i * 4, 1200, "Standard-Tier", "Re-Sale")
-          for i in range(4)]
-    s6 += [sale("Metal Shed Storage", 950 + i, 5 + i * 2, 280 + i * 3, 1220, "Standard-Tier", "Re-Sale")
-           for i in range(4)]
-    attrs6 = {"test motor condos": {"materials": "Block", "finish": "Basic"},
-              "metal shed storage": {"materials": "Metal", "finish": "Basic"}}
-    out6, rpt6 = run(s6, "bq-metal", subj=bq_subj, project_attributes=attrs6)
-    metal = [c for c in out6["comps"] if c["project"] == "Metal Shed Storage"]
-    same = [c for c in out6["comps"] if c["project"] == "Test Motor Condos"]
-    assert metal and all(abs(c["bq_adj"] - 4.00) < 1e-6 for c in metal), \
-        "metal comp should carry +4.00%%, got %s" % [c["bq_adj"] for c in metal]
-    assert all(abs(c["bq_adj"]) < 1e-9 for c in same), "same-quality comps must be 0.00%"
-    assert "Build Quality Adj" in rpt6 and "**Build Quality**" in rpt6
-    print("PASS scenario 6 (build quality: metal comp vs concrete subject = %+.2f%%)"
-          % metal[0]["bq_adj"])
+    # ================= v3.0 methodology =================
+    def _pair(subj_mat, subj_fin, comp_mat, comp_fin, comp_styp="Re-Sale", subj_extra=None):
+        sj = dict(subject(), construction_materials=subj_mat, common_area_finish=subj_fin)
+        if subj_extra:
+            sj.update(subj_extra)
+        sl = [sale("Test Motor Condos", 900 + i, 4 + i * 3, 300 + i * 4, 1200, "Standard-Tier", "Re-Sale")
+              for i in range(4)]
+        sl += [sale("Peer Garage Works", 950 + i, 5 + i * 2, 290 + i * 3, 1210, "Standard-Tier", comp_styp)
+               for i in range(4)]
+        at = {"test motor condos": {"materials": subj_mat, "finish": subj_fin},
+              "peer garage works": {"materials": comp_mat, "finish": comp_fin}}
+        return sj, sl, at
 
-    # (b) Premium de-dup: Premium High-Quality subject vs Premium High-Quality comp = 0.00%.
-    #     The tier floor removes the finish points the Amenity Tier adjustment already prices.
-    ded_subj = dict(subject(), amenity_tier="Premium-Tier",
-                    construction_materials="Block", common_area_finish="High-Quality")
-    s7 = [sale("Test Motor Condos", 700 + i, 4 + i * 3, 320 + i * 5, 1200, "Premium-Tier", "Re-Sale")
-          for i in range(4)]
-    s7 += [sale("Peer Premium Garages", 760 + i, 5 + i * 2, 330 + i * 4, 1210, "Premium-Tier", "Re-Sale")
-           for i in range(4)]
-    attrs7 = {"test motor condos": {"materials": "Block", "finish": "High-Quality"},
-              "peer premium garages": {"materials": "Block", "finish": "High-Quality"}}
-    out7, rpt7 = run(s7, "bq-dedup", subj=ded_subj, project_attributes=attrs7)
-    assert all(abs(c["bq_adj"]) < 1e-9 for c in out7["comps"]), \
-        "Premium HQ vs Premium HQ must net 0.00%%, got %s" % [c["bq_adj"] for c in out7["comps"]]
-    print("PASS scenario 7 (build quality de-dup: Premium High-Quality both sides = 0.00%)")
+    # (b) FINISH SPREAD, no floor: Luxury subject vs Basic comp = +8.00%.
+    sj, sl, at = _pair("Block", "Luxury", "Block", "Basic")
+    o, r = run(sl, "v3-finish", subj=sj, project_attributes=at)
+    peer = [c for c in o["comps"] if c["project"] == "Peer Garage Works"]
+    assert peer and all(abs(c["fin_adj"] - 8.00) < 1e-6 for c in peer), \
+        "Luxury vs Basic must be +8.00%%, got %s" % [c["fin_adj"] for c in peer]
+    print("PASS scenario 6 (v3.0 finish spread, no floor: Luxury subject vs Basic comp = %+.2f%%)"
+          % peer[0]["fin_adj"])
 
-    # (c) cap clipping: Tilt Wall/Luxury Standard subject (BQI 5) vs Wood-Frame/Utility comp
-    #     (BQI 0) measures +10%, clipped to the +8% ceiling and disclosed.
-    cap_subj = dict(subject(), construction_materials="Tilt Wall", common_area_finish="Luxury")
-    s8 = [sale("Test Motor Condos", 600 + i, 4 + i * 3, 320 + i * 5, 1200, "Standard-Tier", "Re-Sale")
+    # (c) MATERIALS: metal comp against a concrete subject. Block 3 vs Metal 2 = +2.00%,
+    #     translating the INFERIOR comp UP toward the subject, the same direction as
+    #     AMEN_ADJ[("Premium","Standard")] = +8 and wi_adj = (s-c)*4.
+    sj, sl, at = _pair("Block", "Basic", "Metal", "Basic")
+    o, r = run(sl, "v3-materials", subj=sj, project_attributes=at)
+    peer = [c for c in o["comps"] if c["project"] == "Peer Garage Works"]
+    assert peer and all(abs(c["mat_adj"] - 2.00) < 1e-6 for c in peer), \
+        "Block vs Metal must be +2.00%%, got %s" % [c["mat_adj"] for c in peer]
+    print("PASS scenario 7 (v3.0 materials: metal comp vs concrete subject = %+.2f%%, comp translated toward subject)"
+          % peer[0]["mat_adj"])
+
+    # (d) SALE TYPE: a New Construction comp against a re-sale subject = +10.00%.
+    sj, sl, at = _pair("Block", "Basic", "Block", "Basic", comp_styp="New Construction")
+    o, r = run(sl, "v3-saletype", subj=sj, project_attributes=at)
+    peer = [c for c in o["comps"] if c["project"] == "Peer Garage Works"]
+    assert peer and all(abs(c["type_adj"] - 10.00) < 1e-6 for c in peer), \
+        "New Construction comp must be +10.00%%, got %s" % [c["type_adj"] for c in peer]
+    print("PASS scenario 8 (v3.0 sale type recalibrated: New Construction comp = %+.2f%%)"
+          % peer[0]["type_adj"])
+
+    # (e) WI SCALE GUARD: subject 7.6 against a comp recorded on the 0-100 scale (76).
+    #     Both sides normalize to 0-10 first, so this is ~0.0%, NOT the -25 floor.
+    sj = dict(subject(), wealth_index=7.6, construction_materials="Block", common_area_finish="Basic")
+    sl = [sale("Test Motor Condos", 980 + i, 4 + i * 3, 300 + i * 4, 1200, "Standard-Tier", "Re-Sale", wi=7.6)
           for i in range(4)]
-    s8 += [sale("Wood Frame Barns", 660 + i, 5 + i * 2, 250 + i * 3, 1220, "Standard-Tier", "Re-Sale")
+    sl += [sale("Scaled Peer Garages", 985 + i, 5 + i * 2, 295 + i * 3, 1205, "Standard-Tier", "Re-Sale", wi=76)
            for i in range(4)]
-    attrs8 = {"test motor condos": {"materials": "Tilt Wall", "finish": "Luxury"},
-              "wood frame barns": {"materials": "Wood-Frame", "finish": "Utility"}}
-    out8, rpt8 = run(s8, "bq-cap", subj=cap_subj, project_attributes=attrs8)
-    wf = [c for c in out8["comps"] if c["project"] == "Wood Frame Barns"]
-    assert wf and all(abs(c["bq_adj"] - 8.00) < 1e-6 and c["bq_capped"] for c in wf), \
-        "wood-frame comp should clip at +8.00%% and flag capped, got %s" % [(c["bq_adj"], c["bq_capped"]) for c in wf]
-    assert "the category ceiling" in rpt8, "build-quality cap disclosure missing"
-    print("PASS scenario 8 (build quality cap: clipped at +8.00%% and disclosed)")
+    at = {"test motor condos": {"materials": "Block", "finish": "Basic"},
+          "scaled peer garages": {"materials": "Block", "finish": "Basic"}}
+    o, r = run(sl, "v3-wi-guard", subj=sj, project_attributes=at)
+    peer = [c for c in o["comps"] if c["project"] == "Scaled Peer Garages"]
+    assert peer, "scaled peer comps missing"
+    worst = max(abs(c["wi_adj"]) for c in peer)
+    assert worst < 1.0, "wi scale guard failed: expected ~0%%, got %s" % [c["wi_adj"] for c in peer]
+    print("PASS scenario 9 (v3.0 wi scale guard: subject 7.6 vs comp 76 = %+.2f%%, not -25)"
+          % peer[0]["wi_adj"])
+
+    # (f) CAP DISCLOSURE: Luxury/Tilt Wall subject vs Utility/Wood-Frame comp lands finish on
+    #     its 12%% ceiling and materials on its 6%% ceiling; both must be disclosed.
+    sj, sl, at = _pair("Tilt Wall", "Luxury", "Wood-Frame", "Utility")
+    o, r = run(sl, "v3-caps", subj=sj, project_attributes=at)
+    peer = [c for c in o["comps"] if c["project"] == "Peer Garage Works"]
+    assert peer and all(abs(c["fin_adj"] - 12.00) < 1e-6 for c in peer), "finish should land on 12%% ceiling"
+    assert peer and all(abs(c["mat_adj"] - 6.00) < 1e-6 for c in peer), "materials should land on 6%% ceiling"
+    assert "finish level" in r and "construction materials" in r, "cap disclosure must name both categories"
+    assert "reached their cap" in r or "reached its cap" in r, "cap disclosure sentence missing"
+    print("PASS scenario 10 (v3.0 cap disclosure: finish +12.00%%, materials +6.00%%, both disclosed)")
 
     print("PASS all render tests")
 
