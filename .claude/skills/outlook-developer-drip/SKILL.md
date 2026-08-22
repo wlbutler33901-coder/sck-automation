@@ -322,37 +322,75 @@ valid bare address, preferring a named-person address over a generic info@ or
 legal@ inbox. "Recipient Email" stores that bare address only, with no
 parentheses, notes or secondary addresses.
 
-### Market data nugget (live, aggregate only)
+### Market data, woven as LIQUIDITY EVIDENCE for the distribution ask
 
-Every Lane B draft carries exactly ONE market data figure relevant to the
-recipient's region: a PSF trend, a sales velocity stat, or an inventory figure.
-Pull it live:
+**The data has a job, and the job is not to inform.** It exists to make the
+distribution offer credible: this product trades, and we hold the list of the
+people trading it, so let us put your units in front of them. A figure that does
+not serve that argument does not belong in the email.
+
+**NEVER a standalone stat paragraph.** Retired 2026-08-22 by Will as awkward and
+disconnected: a lone sentence reading "For context on the market, 143 car condo
+units traded across 25 Florida projects over the trailing twelve months," parked
+between the opener and the service list, doing nothing and leading nowhere. The
+data now lives INSIDE the distribution paragraph, or in the sentence immediately
+setting it up, and it always resolves into the ask.
+
+Two components, in this order, because the argument only works in this order:
+
+1. **MARKET LIQUIDITY.** Transaction velocity, aggregate: units traded and
+   projects transacting over the trailing twelve months. This proves the product
+   moves. Prefer the widest cut that is still true and relevant, statewide when
+   the recipient's own region is thin.
+2. **PLATFORM REACH.** The size of the owner and buyer list that captures that
+   activity, plus the recipient's own region slice when it is non-trivial. This
+   proves WE can reach the people doing the trading, which is the whole basis of
+   the offer.
+
+Pull both live:
 
 ```sql
-select region, submarket, psf_growth_5yr_ann_pct, psf_growth_1yr_pct,
-       unit_sales_ttm, median_psf_ttm
-from "Region Definition"
-where region = $REGION;
+-- 1. liquidity: units traded and projects transacting, trailing 12 months
+select n as units_traded, project_count
+from get_market_segmentation_v2(null, null, null, null, null, null, 12)
+where dimension = 'all';
+
+-- 2. reach: the distribution list, overall and in the recipient's region
+select count(distinct lower(btrim("Email 1")))
+         filter (where coalesce(btrim("Email 1"),'') <> '') as unique_owners,
+       count(distinct "Project") as projects_covered
+from "04 - Unit Owner CRM";
+
+select count(distinct lower(btrim("Email 1")))
+         filter (where coalesce(btrim("Email 1"),'') <> '') as region_owners,
+       count(distinct "Project") as region_projects
+from "04 - Unit Owner CRM" where "Region" = $REGION;
 ```
 
-`get_market_segmentation_v2` and `get_market_appreciation` are also available for
-a region or submarket cut when the "Region Definition" row is thin.
+`get_market_appreciation` and "Region Definition" remain available for a growth
+or median cut when one genuinely strengthens the argument.
 
-**HARD RULES on the nugget:**
+**HARD RULES:**
 
-- **AGGREGATE FIGURES ONLY. NEVER a named competing project.** Region and
-  submarket rollups, medians, counts and percentages are fine. A sentence that
-  names another developer's project, or that is specific enough to identify one,
-  is barred outright. This is the competitor anonymity rule and it has no
-  exceptions in this lane. The recipient's OWN project may be named.
+- **AGGREGATE FIGURES ONLY. NEVER a named competing project.** Rollups, counts
+  and percentages are fine. Anything specific enough to identify another
+  developer's project is barred outright, and this has no exceptions. The
+  recipient's OWN project may be named.
+- **NEVER a competitor's pricing.** A PSF figure drawn from a region or
+  submarket with only two or three tracked projects effectively quotes the
+  neighbour, so prefer COUNTS, which expose no pricing at all. Check
+  `project_count` before using any average or median: below about five projects,
+  drop the price figure and use volume.
 - **Never state a decline.** `psf_growth_1yr_pct` is volatile and frequently
-  negative; do not use it as the nugget when it is negative, and never present a
-  falling figure as news. Prefer `psf_growth_5yr_ann_pct`, `unit_sales_ttm` or
-  `median_psf_ttm`.
-- If every figure for the recipient's region is null, **omit the nugget
-  sentence entirely** and note the omission in the run report. An email with no
-  nugget ships; an invented nugget never does.
-- One figure, one sentence. Do not stack three stats into a paragraph.
+  negative. Never present a falling figure, and never frame thin volume as
+  weakness.
+- **Cite the list honestly.** The number comes from "04 - Unit Owner CRM" and
+  those people are unit OWNERS. Say owners. Do not inflate the count with
+  prospects, and do not describe it as a buyer list larger than it is.
+- If the liquidity figures are null, **drop that clause and keep the reach
+  clause**, and vice versa. If both are null, make the distribution ask WITHOUT
+  numbers rather than inventing any. The ask never drops; the evidence can.
+- At most THREE figures total. This is an argument, not a market report.
 
 ### Body spec (complete; every element required unless marked optional)
 
@@ -362,17 +400,20 @@ In order:
    One factual reference, drawn from the developer card, their live project row
    or their website. If the record is thin, keep the opener generic rather than
    fabricating detail.
-2. **The market data nugget**, one sentence, per the rules above. Optional only
-   in the all-null case.
+2. *(No standalone market paragraph here.)* The market data is NOT a separate
+   block. It belongs to item 4 below, where it functions as evidence.
 3. **The DEVELOPER SERVICE PACKAGE**, exactly as specified in the canonical
    shared block above. All seven bullets, verbatim, in order, each ending with a
    period. Do NOT shorten it, reword it, or substitute a Lane B specific
    capabilities list; the old four to six bullet variant was retired 2026-08-22.
    Introduce it with a short line such as `Here are some of the ways we can help:`.
-4. **An explicit offer to blast their current or upcoming projects to the SCK
-   database of unit owners and buyers.** This is the point of the lane and is
-   never dropped, softened into a hint, or left to be inferred. Say it plainly
-   and make the next step a reply.
+4. **The DISTRIBUTION ASK, carrying the market data as its evidence.** This is
+   the point of the lane and is never dropped, softened into a hint, or left to
+   be inferred. Build it in one move: the market is liquid, we hold the list of
+   the owners behind that liquidity, so let us put your current or upcoming
+   project in front of them. Say it plainly and make the next step a reply.
+   The liquidity and reach figures per the section above live HERE and nowhere
+   else in the email.
 5. **Signature**, Will's standard block.
 
 Body construction rules, all mandatory:
@@ -439,9 +480,14 @@ never rows.
   and frees the rotation. A deletion is a decision, not an error.
 - EVERY draft in EVERY lane CCs chance.friedman@calusainvestments.com.
 - No unsubscribe footer, no font or style markup, no em-dashes or en-dashes.
-- Lane B nuggets are AGGREGATE ONLY and NEVER name a competing project.
-- Lane B never states a decline and never invents a figure; a null region omits
-  the sentence.
+- Lane B market data is AGGREGATE ONLY and NEVER names a competing project.
+- Lane B market data is never a standalone stat paragraph. It sits inside the
+  distribution ask as evidence that the product trades and that we hold the list
+  of the people trading it. Data that does not serve that argument is cut.
+- Lane B never states a decline and never invents a figure. Null figures drop
+  their clause; the distribution ask itself never drops.
+- Never quote an average or median PSF from a region with fewer than about five
+  tracked projects; that quotes the neighbour. Use counts.
 - Lane B honors a Do Not Drip flag the moment the column exists.
 - Never modify a live table. "05 - Developers" is READ ONLY to this skill;
   the only write is the developer's Comments note recording a confirmed send,
