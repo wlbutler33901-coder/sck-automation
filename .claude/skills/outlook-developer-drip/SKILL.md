@@ -67,6 +67,20 @@ the search to a single folder, and do not scope it to Sent Items alone; a reply
 Will wrote from his phone, a thread sitting in the Inbox, and an archived
 exchange all count.
 
+**SEARCH ADDRESS FIELDS ONLY. NEVER FULL-TEXT BODY.** The gate asks who Will has
+corresponded WITH, which lives in the From, To and CC fields. Run it with the
+`sender` and `recipient` parameters, once each, so the match is on an address.
+Do NOT use the free-text `query` parameter, which searches subject, body and
+attachments and answers a completely different question.
+
+CONFIRMED FAILURE, 2026-08-22: a full-text search for `octaneparks.com` returned
+three of Will's own SCK Daily Intelligence Briefs, because the scanner had
+listed the domain in the body of the digest. On a body search, every developer
+the pipeline discovers gates itself the morning after discovery, since the
+digest that surfaced them mentions their domain. Re-running the same candidate
+with `recipient` returned zero rows, which was the truth: no correspondence had
+ever taken place. A body mention is not correspondence.
+
 **ANY HIT MEANS SKIP.** Do not draft. Mark the queue row
 `held - existing correspondence <date>` using the date of the most recent hit,
 log `outreach_skipped` with the matched address or domain and that date, and
@@ -118,6 +132,31 @@ Step 4e against "08 - Brokers", "05 - Developers",
 - A recipient who matches "08 - Brokers" gets **no developer pitch**. Log
   `broker_lead_flag` and rotate to the next candidate. A broker marketing a
   project is a listing signal, not a developer.
+
+**SELF-LISTING DEVELOPER EXCEPTION.** A developer who sells in house legitimately
+appears in BOTH tables, and the guard must not treat that as a broker match.
+PROCEED with the draft when BOTH of these hold:
+
+1. the "08 - Brokers" row carries the SAME FIRM NAME as the developer
+   (normalized: lower, trim, dashes normalized), AND
+2. the broker row's email DOMAIN is the developer's OWN domain.
+
+That combination is an in-house sales desk, not a third party marketing someone
+else's project, and the reason the guard exists does not apply. Log the benign
+match to scan_notes so the run report shows the guard fired and was cleared, and
+address the draft to the developer's NAMED principal, never to the sales desk
+inbox.
+
+CONFIRMED CASE, 2026-08-22: "08 - Brokers" carries a row `The Motor Enclave /
+Sales Team / info@themotorenclave.com`. That is Brad Oleshansky's own sales desk
+at his own domain, and Brad is the Founder on the developer card. Blocking him
+as a broker would have been wrong. Note the shape of the test: it is the firm
+name AND the domain together. Either one alone is not enough, because a
+third-party brokerage that happens to share a name, or a developer-domain
+address sitting on a genuinely different firm's broker row, are both real and
+both must still block. The 2026-08-21 Florida Garage Condos case is exactly the
+second shape: a developer-domain address appearing on a live broker row for a
+DIFFERENT firm, which must keep blocking.
 - A recipient who matches an existing "05 - Developers" row is addressed using
   that row's named contact, never a scraped generic address.
 
@@ -132,6 +171,76 @@ selection permanently, with no draft and no queue row, logged once as
 it the moment it appears; do not wait for a skill edit. Until it exists, Lane B
 selection proceeds on the other criteria and this step is a no-op that the run
 report states plainly.
+
+## Step 5 - OUTREACH HOLD CHECK (both lanes, before composing)
+
+Two independent holds. Either one skips the candidate. Both run on EVERY
+candidate in BOTH lanes, before a draft is composed.
+
+### 5a. Conversations hold
+
+Query "05 - Developers - Conversations & Learnings", matching the candidate by
+`"Developer Index"` OR normalized developer name:
+
+```sql
+select id, "Developer", "Note Type", "Note", "Hold Until"
+from "05 - Developers - Conversations & Learnings"
+where "Outreach Hold" is true
+  and ("Hold Until" is null or "Hold Until" >= current_date)
+  and ( "Developer Index" = $DEV_ROW
+        or regexp_replace(lower(btrim("Developer")), '[\u2013\u2014]', '-', 'g')
+           = regexp_replace(lower(btrim($DEV_NAME)), '[\u2013\u2014]', '-', 'g') );
+```
+
+A NULL "Hold Until" is an INDEFINITE hold, not an expired one. On any hit: do
+not draft, write the ledger row as `held - see conversations note id <n>`,
+rotate to the next candidate, and list the hold in the morning digest so Will
+sees it that day.
+
+### 5b. Competitive hold
+
+Do not draft a developer who competes with a listing SCK is actively selling.
+Hold when EITHER is true of ANY project belonging to the candidate:
+
+1. it lies **within 60 miles** of a project with an active SCK-engaged pre-sale
+   listing (great-circle distance on the latitude and longitude in
+   "01 - Projects"), OR
+2. it sits in the **same Region** as one.
+
+Write the ledger row as
+`held - competitive with active engagement <project>`, naming the conflicting
+project, and surface it in the digest for Will's call.
+
+**DEFINITION, and it decides how much of the rotation survives.** "Active
+SCK-engaged pre-sale listing" means a row in "06 - Pre-Sales" with an ACTIVE
+FOUNDING PROGRAM, evidenced by a non-null "Founding Cap". As of 2026-08-22 that
+is exactly TWO projects, Bonita Motor Vault and Luxe Dream Garage Waterside,
+both in Southwest Florida. The other ten rows in that table are listed but carry
+no founding program and do NOT trigger this hold.
+
+This definition is deliberate and was measured. Reading "any row in
+06 - Pre-Sales" instead puts a listing in SIX of the seven Florida regions, and
+of 100 unique live developers with an email it leaves exactly ONE evaluable
+candidate, which then failed the correspondence gate. That reading shuts Lane B
+down completely rather than steering it. If Will wants the wider reading, widen
+it here deliberately and expect the lane to go quiet in Florida.
+
+**AN UNEVALUABLE TEST IS A HOLD, NOT A PASS.** A candidate with no project row
+in "01 - Projects", or whose project rows carry null coordinates, cannot be
+tested. Do not draft on the assumption of no conflict. Skip with
+`held - competitive test unevaluable, no project coordinates` and report it.
+44 of 100 live developers are in this state today, usually because the project
+is filed under a name variant of the developer, which is a data problem to fix
+in enrichment rather than a licence to draft blind.
+
+Match the candidate to their projects on NORMALIZED developer name. Collection
+Suites was briefly scored clean on 2026-08-22 only because its developer card
+reads "Collection Suites / JMF Consulting" while its two South Florida project
+rows read "Collection Suites"; the exact-string join missed both.
+
+**OVERRIDE.** Will clears a hold by setting "Outreach Hold" false or a past
+"Hold Until" on the conversations row, or by adding a new note row. Never clear
+a hold from inside this skill.
 
 ---
 
@@ -267,7 +376,10 @@ lost, and log the connector failure. Never silently skip.
 ## Run report
 
 Report per lane: candidates walked, candidates held by the correspondence gate
-with the matched address or domain and date, broker matches flagged, deleted
+with the matched address or domain and date, broker matches flagged (and any
+cleared by the self-listing exception), candidates held by the conversations
+hold with the note id, candidates held by the competitive hold with the
+conflicting project, candidates skipped as competitively unevaluable, deleted
 drafts recorded as declined, the draft queued (developer, project, region,
 recipient), the market nugget used and its source figure, any nugget omitted for
 null data, and the Do Not Drip column's presence or absence. Count developers,
@@ -281,6 +393,14 @@ never rows.
 - The outbound correspondence gate runs on EVERY candidate in BOTH lanes before
   composition, across ALL folders including Sent Items, on the address AND its
   domain, over 90 days. Any hit is a skip and a rotate, never a draft.
+- The correspondence gate searches ADDRESS FIELDS ONLY (`sender`, `recipient`),
+  never the free-text body. A body mention is not correspondence, and a body
+  search makes every discovered developer gate itself via the morning digest.
+- The Step 5 holds run on EVERY candidate in BOTH lanes before composition: the
+  conversations hold and the competitive hold. An unevaluable competitive test
+  is a HOLD, never a pass.
+- The broker guard has ONE exception, the self-listing developer: same firm name
+  AND the developer's own email domain. Either condition alone still blocks.
 - A queued draft found in Deleted Items is `declined - draft deleted in Outlook`
   and frees the rotation. A deletion is a decision, not an error.
 - EVERY draft in EVERY lane CCs chance.friedman@calusainvestments.com.
