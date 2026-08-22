@@ -40,17 +40,20 @@ Here are some of the ways we can help:
 
 Developer Service Package:
 
-- Site Selection Valuation Report (available for any address in FL). Helpful for quickly
-  underwriting proforma unit values.
-- Site Selection Demographic Reports (FL).
+USE THE CANONICAL BLOCK IN THE PARENT SKILL, section "DEVELOPER SERVICE PACKAGE (canonical
+shared block, BOTH lanes)". Do not compose the list from this file. It is reproduced below for
+reading convenience ONLY, and if the two ever disagree the parent skill wins.
+
+- Site Selection Valuation Report, available for any address in Florida today. Helpful for
+  quickly underwriting proforma unit values.
+- Site Selection Demographic Reports.
 - Development Financing and Underwriting Model.
 - Website, Brand and Operations Consulting.
 - Capital Markets Advisory. Debt, equity and Founding Member funding capitalization structures.
 - Full-Service Unit Sales, Marketing and Distribution.
 - Storage Condo King Web Platform. Developer project portals, pre-sale marketing and
-  distribution network, market data and research (Florida, with GA, NC and SC coming soon),
-  comp data, pre-sale and re-sale unit valuation engine, listing platform, contact directory,
-  and deal email and CRM system.
+  distribution network, market data and research, comp data, pre-sale and re-sale unit
+  valuation engine, listing platform, contact directory, and deal email and CRM system.
 
 Our latest Florida Garage and Car Condo Market Report is worth a skim for where pricing and
 inventory are trending in {their region}:

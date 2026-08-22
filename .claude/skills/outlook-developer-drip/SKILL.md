@@ -244,6 +244,35 @@ a hold from inside this skill.
 
 ---
 
+## DEVELOPER SERVICE PACKAGE (canonical shared block, BOTH lanes)
+
+**This is the one and only service list, and it is IDENTICAL in Lane A and
+Lane B.** Neither lane keeps a shortened, reordered or re-worded variant. When
+this block changes, it changes here once and both lanes inherit it.
+
+Heading, bold: `Developer Service Package`
+
+Bullets, verbatim and in this order, each ending with a period:
+
+- `Site Selection Valuation Report, available for any address in Florida today. Helpful for quickly underwriting proforma unit values.`
+- `Site Selection Demographic Reports.`
+- `Development Financing and Underwriting Model.`
+- `Website, Brand and Operations Consulting.`
+- `Capital Markets Advisory. Debt, equity and Founding Member funding capitalization structures.`
+- `Full-Service Unit Sales, Marketing and Distribution.`
+- `Storage Condo King Web Platform. Developer project portals, pre-sale marketing and distribution network, market data and research, comp data, pre-sale and re-sale unit valuation engine, listing platform, contact directory, and deal email and CRM system.`
+
+Rendered as `<div><b>Developer Service Package</b></div>` followed by a `<ul>`
+of seven `<li>` items. No `style=`, no `<span>`, no `<font>`, per the allowlist.
+
+Set 2026-08-22 by Will, replacing the shortened five-bullet capabilities list
+Lane B had been using. A developer who gets both lanes over time must see the
+same menu twice, not two different accounts of what Storage Condo King does.
+The `references/outreach-template.md` copy of this list is superseded by this
+block; if the two ever disagree, THIS ONE WINS.
+
+---
+
 ## LANE A - New developments
 
 Selection, composition and rotation are unchanged from the queue this skill
@@ -257,7 +286,10 @@ Lane A additions from the split, applied on top of that template:
 1. The Step 1 correspondence gate runs before the Step 2 sent-check of the
    template, not after. A candidate held by the gate never reaches composition.
 2. The Step 2 deleted-draft branch replaces silent requeueing.
-3. Lane value on every read and write is `car-condo`.
+3. The Step 5 holds, conversations and competitive, run before composition.
+4. The service list is the CANONICAL DEVELOPER SERVICE PACKAGE block above, not
+   the copy inside the template file, which is superseded.
+5. Lane value on every read and write is `car-condo`.
 
 ## LANE B - Existing developers, expanded capabilities
 
@@ -332,9 +364,11 @@ In order:
    fabricating detail.
 2. **The market data nugget**, one sentence, per the rules above. Optional only
    in the all-null case.
-3. **A short bullet list of SCK benefits.** Each bullet ends with a period.
-   Keep it to four to six bullets; this is a capabilities note, not the full
-   Lane A service menu.
+3. **The DEVELOPER SERVICE PACKAGE**, exactly as specified in the canonical
+   shared block above. All seven bullets, verbatim, in order, each ending with a
+   period. Do NOT shorten it, reword it, or substitute a Lane B specific
+   capabilities list; the old four to six bullet variant was retired 2026-08-22.
+   Introduce it with a short line such as `Here are some of the ways we can help:`.
 4. **An explicit offer to blast their current or upcoming projects to the SCK
    database of unit owners and buyers.** This is the point of the lane and is
    never dropped, softened into a hint, or left to be inferred. Say it plainly
